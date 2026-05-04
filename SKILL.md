@@ -81,6 +81,7 @@ description: 네이버 스마트에디터(SE3) HTML 복붙용 원고 작성 스�
 
 모든 원고의 유튜브 영상 URL은 **항상 정확히 2개**를 넣는다.
 네이버 복붙 안정성을 위해 iframe/embed 태그는 쓰지 않고, 실제 존재를 확인한 `watch?v=` 형식의 raw URL만 단독 줄로 배치한다.
+단, 블로그 본문에는 `iframe`, `raw URL`, `스마트에디터 호환`, `원본 URL만 남깁니다` 같은 발행자용 기술 설명을 쓰지 않는다.
 0개, 1개, 3개 이상은 검수 실패로 본다.
 
 ```html
@@ -96,10 +97,10 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 ## 7. 명함 이미지 삽입
 
 ```html
-<p align="center"><img src="business_card.jpg" width="544"></p>
+<p align="center"><img src="https://mih.bp-studio.com/assets/agency-card.png" width="544"></p>
 ```
 
-HTML 파일과 `business_card.jpg`는 반드시 **같은 폴더**에 위치해야 함. 명함 이미지 원본 경로: `/home/ubuntu/projects/project-36c3f8af/KakaoTalk_20260325_135748974.jpg`
+상대 경로나 `data:image`를 쓰지 않는다. 명함 이미지는 `원고_모아보기` 사이트의 CTA 설정 관리에서 교체하며, 원고에는 위 고정 HTTPS URL을 사용한다.
 
 ---
 

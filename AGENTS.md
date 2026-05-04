@@ -100,7 +100,7 @@
 3. **무대 방향 3가지** — 왼쪽 세로선 박스 ①②③
 4. **적합 행사 유형 4종** — 2열 표(행사 유형 / 잘 맞는 이유)
 5. **섭외 전 확인 포인트 3가지** — 왼쪽 세로선 박스 ①②③
-6. **무대 영상** — 유튜브 URL 항상 정확히 2개 (raw URL, iframe 아님)
+6. **무대 영상** — 유튜브 URL 항상 정확히 2개 (raw URL, iframe 아님). 단, 본문에는 `raw URL`, `iframe`, `스마트에디터 호환`, `원본 URL만 남깁니다` 같은 발행자용 기술 설명을 절대 쓰지 않는다.
 7. **섭외 절차 안내** — HYBE 등 대형 기획사는 직접 접근 어려움 강조
 8. **마무리 CTA** — **에이전시 명함 이미지(필수)** → 카카오톡 오픈채팅 링크
 9. **해시태그 단락** — 20개 이상
@@ -147,6 +147,7 @@
 <p class="se-text-paragraph se-text-paragraph-align-center" style="" id="SE-srcN"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">출처 - [아티스트명] 공식 SNS</span></p>
 
 <!-- 유튜브 — raw URL만 붙이기 (iframe 사용 시 504 케이스 많음) -->
+<!-- 주의: 이 기술 설명은 원고 작성자를 위한 주석이다. 블로그 본문에는 iframe/raw URL/스마트에디터 호환 같은 표현을 쓰지 않는다. -->
 https://www.youtube.com/watch?v=VIDEO_ID_1
 
 <p><br></p>
@@ -157,17 +158,20 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 <p class="se-text-paragraph se-text-paragraph-align- " style="" id="SE-hashtag"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">#태그1 #태그2 ...</span></p>
 
 <!-- 에이전시 명함 이미지 (마무리 CTA "▼ 아래 링크로 편하게 ▼" 바로 위에 배치) -->
-<p align="center"><img src="https://postfiles.pstatic.net/MjAyNjA0MjdfMjI5/MDAxNzc3MjY2OTMwMzM5.HjuCB-YNAAUD_tnIQyO9WIFNJPbjiDBrov_5qJb1bxYg.90kjnoxkHHnq4KbABGhEFfw0utkF0axA9fq1qSu6Oq8g.PNG/image.png?type=w773" width="544"></p>
+<p align="center"><img src="https://mih.bp-studio.com/assets/agency-card.png" width="544"></p>
 ```
 
-**명함 이미지 규칙 — 네이버 CDN URL 참조:**
+**CTA/명함 설정 규칙 — 원고 모아보기 관리값 참조:**
 
-- 이미지 src에는 **에이전시 고정 정보 섹션에 저장된 네이버 CDN URL을 그대로 복사**해 사용한다 (다른 원고와 동일 URL 재사용)
+- 카카오톡 링크와 명함 이미지는 `원고_모아보기` 사이트의 **CTA 설정 관리** 값이 기준이다.
+- 원고 작성 전 가능하면 `https://mih.bp-studio.com/api/agency-config`에서 최신 설정을 확인한다.
+- 카카오톡 링크는 관리 설정에 저장된 실제 오픈채팅 URL을 원고에 직접 표시한다. 현재 기본값은 `https://open.kakao.com/me/madeinheavenagency_`이다.
+- 이미지 src에는 고정 명함 이미지 URL `https://mih.bp-studio.com/assets/agency-card.png`를 사용한다. 실제 이미지는 관리 화면에서 교체한다.
 - 위치: 마무리 CTA 섹션 내부, "▼ 아래 링크로 편하게 문의 남겨주세요 ▼" 안내 **바로 위** — 태그 위아래에 `<p><br></p>` 여백
-- `width="544"`는 네이버 블로그 본문 폭에 맞춘 고정값 (URL 뒤의 `?type=w773`는 네이버 CDN 리사이저 파라미터로 그대로 둬도 실제 표시 폭은 `width` 속성으로 결정됨)
+- `width="544"`는 네이버 블로그 본문 폭에 맞춘 기본값이다.
 - ⚠️ `data:image/...` 데이터 URI 방식은 네이버 에디터 정책상 차단되므로 절대 사용하지 않는다
 - ⚠️ `src="image.png"` 같은 상대 경로도 복붙 시 이미지가 깨지므로 절대 사용하지 않는다
-- 명함 디자인 변경 시: 루트의 `image.png`를 교체한 뒤 네이버 블로그에 재업로드하여 새 CDN URL을 확보하고, `AGENTS.md` 고정 정보 섹션의 URL과 이 패턴 블록 내 URL을 함께 갱신한다
+- 명함 디자인 또는 오픈채팅 링크 변경 시: `https://mih.bp-studio.com/원고_모아보기.html`의 CTA 설정 관리에서 수정한다.
 
 ### 표(Table) — 시각적 통일성 유지
 
@@ -301,7 +305,7 @@ console.log('sentence spacing applied');
 - [ ] 유튜브 URL 정확히 2개 (raw URL, iframe 금지, 1개/3개 이상 금지)
 - [ ] 따옴표 인용구 1~2회 (도입부/핵심 메시지/마무리)
 - [ ] 마무리 CTA 블록에 명함 이미지가 카카오톡 링크 **바로 위** 에 삽입되어 있는가
-- [ ] 명함 이미지 src가 **에이전시 고정 정보 섹션의 네이버 CDN URL**과 정확히 일치하는가 (`postfiles.pstatic.net` 도메인)
+- [ ] 명함 이미지 src가 **고정 명함 이미지 URL** `https://mih.bp-studio.com/assets/agency-card.png`와 정확히 일치하는가
 - [ ] `data:image/...` 또는 상대 경로 `image.png` 형태로 참조되지 않는가 (둘 다 네이버 에디터에서 깨짐)
 - [ ] 마무리 CTA + 카카오톡 오픈채팅 링크
 - [ ] 해시태그 단락 20개 이상
@@ -325,14 +329,15 @@ console.log('sentence spacing applied');
 # 에이전시 고정 정보
 
 - **에이전시명:** 메이드인헤븐
-- **카카오톡 오픈채팅 기본 링크:** `https://open.kakao.com/o/sJ5IH55g` (아티스트별로 별도 링크가 없는 한 이 링크 사용)
-- **에이전시 명함 이미지 URL** (네이버 블로그 CDN, 모든 원고에서 이 URL을 그대로 사용):
+- **카카오톡 오픈채팅 원고용 링크:** `https://open.kakao.com/me/madeinheavenagency_` (관리 사이트에서 실제 오픈채팅 URL 수정)
+- **에이전시 명함 이미지 원고용 URL** (관리 사이트에서 실제 이미지 교체):
 
 ```
-https://postfiles.pstatic.net/MjAyNjA0MjdfMjI5/MDAxNzc3MjY2OTMwMzM5.HjuCB-YNAAUD_tnIQyO9WIFNJPbjiDBrov_5qJb1bxYg.90kjnoxkHHnq4KbABGhEFfw0utkF0axA9fq1qSu6Oq8g.PNG/image.png?type=w773
+https://mih.bp-studio.com/assets/agency-card.png
 ```
 
-- 명함 원본 파일은 프로젝트 루트 `image.png` — 네이버 블로그에 업로드해 위 CDN URL을 확보한 것. 명함 디자인이 바뀌면 네이버 블로그에 재업로드하고 새 URL을 이 값으로 교체한다
+- 최신 설정 확인 API: `https://mih.bp-studio.com/api/agency-config`
+- 관리 화면: `https://mih.bp-studio.com/원고_모아보기.html` → CTA 설정 관리
 - `data:image/...` 데이터 URI 방식은 네이버 스마트에디터가 보안상 차단하므로 **절대 사용 금지**
 - 상대 경로(`src="image.png"`)도 복붙 시 깨지므로 **절대 사용 금지**
 - **톤:** 정중한 존댓말, 행사 기획 담당자 대상, 과장 없음
