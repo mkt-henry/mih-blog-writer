@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/draft.js": {
-      "includeFiles": "**/*.html"
+      "includeFiles": "output/**/*.html"
     }
   },
   "rewrites": [
@@ -12,6 +12,14 @@
     {
       "source": "/go/kakao",
       "destination": "/api/kakao"
+    },
+    {
+      "source": "/",
+      "destination": "/output/index.html"
+    },
+    {
+      "source": "/:path((?!api/).*)",
+      "destination": "/output/:path"
     }
   ]
 }

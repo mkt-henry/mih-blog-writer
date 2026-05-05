@@ -651,8 +651,17 @@
       });
     }
 
+    function localDraftUrl(path) {
+      const normalized = String(path || "").replace(/^\.\//, "");
+      return `/api/draft?path=${encodeURIComponent(normalized)}`;
+    }
+
+    function itemTarget(item) {
+      return item.url || localDraftUrl(item.path);
+    }
+
     function selectItem(item) {
-      const target = item.url || item.path;
+      const target = itemTarget(item);
       const displayTitle = item.url ? item.title : `${item.person} ${item.title}`;
       selectedPathValue = target;
       selectedTitle.textContent = displayTitle;
@@ -688,7 +697,7 @@
         `;
       } else {
         preview.removeAttribute("srcdoc");
-        preview.src = item.path;
+        preview.src = target;
       }
 
       Array.from(document.querySelectorAll(".item")).forEach((button) => {
@@ -704,7 +713,7 @@
       copyPublishedUrls.disabled = publishedItemsForSelectedDates().length === 0;
 
       items.forEach((item) => {
-        const target = item.url || item.path;
+        const target = itemTarget(item);
         const displayTitle = item.url ? item.title : `${item.person} ${item.title}`;
         const displayPath = item.url ? item.url : item.path;
         const badge = item.url ? `발행 · ${item.publishedAt}` : item.date;
@@ -729,7 +738,7 @@
         list.appendChild(button);
       });
 
-      const stillVisible = items.some((item) => (item.url || item.path) === selectedPathValue);
+      const stillVisible = items.some((item) => itemTarget(item) === selectedPathValue);
       if (items.length && !stillVisible) {
         selectItem(items[0]);
       }

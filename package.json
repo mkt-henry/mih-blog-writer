@@ -4,5 +4,8 @@
   "scripts": {
     "dev": "npx serve output",
     "rss": "node update-rss.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.0.0"
   }
 }
