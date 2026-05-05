@@ -94,106 +94,6 @@
       margin-bottom: 16px;
     }
 
-    .settings-panel {
-      margin-bottom: 16px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fbfcff;
-      overflow: hidden;
-    }
-
-    .settings-panel summary {
-      padding: 12px 14px;
-      color: #111827;
-      font-size: 14px;
-      font-weight: 800;
-      cursor: pointer;
-      list-style-position: inside;
-    }
-
-    .settings-body {
-      display: grid;
-      gap: 12px;
-      padding: 0 14px 14px;
-    }
-
-    .field {
-      display: grid;
-      gap: 6px;
-    }
-
-    .field label {
-      color: #374151;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .field input {
-      width: 100%;
-      min-height: 38px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 0 10px;
-      color: #111827;
-      background: #ffffff;
-      font-size: 13px;
-      outline: none;
-    }
-
-    .field input:focus {
-      border-color: var(--brand);
-      box-shadow: 0 0 0 3px rgba(36, 84, 166, 0.12);
-    }
-
-    .settings-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .settings-actions .action {
-      flex: 1;
-    }
-
-    .card-preview {
-      display: block;
-      width: 100%;
-      max-width: 260px;
-      margin: 2px auto 0;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #ffffff;
-    }
-
-    .snippet {
-      display: grid;
-      gap: 6px;
-      padding: 10px;
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      background: #ffffff;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-      overflow-wrap: anywhere;
-    }
-
-    .status {
-      min-height: 18px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .status.error {
-      color: #b42318;
-      font-weight: 700;
-    }
-
-    .status.ok {
-      color: #067647;
-      font-weight: 700;
-    }
-
     .search {
       width: 100%;
       height: 42px;
@@ -238,6 +138,67 @@
       background: var(--brand);
       color: #ffffff;
       font-weight: 700;
+    }
+
+    .date-filter {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8px;
+      align-items: end;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcff;
+    }
+
+    .date-field {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .date-field label {
+      color: #374151;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .date-field input {
+      width: 100%;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 9px;
+      background: #ffffff;
+      color: #111827;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .date-field input:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(36, 84, 166, 0.12);
+    }
+
+    .quick-date-actions {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .quick-date-actions .action {
+      height: 34px;
+    }
+
+    .quick-date-actions .action.active {
+      border-color: var(--brand);
+      background: var(--brand-soft);
+      color: var(--brand);
+    }
+
+    .copy-published-urls {
+      grid-column: 1 / -1;
     }
 
     .list {
@@ -375,6 +336,11 @@
       color: #ffffff;
     }
 
+    .action:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
     .frame-wrap {
       padding: 20px;
       min-height: 0;
@@ -442,49 +408,32 @@
       <div class="header">
         <div>
           <h1>원고 모아보기</h1>
-          <p class="meta">원본 HTML 파일은 그대로 두고 목록에서 불러와 확인합니다.<br><a href="./발행_URL_리스트.html">날짜별 발행 URL만 보기</a></p>
+          <p class="meta">원본 HTML 파일은 그대로 두고 목록에서 불러와 확인합니다.</p>
         </div>
         <div class="count"><strong id="visibleCount">0</strong>개</div>
       </div>
 
-      <details class="settings-panel">
-        <summary>CTA 설정 관리</summary>
-        <div class="settings-body">
-          <div class="field">
-            <label for="agencyKakaoUrl">오픈채팅 URL</label>
-            <input id="agencyKakaoUrl" type="url" inputmode="url" placeholder="https://open.kakao.com/...">
-          </div>
-          <div class="field">
-            <label for="agencyCardUrl">명함 이미지 URL</label>
-            <input id="agencyCardUrl" type="url" inputmode="url" placeholder="https://.../business-card.png">
-          </div>
-          <div class="field">
-            <label for="agencyCardFile">명함 이미지 첨부</label>
-            <input id="agencyCardFile" type="file" accept="image/png,image/jpeg">
-          </div>
-          <img id="agencyCardPreview" class="card-preview" alt="현재 명함 미리보기">
-          <div class="settings-actions">
-            <button id="loadAgencyConfig" class="action" type="button">불러오기</button>
-            <button id="saveAgencyConfig" class="action primary" type="button">저장</button>
-          </div>
-          <div class="snippet">
-            <strong>원고용 오픈채팅 링크</strong>
-            <span id="kakaoRedirectSnippet">-</span>
-            <strong>원고용 명함 HTML</strong>
-            <span id="cardHtmlSnippet">-</span>
-          </div>
-          <div id="agencyStatus" class="status"></div>
-        </div>
-      </details>
-
       <div class="toolbar">
         <input id="search" class="search" type="search" placeholder="이름, 제목, 날짜로 검색">
         <div class="tabs source-tabs" role="tablist" aria-label="원고 출처">
-          <button class="tab" type="button" data-source="local">작성 원고</button>
-          <button class="tab active" type="button" data-source="published">발행 원고</button>
+          <button class="tab active" type="button" data-source="local">작성 원고</button>
+          <button class="tab" type="button" data-source="published">발행 원고</button>
         </div>
-        <div id="dateTabs" class="tabs" role="tablist" aria-label="원고 작성일">
-          <button class="tab active" type="button" data-filter="all">전체</button>
+        <div class="date-filter" aria-label="원고 일자 필터">
+          <div class="date-field">
+            <label for="startDateFilter">시작일</label>
+            <input id="startDateFilter" type="date">
+          </div>
+          <div class="date-field">
+            <label for="endDateFilter">종료일</label>
+            <input id="endDateFilter" type="date">
+          </div>
+          <div class="quick-date-actions" aria-label="빠른 일자 필터">
+            <button class="action" type="button" data-quick-date="today">오늘</button>
+            <button class="action" type="button" data-quick-date="yesterday">전일</button>
+            <button id="resetDateFilter" class="action" type="button">전체</button>
+            <button id="copyPublishedUrls" class="action primary copy-published-urls" type="button">선택 날짜 발행 URL 복사</button>
+          </div>
         </div>
       </div>
 
@@ -554,6 +503,12 @@
     ];
 
     const publishedPosts = [
+      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:14","title":"[김민석(멜로망스) 섭외] 선물 보컬, 결혼식 축가·기업 송년회·시민 음악회 섭외","url":"https://blog.naver.com/mih_ent/224274553987"},
+      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:13","title":"[송소희 섭외] 경기민요와 팝을 잇는 싱어송라이터, 전통문화 행사·시민 음악회·페스티벌 섭외","url":"https://blog.naver.com/mih_ent/224274552789"},
+      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:13","title":"[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외","url":"https://blog.naver.com/mih_ent/224274551813"},
+      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:12","title":"[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외","url":"https://blog.naver.com/mih_ent/224274550465"},
+      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:11","title":"[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외","url":"https://blog.naver.com/mih_ent/224274549700"},
+      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:10","title":"[허용별 섭외] 허각 신용재 임한별 보컬 트리오, 기업 송년회·웨딩·시민 콘서트 섭외","url":"https://blog.naver.com/mih_ent/224274548997"},
       {"source":"published","date":"2026-04-30","publishedAt":"2026-04-30 17:53","title":"[김필 섭외] 깊은 감성 싱어송라이터, 기업 행사·대학 축제 섭외","url":"https://blog.naver.com/mih_ent/224270694139"},
       {"source":"published","date":"2026-04-30","publishedAt":"2026-04-30 17:52","title":"[심재용 섭외] 설득 협상 전문가, 기업 교육·세일즈 특강 섭외","url":"https://blog.naver.com/mih_ent/224270693260"},
       {"source":"published","date":"2026-04-30","publishedAt":"2026-04-30 17:51","title":"[박준 섭외] 마음을 읽는 시인의 언어, 도서관·기업 인문학 강연 섭외","url":"https://blog.naver.com/mih_ent/224270692276"},
@@ -596,12 +551,12 @@
       {"source":"published","date":"2026-04-22","publishedAt":"2026-04-22 17:13","title":"[정재승 교수 섭외] 알쓸신잡 뇌과학자, 기업·공공기관 강연으로 행사를 완성하다","url":"https://blog.naver.com/mih_ent/224261443256"},
       {"source":"published","date":"2026-04-22","publishedAt":"2026-04-22 17:13","title":"[유현준 교수 섭외] 알쓸신잡 건축가, 공간과 창의성 강연으로 행사를 완성하다","url":"https://blog.naver.com/mih_ent/224261442736"},
       {"source":"published","date":"2026-04-22","publishedAt":"2026-04-22 17:12","title":"[희철리즘 섭외] 구독자 170만 세계 여행 유튜버, 브랜드 행사와 강연으로 행사를 완성하다","url":"https://blog.naver.com/mih_ent/224261442180"},
-      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:03","title":"[윤대현 섭외] "마음이 지친 직장인에게 딱 맞는 강연" 서울대병원 정신건강의학과 윤대현 교수 섭외 총정리","url":"https://blog.naver.com/mih_ent/224259874259"},
+      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:03","title":"[윤대현 섭외] “마음이 지친 직장인에게 딱 맞는 강연” 서울대병원 정신건강의학과 윤대현 교수 섭외 총정리","url":"https://blog.naver.com/mih_ent/224259874259"},
       {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:02","title":"[이민영 섭외] 연 300회 출강 커뮤니케이션 전문가, 이민영 소장 강연 섭외 전 꼭 읽어보세요","url":"https://blog.naver.com/mih_ent/224259873250"},
-      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:01","title":"[신종호 섭외] "AI 시대 살아남는 인재를 만드는 교육법" 서울대 신종호 교수 강연 섭외 총정리","url":"https://blog.naver.com/mih_ent/224259872542"},
+      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:01","title":"[신종호 섭외] “AI 시대 살아남는 인재를 만드는 교육법” 서울대 신종호 교수 강연 섭외 총정리","url":"https://blog.naver.com/mih_ent/224259872542"},
       {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:00","title":"[함익병 섭외] 방송에서 검증된 명의, 함익병 원장 건강 강연 섭외 전 꼭 확인하세요","url":"https://blog.naver.com/mih_ent/224259871562"},
       {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:00","title":"[십센치 섭외] 아메리카노·봄이 좋냐 그 밴드, 10CM 십센치 공연 섭외 전 꼭 읽어보세요","url":"https://blog.naver.com/mih_ent/224259870801"},
-      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 12:59","title":"[소수빈 섭외] 싱어게인3 준우승 "고막남친" 소수빈, 행사 공연 섭외 전 꼭 확인하세요","url":"https://blog.naver.com/mih_ent/224259869967"},
+      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 12:59","title":"[소수빈 섭외] 싱어게인3 준우승 '고막남친' 소수빈, 행사 공연 섭외 전 꼭 확인하세요","url":"https://blog.naver.com/mih_ent/224259869967"},
       {"source":"published","date":"2026-04-17","publishedAt":"2026-04-17 16:44","title":"[곽튜브 섭외] 구독자 215만 여행 유튜버 곽튜브 행사 섭외 방법 및 비용 안내","url":"https://blog.naver.com/mih_ent/224255879726"},
       {"source":"published","date":"2026-04-17","publishedAt":"2026-04-17 16:43","title":"[김시선 섭외] 구독자 212만 영화평론가 유튜버 김시선 강연·행사 섭외 방법 및 비용 안내","url":"https://blog.naver.com/mih_ent/224255878935"}
     ];
@@ -615,21 +570,17 @@
     const preview = document.getElementById("preview");
     const openLink = document.getElementById("openLink");
     const copyPath = document.getElementById("copyPath");
-    const tabsRoot = document.getElementById("dateTabs");
+    const startDateFilter = document.getElementById("startDateFilter");
+    const endDateFilter = document.getElementById("endDateFilter");
+    const resetDateFilter = document.getElementById("resetDateFilter");
+    const copyPublishedUrls = document.getElementById("copyPublishedUrls");
+    const quickDateButtons = Array.from(document.querySelectorAll("[data-quick-date]"));
     const sourceTabs = Array.from(document.querySelectorAll("[data-source]"));
-    const agencyKakaoUrl = document.getElementById("agencyKakaoUrl");
-    const agencyCardUrl = document.getElementById("agencyCardUrl");
-    const agencyCardFile = document.getElementById("agencyCardFile");
-    const agencyCardPreview = document.getElementById("agencyCardPreview");
-    const loadAgencyConfig = document.getElementById("loadAgencyConfig");
-    const saveAgencyConfig = document.getElementById("saveAgencyConfig");
-    const agencyStatus = document.getElementById("agencyStatus");
-    const kakaoRedirectSnippet = document.getElementById("kakaoRedirectSnippet");
-    const cardHtmlSnippet = document.getElementById("cardHtmlSnippet");
-    let tabs = [];
 
-    let activeSource = "published";
-    let activeFilter = "2026-04-30";
+    let activeSource = "local";
+    let activeStartDate = "";
+    let activeEndDate = "";
+    let activeQuickDate = "";
     let selectedPathValue = "";
 
     function activeItems() {
@@ -650,29 +601,53 @@
       }[char]));
     }
 
-    function buildTabs() {
-      const dates = [...new Set(activeItems().map((item) => item.date))].sort().reverse();
-      const preferredFilter = dates.includes(activeFilter) ? activeFilter : (activeSource === "published" && dates.includes("2026-04-30") ? "2026-04-30" : "all");
-      activeFilter = preferredFilter;
-      tabsRoot.innerHTML = `<button class="tab${activeFilter === "all" ? " active" : ""}" type="button" data-filter="all">전체</button>`;
-      dates.forEach((date) => {
-        const button = document.createElement("button");
-        button.className = `tab${date === activeFilter ? " active" : ""}`;
-        button.type = "button";
-        button.dataset.filter = date;
-        button.textContent = date;
-        tabsRoot.appendChild(button);
+    function formatLocalDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function setDateRange(startDate, endDate, quickDate = "") {
+      activeStartDate = startDate || "";
+      activeEndDate = endDate || "";
+      activeQuickDate = quickDate;
+      startDateFilter.value = activeStartDate;
+      endDateFilter.value = activeEndDate;
+      quickDateButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.quickDate === activeQuickDate);
       });
-      tabs = Array.from(tabsRoot.querySelectorAll(".tab"));
-      bindTabs();
+    }
+
+    function setTodayFilter() {
+      const today = formatLocalDate(new Date());
+      setDateRange(today, today, "today");
+    }
+
+    function selectedDateRange() {
+      if (activeStartDate && activeEndDate && activeStartDate > activeEndDate) {
+        return { startDate: activeEndDate, endDate: activeStartDate };
+      }
+      return { startDate: activeStartDate, endDate: activeEndDate };
+    }
+
+    function publishedItemsForSelectedDates() {
+      const { startDate, endDate } = selectedDateRange();
+      return publishedPosts.filter((item) => {
+        const matchesStart = !startDate || item.date >= startDate;
+        const matchesEnd = !endDate || item.date <= endDate;
+        return matchesStart && matchesEnd && item.url;
+      });
     }
 
     function filteredItems() {
       const query = search.value.trim().toLowerCase();
+      const { startDate, endDate } = selectedDateRange();
       return activeItems().filter((item) => {
-        const matchesFilter = activeFilter === "all" || item.date === activeFilter;
+        const matchesStart = !startDate || item.date >= startDate;
+        const matchesEnd = !endDate || item.date <= endDate;
         const haystack = `${item.person || ""} ${item.title} ${item.date} ${item.publishedAt || ""} ${item.path || ""} ${item.url || ""}`.toLowerCase();
-        return matchesFilter && (!query || haystack.includes(query));
+        return matchesStart && matchesEnd && (!query || haystack.includes(query));
       });
     }
 
@@ -726,6 +701,7 @@
       list.innerHTML = "";
       visibleCount.textContent = items.length;
       empty.style.display = items.length ? "none" : "block";
+      copyPublishedUrls.disabled = publishedItemsForSelectedDates().length === 0;
 
       items.forEach((item) => {
         const target = item.url || item.path;
@@ -759,26 +735,40 @@
       }
     }
 
-    function bindTabs() {
-      tabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-          tabs.forEach((button) => button.classList.remove("active"));
-          tab.classList.add("active");
-          activeFilter = tab.dataset.filter;
-          render();
-        });
-      });
-    }
-
     search.addEventListener("input", render);
+
+    startDateFilter.addEventListener("change", () => {
+      setDateRange(startDateFilter.value, activeEndDate);
+      render();
+    });
+
+    endDateFilter.addEventListener("change", () => {
+      setDateRange(activeStartDate, endDateFilter.value);
+      render();
+    });
+
+    quickDateButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const today = new Date();
+        if (button.dataset.quickDate === "yesterday") today.setDate(today.getDate() - 1);
+        const targetDate = formatLocalDate(today);
+        setDateRange(targetDate, targetDate, button.dataset.quickDate);
+        render();
+      });
+    });
+
+    resetDateFilter.addEventListener("click", () => {
+      setDateRange("", "");
+      render();
+    });
 
     sourceTabs.forEach((tab) => {
       tab.addEventListener("click", () => {
         sourceTabs.forEach((button) => button.classList.remove("active"));
         tab.classList.add("active");
         activeSource = tab.dataset.source;
+        setTodayFilter();
         selectedPathValue = "";
-        buildTabs();
         render();
       });
     });
@@ -797,83 +787,52 @@
       }
     });
 
-    function setAgencyStatus(message, type = "") {
-      agencyStatus.textContent = message;
-      agencyStatus.className = `status${type ? ` ${type}` : ""}`;
-    }
-
-    function applyAgencyConfig(config) {
-      agencyKakaoUrl.value = config.kakaoUrl || "";
-      agencyCardUrl.value = config.businessCardImageUrl || "";
-      agencyCardPreview.src = config.businessCardImageUrl || "";
-      kakaoRedirectSnippet.textContent = config.kakaoUrl || "";
-      cardHtmlSnippet.textContent = config.businessCardHtml || `<p align="center"><img src="${config.businessCardImageUrl || ""}" width="${config.businessCardWidth || 544}"></p>`;
-    }
-
-    async function fetchAgencyConfig() {
-      const response = await fetch("/api/agency-config", { cache: "no-store" });
-      if (!response.ok) throw new Error("설정을 불러오지 못했습니다.");
-      return response.json();
-    }
-
-    async function refreshAgencyConfig() {
-      try {
-        setAgencyStatus("설정을 불러오는 중입니다.");
-        const config = await fetchAgencyConfig();
-        applyAgencyConfig(config);
-        setAgencyStatus("최신 설정을 불러왔습니다.", "ok");
-      } catch (error) {
-        setAgencyStatus(error.message || "설정을 불러오지 못했습니다.", "error");
-      }
-    }
-
-    async function submitAgencyConfig() {
-      const form = new FormData();
-      form.set("kakaoUrl", agencyKakaoUrl.value.trim());
-      form.set("businessCardImageUrl", agencyCardUrl.value.trim());
-      form.set("businessCardWidth", "544");
-      if (agencyCardFile.files[0]) {
-        form.set("businessCardImage", agencyCardFile.files[0]);
-      }
-
-      try {
-        saveAgencyConfig.disabled = true;
-        setAgencyStatus("설정을 저장하는 중입니다.");
-        const response = await fetch("/api/agency-config", {
-          method: "POST",
-          body: form
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "저장에 실패했습니다.");
-        agencyCardFile.value = "";
-        applyAgencyConfig(payload);
-        setAgencyStatus("저장되었습니다. 배포 캐시는 최대 60초 후 갱신될 수 있습니다.", "ok");
-      } catch (error) {
-        setAgencyStatus(error.message || "저장에 실패했습니다.", "error");
-      } finally {
-        saveAgencyConfig.disabled = false;
-      }
-    }
-
-    agencyCardFile.addEventListener("change", () => {
-      const file = agencyCardFile.files[0];
-      if (!file) {
-        agencyCardPreview.src = agencyCardUrl.value;
+    copyPublishedUrls.addEventListener("click", async () => {
+      const urls = [...new Set(publishedItemsForSelectedDates().map((item) => item.url))];
+      if (!urls.length) {
+        copyPublishedUrls.textContent = "URL 없음";
+        setTimeout(() => {
+          copyPublishedUrls.textContent = "선택 날짜 발행 URL 복사";
+        }, 1200);
         return;
       }
-      agencyCardPreview.src = URL.createObjectURL(file);
+
+      const text = urls.join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        copyPublishedUrls.textContent = `${urls.length}개 복사됨`;
+        setTimeout(() => {
+          copyPublishedUrls.textContent = "선택 날짜 발행 URL 복사";
+        }, 1200);
+      } catch {
+        window.prompt("아래 발행 URL을 복사하세요.", text);
+      }
     });
 
-    agencyCardUrl.addEventListener("input", () => {
-      if (!agencyCardFile.files[0]) agencyCardPreview.src = agencyCardUrl.value;
-    });
+    async function loadRssPosts() {
+      try {
+        const res = await fetch("/api/rss", { cache: "no-store" });
+        if (!res.ok) return;
+        const items = await res.json();
+        if (!Array.isArray(items) || !items.length) return;
+        const fresh = items.map((item) => ({
+          source: "published",
+          date: item.date,
+          publishedAt: `${item.date} ${item.time}`,
+          title: item.title,
+          url: item.url
+        }));
+        const urlSet = new Set(fresh.map((p) => p.url));
+        const merged = [...fresh, ...publishedPosts.filter((p) => !urlSet.has(p.url))];
+        merged.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+        publishedPosts.splice(0, publishedPosts.length, ...merged);
+        if (activeSource === "published") render();
+      } catch {}
+    }
 
-    loadAgencyConfig.addEventListener("click", refreshAgencyConfig);
-    saveAgencyConfig.addEventListener("click", submitAgencyConfig);
-
-    buildTabs();
+    setTodayFilter();
     render();
-    refreshAgencyConfig();
+    loadRssPosts();
   </script>
 </body>
 </html>
