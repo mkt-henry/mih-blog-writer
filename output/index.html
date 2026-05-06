@@ -110,36 +110,6 @@
       box-shadow: 0 0 0 3px rgba(36, 84, 166, 0.14);
     }
 
-    .tabs {
-      display: flex;
-      flex-wrap: wrap;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .tab {
-      flex: 1 0 110px;
-      height: 36px;
-      border: 0;
-      border-right: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-      background: #ffffff;
-      color: var(--muted);
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .tab:last-child {
-      border-right: 0;
-    }
-
-    .tab.active {
-      background: var(--brand);
-      color: #ffffff;
-      font-weight: 700;
-    }
-
     .date-filter {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -197,9 +167,109 @@
       color: var(--brand);
     }
 
-    .copy-published-urls {
-      grid-column: 1 / -1;
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
     }
+
+    .modal-overlay[hidden] { display: none; }
+
+    .modal {
+      background: var(--panel);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 540px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+
+    .modal-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .modal-head-actions {
+      display: flex;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .modal-list {
+      overflow-y: auto;
+      flex: 1;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .modal-post {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    .modal-post-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .modal-post-title {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      line-height: 1.45;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      text-decoration: none;
+    }
+
+    .modal-post-title:hover { color: var(--brand); }
+
+    .modal-post-date {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .modal-empty {
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .modal-foot {
+      padding: 14px 20px;
+      border-top: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+
+    .modal-foot .action { width: 100%; }
 
     .list {
       display: grid;
@@ -415,10 +485,6 @@
 
       <div class="toolbar">
         <input id="search" class="search" type="search" placeholder="이름, 제목, 날짜로 검색">
-        <div class="tabs source-tabs" role="tablist" aria-label="원고 출처">
-          <button class="tab active" type="button" data-source="local">작성 원고</button>
-          <button class="tab" type="button" data-source="published">발행 원고</button>
-        </div>
         <div class="date-filter" aria-label="원고 일자 필터">
           <div class="date-field">
             <label for="startDateFilter">시작일</label>
@@ -432,9 +498,9 @@
             <button class="action" type="button" data-quick-date="today">오늘</button>
             <button class="action" type="button" data-quick-date="yesterday">전일</button>
             <button id="resetDateFilter" class="action" type="button">전체</button>
-            <button id="copyPublishedUrls" class="action primary copy-published-urls" type="button">선택 날짜 발행 URL 복사</button>
           </div>
         </div>
+        <button id="showPublished" class="action primary" style="width:100%">발행 원고 목록 보기</button>
       </div>
 
       <div id="list" class="list"></div>
@@ -458,20 +524,36 @@
     </section>
   </main>
 
+  <div id="publishedModal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <span id="modalTitle" class="modal-title">발행 원고 목록</span>
+        <div class="modal-head-actions">
+          <button id="refreshRss" class="action" type="button">↻ 새로고침</button>
+          <button id="closeModal" class="action" type="button">✕</button>
+        </div>
+      </div>
+      <div id="modalList" class="modal-list"></div>
+      <div class="modal-foot">
+        <button id="copyModalUrls" class="action primary" type="button">선택 날짜 URL 모두 복사</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const manuscripts = [
-      { date: "2026-05-04", person: "안정환", title: "[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외", path: "./안정환_[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외.html" },
-      { date: "2026-05-04", person: "추성훈", title: "[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외", path: "./추성훈_[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외.html" },
-      { date: "2026-05-04", person: "탁재훈", title: "[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외", path: "./탁재훈_[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외.html" },
-      { date: "2026-05-04", person: "허용별", title: "[허용별 섭외] 허각 신용재 임한별 보컬 트리오, 기업 송년회·웨딩·시민 콘서트 섭외", path: "./허용별_[허용별 섭외] 허각 신용재 임한별 보컬 트리오, 기업 송년회·웨딩·시민 콘서트 섭외.html" },
-      { date: "2026-05-04", person: "김민석", title: "[김민석(멜로망스) 섭외] 선물 보컬, 결혼식 축가·기업 송년회·시민 음악회 섭외", path: "./김민석_[김민석(멜로망스) 섭외] 선물 보컬, 결혼식 축가·기업 송년회·시민 음악회 섭외.html" },
-      { date: "2026-05-04", person: "송소희", title: "[송소희 섭외] 경기민요와 팝을 잇는 싱어송라이터, 전통문화 행사·시민 음악회·페스티벌 섭외", path: "./송소희_[송소희 섭외] 경기민요와 팝을 잇는 싱어송라이터, 전통문화 행사·시민 음악회·페스티벌 섭외.html" },
-      { date: "2026-04-30", person: "김경순", title: "[김경순 섭외] 한약사 건강식재료 전문가, 기업·평생교육 특강 섭외", path: "./김경순_[김경순 섭외] 한약사 건강식재료 전문가, 기업·평생교육 특강 섭외.html" },
-      { date: "2026-04-30", person: "박준", title: "[박준 섭외] 마음을 읽는 시인의 언어, 도서관·기업 인문학 강연 섭외", path: "./박준_[박준 섭외] 마음을 읽는 시인의 언어, 도서관·기업 인문학 강연 섭외.html" },
-      { date: "2026-04-30", person: "심재용", title: "[심재용 섭외] 설득 협상 전문가, 기업 교육·세일즈 특강 섭외", path: "./심재용_[심재용 섭외] 설득 협상 전문가, 기업 교육·세일즈 특강 섭외.html" },
-      { date: "2026-04-30", person: "김필", title: "[김필 섭외] 깊은 감성 싱어송라이터, 기업 행사·대학 축제 섭외", path: "./김필_[김필 섭외] 깊은 감성 싱어송라이터, 기업 행사·대학 축제 섭외.html" },
-      { date: "2026-04-30", person: "김보경", title: "[김보경 섭외] OST 감성 파워 보컬, 기업 행사·축제 섭외", path: "./김보경_[김보경 섭외] OST 감성 파워 보컬, 기업 행사·축제 섭외.html" },
-      { date: "2026-04-30", person: "비트펠라하우스", title: "[비트펠라하우스 섭외] 입소리 퍼포먼스, 대학 축제·브랜드 행사 섭외", path: "./비트펠라하우스_[비트펠라하우스 섭외] 입소리 퍼포먼스, 대학 축제·브랜드 행사 섭외.html" },
+      { date: "2026-05-04", person: "안정환", title: "[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외", path: "./2026-05-05/안정환_[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외.html" },
+      { date: "2026-05-04", person: "추성훈", title: "[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외", path: "./2026-05-05/추성훈_[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외.html" },
+      { date: "2026-05-04", person: "탁재훈", title: "[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외", path: "./2026-05-05/탁재훈_[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외.html" },
+      { date: "2026-05-04", person: "허용별", title: "[허용별 섭외] 허각 신용재 임한별 보컬 트리오, 기업 송년회·웨딩·시민 콘서트 섭외", path: "./2026-05-05/허용별_[허용별 섭외] 허각 신용재 임한별 보컬 트리오, 기업 송년회·웨딩·시민 콘서트 섭외.html" },
+      { date: "2026-05-04", person: "김민석", title: "[김민석(멜로망스) 섭외] 선물 보컬, 결혼식 축가·기업 송년회·시민 음악회 섭외", path: "./2026-05-05/김민석_[김민석(멜로망스) 섭외] 선물 보컬, 결혼식 축가·기업 송년회·시민 음악회 섭외.html" },
+      { date: "2026-05-04", person: "송소희", title: "[송소희 섭외] 경기민요와 팝을 잇는 싱어송라이터, 전통문화 행사·시민 음악회·페스티벌 섭외", path: "./2026-05-05/송소희_[송소희 섭외] 경기민요와 팝을 잇는 싱어송라이터, 전통문화 행사·시민 음악회·페스티벌 섭외.html" },
+      { date: "2026-04-30", person: "김경순", title: "[김경순 섭외] 한약사 건강식재료 전문가, 기업·평생교육 특강 섭외", path: "./2026-05-05/김경순_[김경순 섭외] 한약사 건강식재료 전문가, 기업·평생교육 특강 섭외.html" },
+      { date: "2026-04-30", person: "박준", title: "[박준 섭외] 마음을 읽는 시인의 언어, 도서관·기업 인문학 강연 섭외", path: "./2026-05-05/박준_[박준 섭외] 마음을 읽는 시인의 언어, 도서관·기업 인문학 강연 섭외.html" },
+      { date: "2026-04-30", person: "심재용", title: "[심재용 섭외] 설득 협상 전문가, 기업 교육·세일즈 특강 섭외", path: "./2026-05-05/심재용_[심재용 섭외] 설득 협상 전문가, 기업 교육·세일즈 특강 섭외.html" },
+      { date: "2026-04-30", person: "김필", title: "[김필 섭외] 깊은 감성 싱어송라이터, 기업 행사·대학 축제 섭외", path: "./2026-05-05/김필_[김필 섭외] 깊은 감성 싱어송라이터, 기업 행사·대학 축제 섭외.html" },
+      { date: "2026-04-30", person: "김보경", title: "[김보경 섭외] OST 감성 파워 보컬, 기업 행사·축제 섭외", path: "./2026-05-05/김보경_[김보경 섭외] OST 감성 파워 보컬, 기업 행사·축제 섭외.html" },
+      { date: "2026-04-30", person: "비트펠라하우스", title: "[비트펠라하우스 섭외] 입소리 퍼포먼스, 대학 축제·브랜드 행사 섭외", path: "./2026-05-05/비트펠라하우스_[비트펠라하우스 섭외] 입소리 퍼포먼스, 대학 축제·브랜드 행사 섭외.html" },
       { date: "2026-04-23", person: "정성호", title: "[정성호 MC 섭외] 성대모사의 달인, 기업 행사 및 결혼식 사회 섭외", path: "./2026-04-23/정성호_[정성호 MC 섭외] 성대모사의 달인, 기업 행사 및 결혼식 사회 섭외.html" },
       { date: "2026-04-23", person: "허성범", title: "[허성범 섭외] 카이스트 AI 크리에이터, 대학 강연 및 브랜드 콘텐츠 섭외", path: "./2026-04-23/허성범_[허성범 섭외] 카이스트 AI 크리에이터, 대학 강연 및 브랜드 콘텐츠 섭외.html" },
       { date: "2026-04-23", person: "궤도", title: "[궤도 섭외] 1세대 과학 커뮤니케이터, 대학 강연 및 AI 시대 기업 특강 섭외", path: "./2026-04-23/궤도_[궤도 섭외] 1세대 과학 커뮤니케이터, 대학 강연 및 AI 시대 기업 특강 섭외.html" },
@@ -499,10 +581,23 @@
       { date: "2026-04-29", person: "카더가든", title: "[카더가든 섭외] 짙은 음색 싱어송라이터, 대학 축제·기업 행사 섭외", path: "./2026-04-29/카더가든_[카더가든 섭외] 짙은 음색 싱어송라이터, 대학 축제·기업 행사 섭외.html" },
       { date: "2026-04-29", person: "인순이", title: "[인순이 강연 섭외] 다문화·도전·자존감 메시지, 기업 특강·공공기관 교육 섭외", path: "./2026-04-29/인순이_[인순이 강연 섭외] 다문화·도전·자존감 메시지, 기업 특강·공공기관 교육 섭외.html" },
       { date: "2026-04-29", person: "박명수", title: "[박명수 강연 섭외] 현실 조언과 유머 소통, 기업 특강·공공기관 교육 섭외", path: "./2026-04-29/박명수_[박명수 강연 섭외] 현실 조언과 유머 소통, 기업 특강·공공기관 교육 섭외.html" },
-      { date: "2026-04-29", person: "조진세·김원훈", title: "[조진세·김원훈 섭외] 숏박스 코미디 듀오, 기업 행사·대학 축제·브랜드 콘텐츠 섭외", path: "./2026-04-29/조진세·김원훈_[조진세·김원훈 섭외] 숏박스 코미디 듀오, 기업 행사·대학 축제·브랜드 콘텐츠 섭외.html" }
+      { date: "2026-04-29", person: "조진세·김원훈", title: "[조진세·김원훈 섭외] 숏박스 코미디 듀오, 기업 행사·대학 축제·브랜드 콘텐츠 섭외", path: "./2026-04-29/조진세·김원훈_[조진세·김원훈 섭외] 숏박스 코미디 듀오, 기업 행사·대학 축제·브랜드 콘텐츠 섭외.html" },
+      { date: "2026-05-06", person: "김계란", title: "[김계란 섭외] 건강·운동 콘텐츠 제작자, 기업 행사·브랜드 캠페인 섭외", path: "./2026-05-06/김계란_[김계란 섭외] 건강·운동 콘텐츠 제작자, 기업 행사·브랜드 캠페인 섭외.html" },
+      { date: "2026-05-06", person: "나민애", title: "[나민애 섭외] 서울대 글쓰기 교수, 기업 인문학·학부모 특강 섭외", path: "./2026-05-06/나민애_[나민애 섭외] 서울대 글쓰기 교수, 기업 인문학·학부모 특강 섭외.html" },
+      { date: "2026-05-06", person: "문세윤", title: "[문세윤 섭외] 먹방·토크 예능 베테랑, 기업 행사·축제 MC 섭외", path: "./2026-05-06/문세윤_[문세윤 섭외] 먹방·토크 예능 베테랑, 기업 행사·축제 MC 섭외.html" },
+      { date: "2026-05-06", person: "서은국", title: "[서은국 섭외] 행복 심리학 권위자, 기업 특강·공공 인문학 강연 섭외", path: "./2026-05-06/서은국_[서은국 섭외] 행복 심리학 권위자, 기업 특강·공공 인문학 강연 섭외.html" },
+      { date: "2026-05-06", person: "이찬원", title: "[이찬원 섭외] 세대를 잇는 트롯테이너, 지역 축제·기업 행사·콘서트 섭외", path: "./2026-05-06/이찬원_[이찬원 섭외] 세대를 잇는 트롯테이너, 지역 축제·기업 행사·콘서트 섭외.html" },
+      { date: "2026-05-06", person: "행사공연", title: "[행사공연] 기업 행사와 지역 축제에 맞는 공연팀 섭외 가이드", path: "./2026-05-06/행사공연_[행사공연] 기업 행사와 지역 축제에 맞는 공연팀 섭외 가이드.html" },
+      { date: "2026-05-06", person: "홍현희", title: "[홍현희 섭외] 리액션 강한 예능 MC, 기업 행사·토크 콘서트 섭외", path: "./2026-05-06/홍현희_[홍현희 섭외] 리액션 강한 예능 MC, 기업 행사·토크 콘서트 섭외.html" }
     ];
 
     const publishedPosts = [
+      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:41","title":"[김계란 섭외] 건강·운동 콘텐츠 제작자, 기업 행사·브랜드 캠페인 섭외","url":"https://blog.naver.com/mih_ent/224276750397"},
+      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:41","title":"[서은국 섭외] 행복 심리학 권위자, 기업 특강·공공 인문학 강연 섭외","url":"https://blog.naver.com/mih_ent/224276750011"},
+      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:41","title":"[문세윤 섭외] 먹방·토크 예능 베테랑, 기업 행사·축제 MC 섭외","url":"https://blog.naver.com/mih_ent/224276749704"},
+      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:40","title":"[나민애 섭외] 서울대 글쓰기 교수, 기업 인문학·학부모 특강 섭외","url":"https://blog.naver.com/mih_ent/224276749240"},
+      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:40","title":"[홍현희 섭외] 리액션 강한 예능 MC, 기업 행사·토크 콘서트 섭외","url":"https://blog.naver.com/mih_ent/224276748850"},
+      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:40","title":"[이찬원 섭외] 세대를 잇는 트롯테이너, 지역 축제·기업 행사·콘서트 섭외","url":"https://blog.naver.com/mih_ent/224276748180"},
       {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:14","title":"[김민석(멜로망스) 섭외] 선물 보컬, 결혼식 축가·기업 송년회·시민 음악회 섭외","url":"https://blog.naver.com/mih_ent/224274553987"},
       {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:13","title":"[송소희 섭외] 경기민요와 팝을 잇는 싱어송라이터, 전통문화 행사·시민 음악회·페스티벌 섭외","url":"https://blog.naver.com/mih_ent/224274552789"},
       {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:13","title":"[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외","url":"https://blog.naver.com/mih_ent/224274551813"},
@@ -573,19 +668,18 @@
     const startDateFilter = document.getElementById("startDateFilter");
     const endDateFilter = document.getElementById("endDateFilter");
     const resetDateFilter = document.getElementById("resetDateFilter");
-    const copyPublishedUrls = document.getElementById("copyPublishedUrls");
+    const showPublished = document.getElementById("showPublished");
+    const publishedModal = document.getElementById("publishedModal");
+    const modalList = document.getElementById("modalList");
+    const closeModal = document.getElementById("closeModal");
+    const refreshRss = document.getElementById("refreshRss");
+    const copyModalUrls = document.getElementById("copyModalUrls");
     const quickDateButtons = Array.from(document.querySelectorAll("[data-quick-date]"));
-    const sourceTabs = Array.from(document.querySelectorAll("[data-source]"));
 
-    let activeSource = "local";
     let activeStartDate = "";
     let activeEndDate = "";
     let activeQuickDate = "";
     let selectedPathValue = "";
-
-    function activeItems() {
-      return activeSource === "published" ? publishedPosts : manuscripts;
-    }
 
     function shouldOpenDirectly() {
       return window.matchMedia("(max-width: 980px)").matches;
@@ -643,7 +737,7 @@
     function filteredItems() {
       const query = search.value.trim().toLowerCase();
       const { startDate, endDate } = selectedDateRange();
-      return activeItems().filter((item) => {
+      return manuscripts.filter((item) => {
         const matchesStart = !startDate || item.date >= startDate;
         const matchesEnd = !endDate || item.date <= endDate;
         const haystack = `${item.person || ""} ${item.title} ${item.date} ${item.publishedAt || ""} ${item.path || ""} ${item.url || ""}`.toLowerCase();
@@ -652,8 +746,7 @@
     }
 
     function localDraftUrl(path) {
-      const normalized = String(path || "").replace(/^\.\//, "");
-      return `/api/draft?path=${encodeURIComponent(normalized)}`;
+      return String(path || "").replace(/^\.\//, "/");
     }
 
     function itemTarget(item) {
@@ -710,13 +803,12 @@
       list.innerHTML = "";
       visibleCount.textContent = items.length;
       empty.style.display = items.length ? "none" : "block";
-      copyPublishedUrls.disabled = publishedItemsForSelectedDates().length === 0;
 
       items.forEach((item) => {
         const target = itemTarget(item);
-        const displayTitle = item.url ? item.title : `${item.person} ${item.title}`;
-        const displayPath = item.url ? item.url : item.path;
-        const badge = item.url ? `발행 · ${item.publishedAt}` : item.date;
+        const displayTitle = `${item.person} ${item.title}`;
+        const displayPath = item.path;
+        const badge = item.date;
         const button = document.createElement("button");
         button.className = "item";
         button.type = "button";
@@ -771,15 +863,72 @@
       render();
     });
 
-    sourceTabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        sourceTabs.forEach((button) => button.classList.remove("active"));
-        tab.classList.add("active");
-        activeSource = tab.dataset.source;
-        setTodayFilter();
-        selectedPathValue = "";
-        render();
-      });
+    function renderModal() {
+      const items = publishedItemsForSelectedDates();
+      const { startDate, endDate } = selectedDateRange();
+      const dateLabel = startDate === endDate && startDate
+        ? startDate
+        : startDate && endDate ? `${startDate} ~ ${endDate}` : "전체";
+      document.getElementById("modalTitle").textContent = `발행 원고 목록 · ${dateLabel}`;
+      copyModalUrls.disabled = items.length === 0;
+
+      if (!items.length) {
+        modalList.innerHTML = `<p class="modal-empty">선택한 날짜에 발행된 원고가 없습니다.</p>`;
+        return;
+      }
+      modalList.innerHTML = items.map((item) => `
+        <div class="modal-post">
+          <div class="modal-post-info">
+            <a class="modal-post-title" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>
+            <span class="modal-post-date">${escapeHtml(item.publishedAt)}</span>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    showPublished.addEventListener("click", () => {
+      renderModal();
+      publishedModal.hidden = false;
+    });
+
+    closeModal.addEventListener("click", () => {
+      publishedModal.hidden = true;
+    });
+
+    publishedModal.addEventListener("click", (e) => {
+      if (e.target === publishedModal) publishedModal.hidden = true;
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !publishedModal.hidden) publishedModal.hidden = true;
+    });
+
+    refreshRss.addEventListener("click", async () => {
+      refreshRss.disabled = true;
+      refreshRss.textContent = "로딩 중...";
+      const ok = await loadRssPosts();
+      refreshRss.textContent = ok ? "완료" : "실패";
+      renderModal();
+      setTimeout(() => {
+        refreshRss.textContent = "↻ 새로고침";
+        refreshRss.disabled = false;
+      }, 1500);
+    });
+
+    copyModalUrls.addEventListener("click", async () => {
+      const urls = [...new Set(publishedItemsForSelectedDates().map((item) => item.url))];
+      if (!urls.length) return;
+      const text = urls.join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        copyModalUrls.textContent = `${urls.length}개 복사됨`;
+        setTimeout(() => {
+          copyModalUrls.textContent = "선택 날짜 URL 모두 복사";
+          copyModalUrls.disabled = false;
+        }, 1500);
+      } catch {
+        window.prompt("아래 발행 URL을 복사하세요.", text);
+      }
     });
 
     copyPath.addEventListener("click", async () => {
@@ -796,34 +945,12 @@
       }
     });
 
-    copyPublishedUrls.addEventListener("click", async () => {
-      const urls = [...new Set(publishedItemsForSelectedDates().map((item) => item.url))];
-      if (!urls.length) {
-        copyPublishedUrls.textContent = "URL 없음";
-        setTimeout(() => {
-          copyPublishedUrls.textContent = "선택 날짜 발행 URL 복사";
-        }, 1200);
-        return;
-      }
-
-      const text = urls.join("\n");
-      try {
-        await navigator.clipboard.writeText(text);
-        copyPublishedUrls.textContent = `${urls.length}개 복사됨`;
-        setTimeout(() => {
-          copyPublishedUrls.textContent = "선택 날짜 발행 URL 복사";
-        }, 1200);
-      } catch {
-        window.prompt("아래 발행 URL을 복사하세요.", text);
-      }
-    });
-
     async function loadRssPosts() {
       try {
         const res = await fetch("/api/rss", { cache: "no-store" });
-        if (!res.ok) return;
+        if (!res.ok) return false;
         const items = await res.json();
-        if (!Array.isArray(items) || !items.length) return;
+        if (!Array.isArray(items) || !items.length) return false;
         const fresh = items.map((item) => ({
           source: "published",
           date: item.date,
@@ -835,8 +962,10 @@
         const merged = [...fresh, ...publishedPosts.filter((p) => !urlSet.has(p.url))];
         merged.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
         publishedPosts.splice(0, publishedPosts.length, ...merged);
-        if (activeSource === "published") render();
-      } catch {}
+        return true;
+      } catch {
+        return false;
+      }
     }
 
     setTodayFilter();

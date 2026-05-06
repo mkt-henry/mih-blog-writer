@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// node update-rss.js -> 네이버 블로그 RSS를 받아 원고_모아보기.html의 발행 목록을 갱신합니다.
+// node update-rss.js -> 네이버 블로그 RSS를 받아 index.html / 원고_모아보기.html 발행 목록을 갱신합니다.
 
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -7,7 +7,10 @@ import { dirname, join } from "path";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const RSS_URL = "https://rss.blog.naver.com/mih_ent.xml";
-const INDEX_PATH = join(__dir, "output", "원고_모아보기.html");
+const TARGET_FILES = [
+  join(__dir, "output", "index.html"),
+  join(__dir, "output", "원고_모아보기.html"),
+];
 
 function parseDate(pubDate) {
   const d = new Date(pubDate);
@@ -105,15 +108,19 @@ async function main() {
     return;
   }
 
-  const html = readFileSync(INDEX_PATH, "utf8");
-  const { html: updated, count } = injectPublishedPosts(html, items);
-  if (!count) {
-    console.log("[원고_모아보기.html] 새 항목 없음");
-    return;
+  let totalCount = 0;
+  for (const filePath of TARGET_FILES) {
+    const fileName = filePath.split(/[/\\]/).pop();
+    const html = readFileSync(filePath, "utf8");
+    const { html: updated, count } = injectPublishedPosts(html, items);
+    if (!count) {
+      console.log(`[${fileName}] 새 항목 없음`);
+      continue;
+    }
+    writeFileSync(filePath, updated, "utf8");
+    console.log(`[${fileName}] ${count}개 항목 추가`);
+    totalCount += count;
   }
-
-  writeFileSync(INDEX_PATH, updated, "utf8");
-  console.log(`[원고_모아보기.html] ${count}개 항목 추가`);
 }
 
 main().catch((err) => {
