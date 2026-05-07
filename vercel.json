@@ -2,6 +2,9 @@
   "functions": {
     "api/draft.js": {
       "includeFiles": "output/**/*.html"
+    },
+    "api/local-files.js": {
+      "includeFiles": "output/**/*.html"
     }
   },
   "rewrites": [

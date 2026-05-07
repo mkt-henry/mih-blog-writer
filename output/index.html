@@ -611,6 +611,101 @@
       }
     }
 
+    .upload-date-sep {
+      padding: 10px 4px 4px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #374151;
+    }
+
+    .upload-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(80px, auto);
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .upload-info { min-width: 0; }
+
+    .upload-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #111827;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+
+    .upload-title .upload-title-sub {
+      color: var(--muted);
+      font-weight: 400;
+      margin-left: 6px;
+    }
+
+    .upload-status {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .upload-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .upload-tag.history {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .upload-status .empty {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .upload-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .upload-actions .upload-btn {
+      height: 28px;
+      padding: 0 10px;
+      font-size: 11px;
+    }
+
+    .upload-actions .upload-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .upload-result {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+      min-width: 80px;
+    }
+
+    .upload-result.ok { color: #047857; }
+    .upload-result.err { color: #b91c1c; }
+
+    @media (max-width: 720px) {
+      .upload-row {
+        grid-template-columns: 1fr;
+      }
+      .upload-result { text-align: left; }
+    }
+
     @media (max-width: 640px) {
       .sidebar,
       .frame-wrap {
@@ -673,6 +768,7 @@
           </div>
         </div>
         <button id="showPublished" class="action primary" style="width:100%">발행 원고 목록 보기</button>
+        <button id="showUpload" class="action" type="button" style="width:100%">📤 로컬 원고 업로드</button>
         <button id="showConfig" class="action" type="button" style="width:100%">⚙️ 계정 명함·CTA 설정</button>
       </div>
 
@@ -697,6 +793,19 @@
       </div>
     </section>
   </main>
+
+  <div id="uploadModal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle" style="max-width: 820px;">
+      <div class="modal-head">
+        <span id="uploadModalTitle" class="modal-title">로컬 원고 업로드</span>
+        <div class="modal-head-actions">
+          <button id="refreshUpload" class="action" type="button">↻ 새로고침</button>
+          <button id="closeUploadModal" class="action" type="button">✕</button>
+        </div>
+      </div>
+      <div id="uploadList" class="modal-list" style="gap:6px"></div>
+    </div>
+  </div>
 
   <div id="configModal" class="modal-overlay" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="configModalTitle" style="max-width: 760px;">
@@ -1160,6 +1269,8 @@ ${cardHtml || ""}
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       if (!publishedModal.hidden) publishedModal.hidden = true;
+      const uploadModalEl = document.getElementById("uploadModal");
+      if (uploadModalEl && !uploadModalEl.hidden) uploadModalEl.hidden = true;
       if (!configModal.hidden) configModal.hidden = true;
     });
 
@@ -1501,6 +1612,120 @@ ${cardHtml || ""}
     showConfig.addEventListener("click", openConfigModal);
     closeConfigModal.addEventListener("click", () => { configModal.hidden = true; });
     configModal.addEventListener("click", (e) => { if (e.target === configModal) configModal.hidden = true; });
+
+    const uploadModal = document.getElementById("uploadModal");
+    const uploadList = document.getElementById("uploadList");
+    const closeUploadModal = document.getElementById("closeUploadModal");
+    const refreshUpload = document.getElementById("refreshUpload");
+    const showUpload = document.getElementById("showUpload");
+
+    async function renderUploadList() {
+      uploadList.innerHTML = `<p class="modal-empty">불러오는 중...</p>`;
+      let files;
+      try {
+        const res = await fetch("/api/local-files", { cache: "no-store" });
+        if (!res.ok) throw new Error(res.status);
+        files = await res.json();
+      } catch {
+        uploadList.innerHTML = `<p class="modal-empty">로컬 파일을 불러올 수 없습니다.<br>vercel dev 또는 프로덕션 배포에서 동작합니다.</p>`;
+        return;
+      }
+      if (!files.length) {
+        uploadList.innerHTML = `<p class="modal-empty">output 폴더에 원고가 없습니다.</p>`;
+        return;
+      }
+      uploadList.innerHTML = "";
+      let prevDate = null;
+      for (const file of files) {
+        if (file.date !== prevDate) {
+          const sep = document.createElement("div");
+          sep.className = "upload-date-sep";
+          sep.textContent = file.date;
+          uploadList.appendChild(sep);
+          prevDate = file.date;
+        }
+        const row = document.createElement("div");
+        row.className = "upload-row";
+        row.dataset.path = file.file_path;
+
+        const tagsHtml = (file.uploaded_to || []).length
+          ? file.uploaded_to.map(s => `<span class="upload-tag${s === "mih_history" ? " history" : ""}">${escapeHtml(AGENCY_NAMES[s] || s)}</span>`).join("")
+          : `<span class="empty">업로드 안 됨</span>`;
+
+        row.innerHTML = `
+          <div class="upload-info">
+            <div class="upload-title">${escapeHtml(file.slug)}<span class="upload-title-sub">${escapeHtml(file.title)}</span></div>
+            <div class="upload-status">${tagsHtml}</div>
+          </div>
+          <div class="upload-actions">
+            ${UPLOAD_AGENCIES.map(slug => `<button class="action upload-btn" data-slug="${slug}" type="button">${escapeHtml(AGENCY_NAMES[slug])}</button>`).join("")}
+          </div>
+          <div class="upload-result"></div>
+        `;
+        attachUploadHandlers(row, file);
+        uploadList.appendChild(row);
+      }
+    }
+
+    const UPLOAD_AGENCIES = ["mih_speaker", "mih_casting", "mih_agency"];
+
+    function attachUploadHandlers(row, file) {
+      const result = row.querySelector(".upload-result");
+      row.querySelectorAll(".upload-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const slug = btn.dataset.slug;
+          const token = getAdminToken();
+          if (!token) return;
+          row.querySelectorAll(".upload-btn").forEach(b => b.disabled = true);
+          result.className = "upload-result";
+          result.textContent = "업로드 중...";
+          try {
+            const html = await fetch(`/${file.file_path}`, { cache: "no-store" }).then(r => r.ok ? r.text() : null);
+            if (html === null) {
+              result.className = "upload-result err";
+              result.textContent = "파일 읽기 실패";
+              return;
+            }
+            const res = await fetch("/api/manuscripts", {
+              method: "POST",
+              headers: { "content-type": "application/json", "authorization": `Bearer ${token}` },
+              body: JSON.stringify({
+                agency: slug,
+                file_path: file.file_path,
+                title: file.title,
+                slug: file.slug,
+                date: file.date,
+                html_content: html
+              })
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              result.className = "upload-result err";
+              result.textContent = `오류: ${err.error || res.status}`;
+              if (res.status === 401) sessionStorage.removeItem("adminToken");
+              return;
+            }
+            result.className = "upload-result ok";
+            result.textContent = "✓ 완료";
+            // 상태 갱신
+            setTimeout(renderUploadList, 600);
+          } catch {
+            result.className = "upload-result err";
+            result.textContent = "업로드 실패";
+          } finally {
+            row.querySelectorAll(".upload-btn").forEach(b => b.disabled = false);
+          }
+        });
+      });
+    }
+
+    showUpload.addEventListener("click", () => {
+      uploadModal.hidden = false;
+      renderUploadList();
+    });
+    closeUploadModal.addEventListener("click", () => { uploadModal.hidden = true; });
+    uploadModal.addEventListener("click", (e) => { if (e.target === uploadModal) uploadModal.hidden = true; });
+    refreshUpload.addEventListener("click", renderUploadList);
 
     agencyTabs.forEach(tab => {
       tab.addEventListener("click", () => {
