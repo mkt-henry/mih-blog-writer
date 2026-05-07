@@ -804,7 +804,15 @@
       </div>
       <div class="modal-list" style="gap:14px">
         <div class="config-field">
-          <label for="uploadDate">날짜 (모든 파일에 적용 · file_path는 <code>YYYY-MM-DD/파일명.html</code>)</label>
+          <label>발행 계정 (모든 파일에 적용)</label>
+          <div id="uploadAgencyTabs" class="agency-tabs" style="margin:0;padding:0;border:0;">
+            <button class="agency-tab active" data-upload-agency="mih_speaker" type="button">스피커</button>
+            <button class="agency-tab" data-upload-agency="mih_casting" type="button">캐스팅</button>
+            <button class="agency-tab" data-upload-agency="mih_agency" type="button">에이전시</button>
+          </div>
+        </div>
+        <div class="config-field">
+          <label for="uploadDate">날짜 (file_path는 <code>YYYY-MM-DD/파일명.html</code>)</label>
           <input id="uploadDate" type="date">
         </div>
         <div class="config-field">
@@ -813,6 +821,7 @@
           <p class="config-hint">파일명은 <code>슬러그_제목.html</code> 패턴이어야 합니다 (예: <code>자우림_[자우림 섭외] 한국 록의 살아있는 명가....html</code>)</p>
         </div>
         <div id="uploadList" style="display:flex;flex-direction:column;gap:6px"></div>
+        <button id="uploadAll" class="action primary" type="button" disabled>선택한 계정으로 모두 업로드</button>
       </div>
     </div>
   </div>
@@ -1629,8 +1638,18 @@ ${cardHtml || ""}
     const uploadFiles = document.getElementById("uploadFiles");
     const closeUploadModal = document.getElementById("closeUploadModal");
     const showUpload = document.getElementById("showUpload");
+    const uploadAgencyTabs = Array.from(document.querySelectorAll("#uploadAgencyTabs .agency-tab"));
+    const uploadAll = document.getElementById("uploadAll");
 
-    const UPLOAD_AGENCIES = ["mih_speaker", "mih_casting", "mih_agency"];
+    let uploadTargetAgency = "mih_speaker";
+    const uploadRows = [];
+
+    uploadAgencyTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        uploadTargetAgency = tab.dataset.uploadAgency;
+        uploadAgencyTabs.forEach(t => t.classList.toggle("active", t === tab));
+      });
+    });
 
     function parseUploadFileName(fileName) {
       const withoutExt = fileName.replace(/\.html?$/i, "");
@@ -1639,59 +1658,60 @@ ${cardHtml || ""}
       return { slug: withoutExt.slice(0, idx), title: withoutExt.slice(idx + 1) };
     }
 
-    function attachUploadRowHandlers(row, file, slug, title) {
+    async function uploadOne(rowState) {
+      const { row, file, slug, title } = rowState;
       const result = row.querySelector(".upload-result");
-      row.querySelectorAll(".upload-btn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const agencySlug = btn.dataset.slug;
-          const date = (uploadDate.value || "").trim();
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-            result.className = "upload-result err";
-            result.textContent = "날짜 입력 필요";
-            return;
-          }
-          const token = getAdminToken();
-          if (!token) return;
-          row.querySelectorAll(".upload-btn").forEach(b => b.disabled = true);
-          result.className = "upload-result";
-          result.textContent = "업로드 중...";
-          try {
-            const html = await file.text();
-            const filePath = `${date}/${file.name}`;
-            const res = await fetch("/api/manuscripts", {
-              method: "POST",
-              headers: { "content-type": "application/json", "authorization": `Bearer ${token}` },
-              body: JSON.stringify({
-                agency: agencySlug,
-                file_path: filePath,
-                title,
-                slug,
-                date,
-                html_content: html
-              })
-            });
-            if (!res.ok) {
-              const err = await res.json().catch(() => ({}));
-              result.className = "upload-result err";
-              result.textContent = `오류: ${err.error || res.status}`;
-              if (res.status === 401) sessionStorage.removeItem("adminToken");
-              return;
-            }
-            result.className = "upload-result ok";
-            result.textContent = `✓ ${AGENCY_NAMES[agencySlug] || agencySlug}`;
-          } catch {
-            result.className = "upload-result err";
-            result.textContent = "업로드 실패";
-          } finally {
-            row.querySelectorAll(".upload-btn").forEach(b => b.disabled = false);
-          }
+      const btn = row.querySelector(".upload-btn");
+      const date = (uploadDate.value || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        result.className = "upload-result err";
+        result.textContent = "날짜 입력 필요";
+        return false;
+      }
+      const token = getAdminToken();
+      if (!token) return false;
+      btn.disabled = true;
+      result.className = "upload-result";
+      result.textContent = "업로드 중...";
+      try {
+        const html = await file.text();
+        const filePath = `${date}/${file.name}`;
+        const res = await fetch("/api/manuscripts", {
+          method: "POST",
+          headers: { "content-type": "application/json", "authorization": `Bearer ${token}` },
+          body: JSON.stringify({
+            agency: uploadTargetAgency,
+            file_path: filePath,
+            title,
+            slug,
+            date,
+            html_content: html
+          })
         });
-      });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          result.className = "upload-result err";
+          result.textContent = `오류: ${err.error || res.status}`;
+          if (res.status === 401) sessionStorage.removeItem("adminToken");
+          return false;
+        }
+        result.className = "upload-result ok";
+        result.textContent = `✓ ${AGENCY_NAMES[uploadTargetAgency] || uploadTargetAgency}`;
+        return true;
+      } catch {
+        result.className = "upload-result err";
+        result.textContent = "업로드 실패";
+        return false;
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     uploadFiles.addEventListener("change", () => {
       const files = Array.from(uploadFiles.files || []);
       uploadList.innerHTML = "";
+      uploadRows.length = 0;
+      uploadAll.disabled = !files.length;
       if (!files.length) return;
       for (const file of files) {
         const { slug, title } = parseUploadFileName(file.name);
@@ -1703,12 +1723,33 @@ ${cardHtml || ""}
             <div class="upload-status"><span class="empty">${escapeHtml(file.name)} · ${(file.size / 1024).toFixed(1)} KB</span></div>
           </div>
           <div class="upload-actions">
-            ${UPLOAD_AGENCIES.map(s => `<button class="action upload-btn" data-slug="${s}" type="button">${escapeHtml(AGENCY_NAMES[s])}</button>`).join("")}
+            <button class="action upload-btn" type="button">업로드</button>
           </div>
           <div class="upload-result"></div>
         `;
-        attachUploadRowHandlers(row, file, slug, title);
+        const rowState = { row, file, slug, title };
+        row.querySelector(".upload-btn").addEventListener("click", () => uploadOne(rowState));
         uploadList.appendChild(row);
+        uploadRows.push(rowState);
+      }
+    });
+
+    uploadAll.addEventListener("click", async () => {
+      if (!uploadRows.length) return;
+      uploadAll.disabled = true;
+      const original = uploadAll.textContent;
+      uploadAll.textContent = "업로드 중...";
+      try {
+        let ok = 0;
+        let fail = 0;
+        for (const r of uploadRows) {
+          const success = await uploadOne(r);
+          if (success) ok++; else fail++;
+        }
+        uploadAll.textContent = `완료 (성공 ${ok} / 실패 ${fail})`;
+        setTimeout(() => { uploadAll.textContent = original; }, 2500);
+      } finally {
+        uploadAll.disabled = false;
       }
     });
 
@@ -1716,6 +1757,8 @@ ${cardHtml || ""}
       uploadDate.value = formatLocalDate(new Date());
       uploadFiles.value = "";
       uploadList.innerHTML = `<p class="modal-empty">위에서 HTML 파일을 선택하세요.</p>`;
+      uploadRows.length = 0;
+      uploadAll.disabled = true;
       uploadModal.hidden = false;
     });
     closeUploadModal.addEventListener("click", () => { uploadModal.hidden = true; });
