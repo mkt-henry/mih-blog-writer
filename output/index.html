@@ -687,6 +687,7 @@
           <span id="selectedPath">왼쪽 목록에서 원고를 선택하면 선택한 계정의 명함과 함께 미리보기가 표시됩니다.</span>
         </div>
         <div class="actions">
+          <button id="copyFileUrl" class="action" type="button" disabled>경로 복사</button>
           <button id="copyContent" class="action" type="button" disabled>콘텐츠 복사</button>
           <button id="copyWriteUrl" class="action primary" type="button" disabled>글쓰기 URL 복사</button>
         </div>
@@ -861,6 +862,7 @@
     const preview = document.getElementById("preview");
     const copyContent = document.getElementById("copyContent");
     const copyWriteUrl = document.getElementById("copyWriteUrl");
+    const copyFileUrl = document.getElementById("copyFileUrl");
     const startDateFilter = document.getElementById("startDateFilter");
     const endDateFilter = document.getElementById("endDateFilter");
     const resetDateFilter = document.getElementById("resetDateFilter");
@@ -1000,6 +1002,7 @@ ${cardHtml || ""}
         preview.removeAttribute("srcdoc");
         copyContent.disabled = true;
         copyWriteUrl.disabled = true;
+        copyFileUrl.disabled = true;
         return;
       }
 
@@ -1014,6 +1017,7 @@ ${cardHtml || ""}
 
       copyContent.disabled = isPublished || isHistory;
       copyWriteUrl.disabled = isHistory;
+      copyFileUrl.disabled = isPublished;
 
       const token = ++renderToken;
 
@@ -1184,6 +1188,21 @@ ${cardHtml || ""}
         }, 1500);
       } catch {
         window.prompt("아래 발행 URL을 복사하세요.", text);
+      }
+    });
+
+    copyFileUrl.addEventListener("click", async () => {
+      if (!selectedItem || copyFileUrl.disabled) return;
+      const rawPath = (selectedItem.file_path || selectedItem.path || "").replace(/^\.\//, "");
+      if (!rawPath) return;
+      const url = `${window.location.origin}/${rawPath}`;
+      const original = copyFileUrl.textContent;
+      try {
+        await navigator.clipboard.writeText(url);
+        copyFileUrl.textContent = "복사됨";
+        setTimeout(() => { copyFileUrl.textContent = original; }, 1500);
+      } catch {
+        window.prompt("경로를 복사하세요:", url);
       }
     });
 

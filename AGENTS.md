@@ -171,21 +171,17 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 <!-- 해시태그 단락 (좌측 정렬, 회색, 13px) -->
 <p class="se-text-paragraph se-text-paragraph-align- " style="" id="SE-hashtag"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">#태그1 #태그2 ...</span></p>
 
-<!-- 에이전시 명함 이미지 (마무리 CTA "▼ 아래 링크로 편하게 ▼" 바로 위에 배치) -->
-<p align="center"><img src="https://mih.bp-studio.com/assets/agency-card.png" width="544"></p>
+<!-- 명함 이미지는 원고에 포함하지 않는다. 모아보기에서 발행 계정 선택 시 자동 합성된다. -->
 ```
 
-**CTA/명함 설정 규칙 — 원고 모아보기 관리값 참조:**
+**CTA/명함 설정 규칙 — 다중 계정 + 자동 합성:**
 
-- 카카오톡 링크와 명함 이미지는 `원고_모아보기` 사이트의 **CTA 설정 관리** 값이 기준이다.
-- 원고 작성 전 가능하면 `https://mih.bp-studio.com/api/agency-config`에서 최신 설정을 확인한다.
-- 카카오톡 링크는 관리 설정에 저장된 실제 오픈채팅 URL을 원고에 직접 표시한다. 현재 기본값은 `https://open.kakao.com/me/madeinheavenagency_`이다.
-- 이미지 src에는 고정 명함 이미지 URL `https://mih.bp-studio.com/assets/agency-card.png`를 사용한다. 실제 이미지는 관리 화면에서 교체한다.
-- 위치: 마무리 CTA 섹션 내부, "▼ 아래 링크로 편하게 문의 남겨주세요 ▼" 안내 **바로 위** — 태그 위아래에 `<p><br></p>` 여백
-- `width="544"`는 네이버 블로그 본문 폭에 맞춘 기본값이다.
-- ⚠️ `data:image/...` 데이터 URI 방식은 네이버 에디터 정책상 차단되므로 절대 사용하지 않는다
-- ⚠️ `src="image.png"` 같은 상대 경로도 복붙 시 이미지가 깨지므로 절대 사용하지 않는다
-- 명함 디자인 또는 오픈채팅 링크 변경 시: `https://mih.bp-studio.com/`의 CTA 설정 관리에서 수정한다.
+- 명함 이미지 태그(`<img src="...agency-card.png">`)는 **원고 본문에 포함하지 않는다**. 작성된 원고는 명함이 비어있는 상태로 저장되고, 모아보기(`https://mih.bp-studio.com/`)에서 발행 계정을 선택하면 그 계정의 명함이 미리보기 끝에 자동으로 붙는다. "콘텐츠 복사" 버튼이 명함 포함 HTML을 클립보드로 복사한다.
+- 명함은 계정별로 다르다 — `mih_speaker` / `mih_casting` / `mih_agency` 각 카드. 모아보기 사이드바의 계정 탭이 어느 명함을 합성할지 결정한다.
+- 카카오톡 오픈채팅 링크 텍스트는 원고 본문에 그대로 작성한다 (계정별로 다를 수 있으니 발행 계정에 맞춰 조정). 모아보기의 **⚙️ 계정 명함·CTA 설정**에 저장된 카카오 URL이 그 계정의 기준값이다.
+- 명함 이미지 또는 카카오 URL 변경 시: 모아보기 사이드바의 **⚙️ 계정 명함·CTA 설정** 모달에서 해당 계정 카드의 파일/URL을 수정 → 저장. 변경 즉시 미리보기와 콘텐츠 복사에 반영된다.
+- ⚠️ 원고에 명함 `<img>` 태그를 직접 넣으면 모아보기에서 합성된 명함과 **중복**된다. 절대 넣지 않는다.
+- ⚠️ `data:image/...` 데이터 URI는 네이버 에디터 정책상 차단되므로 사용하지 않는다.
 
 ### 표(Table) — 시각적 통일성 유지
 
@@ -320,8 +316,7 @@ console.log('sentence spacing applied');
 - [ ] 이미지 출처 표기(`<p>` 가운데 정렬, 회색 13px) 정확히 4개, 모두 `출처 - [아티스트명] 공식 SNS` 형식인가
 - [ ] 유튜브 URL 정확히 2개 (raw URL, iframe 금지, 1개/3개 이상 금지)
 - [ ] 따옴표 인용구 1~2회 (도입부/핵심 메시지/마무리)
-- [ ] 마무리 CTA 블록에 명함 이미지가 카카오톡 링크 **바로 위** 에 삽입되어 있는가
-- [ ] 명함 이미지 src가 **고정 명함 이미지 URL** `https://mih.bp-studio.com/assets/agency-card.png`와 정확히 일치하는가
+- [ ] 원고 본문에 명함 `<img>` 태그가 들어 있지 않은가 (모아보기에서 자동 합성되므로 본문에 넣으면 중복)
 - [ ] `data:image/...` 또는 상대 경로 `image.png` 형태로 참조되지 않는가 (둘 다 네이버 에디터에서 깨짐)
 - [ ] 마무리 CTA + 카카오톡 오픈채팅 링크
 - [ ] 해시태그 단락 20개 이상
@@ -346,15 +341,23 @@ console.log('sentence spacing applied');
 # 에이전시 고정 정보
 
 - **에이전시명:** 메이드인헤븐
-- **카카오톡 오픈채팅 원고용 링크:** `https://open.kakao.com/me/madeinheavenagency_` (관리 사이트에서 실제 오픈채팅 URL 수정)
-- **에이전시 명함 이미지 원고용 URL** (관리 사이트에서 실제 이미지 교체):
-
-```
-https://mih.bp-studio.com/assets/agency-card.png
-```
-
-- 최신 설정 확인 API: `https://mih.bp-studio.com/api/agency-config`
-- 관리 화면: `https://mih.bp-studio.com/` → CTA 설정 관리
+- **활성 발행 계정:** `mih_speaker` (스피커), `mih_casting` (캐스팅), `mih_agency` (에이전시) — 각 계정마다 명함과 카카오 URL이 다름. 발행 시점에 모아보기에서 어느 계정에 올릴지 선택한다.
+- 명함과 카카오 URL은 **원고 본문에 직접 넣지 않는다**. 모아보기가 발행 계정의 명함을 미리보기에 자동 합성한다.
+- 최신 설정 확인 API (계정별): `https://mih.bp-studio.com/api/agency-config?agency={slug}`
+- 관리 화면: `https://mih.bp-studio.com/` → 사이드바 **⚙️ 계정 명함·CTA 설정** 모달에서 3개 계정을 한 화면에서 관리한다.
 - `data:image/...` 데이터 URI 방식은 네이버 스마트에디터가 보안상 차단하므로 **절대 사용 금지**
 - 상대 경로(`src="image.png"`)도 복붙 시 깨지므로 **절대 사용 금지**
 - **톤:** 정중한 존댓말, 행사 기획 담당자 대상, 과장 없음
+
+# 발행 워크플로우 (작성 → 모아보기 → 네이버 블로그)
+
+1. 원고를 본문 HTML로 작성한다 (명함 `<img>` 태그 포함하지 않음).
+2. 원고를 `manuscripts` 테이블에 저장한다 (어느 활성 계정 풀에 둘지 결정).
+3. 모아보기(`https://mih.bp-studio.com/`)에서:
+   - 사이드바 좌측 상단 탭에서 **발행 계정** 선택 (스피커/캐스팅/에이전시)
+   - 좌측 목록에서 발행할 원고 클릭 → 우측 미리보기에 원고 + 그 계정의 명함이 합쳐서 표시됨
+   - 우측 상단 **콘텐츠 복사** 버튼 클릭 → 명함 포함 HTML이 클립보드로 복사됨
+   - **글쓰기 URL 복사** 버튼 클릭 → `https://blog.naver.com/{slug}/postwrite` URL이 클립보드로 복사됨
+4. 브라우저 주소창에 글쓰기 URL을 붙여넣어 네이버 블로그 글쓰기 페이지를 연다.
+5. HTML 모드에 콘텐츠를 붙여넣고 발행한다.
+6. **이력 탭**(`mih_history`)은 이미 발행된 원고를 모아 보는 읽기 전용 영역이므로 발행 액션이 비활성화된다.
