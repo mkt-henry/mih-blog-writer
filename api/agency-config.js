@@ -25,7 +25,8 @@ export async function PUT(request) {
     ...current,
     kakaoUrl: String(body.kakaoUrl || current.kakaoUrl).trim(),
     businessCardImageUrl: String(body.businessCardImageUrl || current.businessCardImageUrl).trim(),
-    businessCardWidth: Number(body.businessCardWidth || current.businessCardWidth || 544)
+    businessCardWidth: Number(body.businessCardWidth || current.businessCardWidth || 544),
+    rssUrl: typeof body.rssUrl === "string" ? body.rssUrl.trim() : (current.rssUrl || "")
   };
 
   const validation = validateConfig(next);
@@ -41,11 +42,13 @@ export async function POST(request) {
 
   const current = await readAgencyConfig(slug, request);
   const form = await request.formData();
+  const rssRaw = form.get("rssUrl");
   const next = {
     ...current,
     kakaoUrl: String(form.get("kakaoUrl") || current.kakaoUrl).trim(),
     businessCardImageUrl: String(form.get("businessCardImageUrl") || current.businessCardImageUrl).trim(),
-    businessCardWidth: Number(form.get("businessCardWidth") || current.businessCardWidth || 544)
+    businessCardWidth: Number(form.get("businessCardWidth") || current.businessCardWidth || 544),
+    rssUrl: typeof rssRaw === "string" ? rssRaw.trim() : (current.rssUrl || "")
   };
 
   const file = form.get("businessCardImage");
@@ -79,6 +82,16 @@ function validateConfig(config) {
   }
   if (!Number.isFinite(config.businessCardWidth) || config.businessCardWidth < 200 || config.businessCardWidth > 900) {
     return json({ error: "Business card image width must be a number between 200 and 900." }, { status: 400 });
+  }
+  if (config.rssUrl) {
+    try {
+      const u = new URL(config.rssUrl);
+      if (u.protocol !== "https:" && u.protocol !== "http:") {
+        return json({ error: "RSS URL must start with http:// or https://." }, { status: 400 });
+      }
+    } catch {
+      return json({ error: "RSS URL must be a valid URL." }, { status: 400 });
+    }
   }
   return null;
 }

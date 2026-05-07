@@ -1444,12 +1444,12 @@
           <input class="biz-card-file" type="file" accept="image/png,image/jpeg">
         </div>
         <div class="config-field">
-          <label>명함 너비 (200~900 px)</label>
-          <input class="biz-card-width" type="number" min="200" max="900" step="1" value="${Number(data.businessCardWidth) || 544}">
-        </div>
-        <div class="config-field">
           <label>카카오 오픈채팅 URL</label>
           <input class="kakao-url" type="url" placeholder="https://open.kakao.com/..." value="${escapeHtml(data.kakaoUrl || "")}">
+        </div>
+        <div class="config-field">
+          <label>RSS URL</label>
+          <input class="rss-url" type="url" placeholder="https://rss.blog.naver.com/${escapeHtml(slug)}.xml" value="${escapeHtml(data.rssUrl || "")}">
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:2px">
           <button class="action primary save-btn" type="button" style="flex:1">저장</button>
@@ -1464,8 +1464,8 @@
     function attachConfigCardHandlers(card) {
       const slug = card.dataset.slug;
       const fileInput = card.querySelector(".biz-card-file");
-      const widthInput = card.querySelector(".biz-card-width");
       const kakaoInput = card.querySelector(".kakao-url");
+      const rssInput = card.querySelector(".rss-url");
       const saveBtn = card.querySelector(".save-btn");
       const status = card.querySelector(".config-card-status");
       if (!saveBtn) return;
@@ -1507,7 +1507,7 @@
           if (file) {
             const fd = new FormData();
             fd.append("kakaoUrl", kakaoInput.value.trim());
-            fd.append("businessCardWidth", String(widthInput.value || 544));
+            fd.append("rssUrl", rssInput.value.trim());
             fd.append("businessCardImage", file);
             res = await fetch(`/api/agency-config?agency=${encodeURIComponent(slug)}`, { method: "POST", body: fd });
           } else {
@@ -1516,7 +1516,7 @@
               headers: { "content-type": "application/json" },
               body: JSON.stringify({
                 kakaoUrl: kakaoInput.value.trim(),
-                businessCardWidth: Number(widthInput.value || 544)
+                rssUrl: rssInput.value.trim()
               })
             });
           }
