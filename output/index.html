@@ -797,13 +797,23 @@
   <div id="uploadModal" class="modal-overlay" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle" style="max-width: 820px;">
       <div class="modal-head">
-        <span id="uploadModalTitle" class="modal-title">로컬 원고 업로드</span>
+        <span id="uploadModalTitle" class="modal-title">HTML 원고 업로드</span>
         <div class="modal-head-actions">
-          <button id="refreshUpload" class="action" type="button">↻ 새로고침</button>
           <button id="closeUploadModal" class="action" type="button">✕</button>
         </div>
       </div>
-      <div id="uploadList" class="modal-list" style="gap:6px"></div>
+      <div class="modal-list" style="gap:14px">
+        <div class="config-field">
+          <label for="uploadDate">날짜 (모든 파일에 적용 · file_path는 <code>YYYY-MM-DD/파일명.html</code>)</label>
+          <input id="uploadDate" type="date">
+        </div>
+        <div class="config-field">
+          <label for="uploadFiles">HTML 파일 선택 (여러 개 가능)</label>
+          <input id="uploadFiles" type="file" accept=".html,text/html" multiple>
+          <p class="config-hint">파일명은 <code>슬러그_제목.html</code> 패턴이어야 합니다 (예: <code>자우림_[자우림 섭외] 한국 록의 살아있는 명가....html</code>)</p>
+        </div>
+        <div id="uploadList" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
     </div>
   </div>
 
@@ -1615,86 +1625,48 @@ ${cardHtml || ""}
 
     const uploadModal = document.getElementById("uploadModal");
     const uploadList = document.getElementById("uploadList");
+    const uploadDate = document.getElementById("uploadDate");
+    const uploadFiles = document.getElementById("uploadFiles");
     const closeUploadModal = document.getElementById("closeUploadModal");
-    const refreshUpload = document.getElementById("refreshUpload");
     const showUpload = document.getElementById("showUpload");
-
-    async function renderUploadList() {
-      uploadList.innerHTML = `<p class="modal-empty">불러오는 중...</p>`;
-      let files;
-      try {
-        const res = await fetch("/api/local-files", { cache: "no-store" });
-        if (!res.ok) throw new Error(res.status);
-        files = await res.json();
-      } catch {
-        uploadList.innerHTML = `<p class="modal-empty">로컬 파일을 불러올 수 없습니다.<br>vercel dev 또는 프로덕션 배포에서 동작합니다.</p>`;
-        return;
-      }
-      if (!files.length) {
-        uploadList.innerHTML = `<p class="modal-empty">output 폴더에 원고가 없습니다.</p>`;
-        return;
-      }
-      uploadList.innerHTML = "";
-      let prevDate = null;
-      for (const file of files) {
-        if (file.date !== prevDate) {
-          const sep = document.createElement("div");
-          sep.className = "upload-date-sep";
-          sep.textContent = file.date;
-          uploadList.appendChild(sep);
-          prevDate = file.date;
-        }
-        const row = document.createElement("div");
-        row.className = "upload-row";
-        row.dataset.path = file.file_path;
-
-        const tagsHtml = (file.uploaded_to || []).length
-          ? file.uploaded_to.map(s => `<span class="upload-tag${s === "mih_history" ? " history" : ""}">${escapeHtml(AGENCY_NAMES[s] || s)}</span>`).join("")
-          : `<span class="empty">업로드 안 됨</span>`;
-
-        row.innerHTML = `
-          <div class="upload-info">
-            <div class="upload-title">${escapeHtml(file.slug)}<span class="upload-title-sub">${escapeHtml(file.title)}</span></div>
-            <div class="upload-status">${tagsHtml}</div>
-          </div>
-          <div class="upload-actions">
-            ${UPLOAD_AGENCIES.map(slug => `<button class="action upload-btn" data-slug="${slug}" type="button">${escapeHtml(AGENCY_NAMES[slug])}</button>`).join("")}
-          </div>
-          <div class="upload-result"></div>
-        `;
-        attachUploadHandlers(row, file);
-        uploadList.appendChild(row);
-      }
-    }
 
     const UPLOAD_AGENCIES = ["mih_speaker", "mih_casting", "mih_agency"];
 
-    function attachUploadHandlers(row, file) {
+    function parseUploadFileName(fileName) {
+      const withoutExt = fileName.replace(/\.html?$/i, "");
+      const idx = withoutExt.indexOf("_");
+      if (idx === -1) return { slug: withoutExt, title: withoutExt };
+      return { slug: withoutExt.slice(0, idx), title: withoutExt.slice(idx + 1) };
+    }
+
+    function attachUploadRowHandlers(row, file, slug, title) {
       const result = row.querySelector(".upload-result");
       row.querySelectorAll(".upload-btn").forEach(btn => {
         btn.addEventListener("click", async () => {
-          const slug = btn.dataset.slug;
+          const agencySlug = btn.dataset.slug;
+          const date = (uploadDate.value || "").trim();
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            result.className = "upload-result err";
+            result.textContent = "날짜 입력 필요";
+            return;
+          }
           const token = getAdminToken();
           if (!token) return;
           row.querySelectorAll(".upload-btn").forEach(b => b.disabled = true);
           result.className = "upload-result";
           result.textContent = "업로드 중...";
           try {
-            const html = await fetch(`/${file.file_path}`, { cache: "no-store" }).then(r => r.ok ? r.text() : null);
-            if (html === null) {
-              result.className = "upload-result err";
-              result.textContent = "파일 읽기 실패";
-              return;
-            }
+            const html = await file.text();
+            const filePath = `${date}/${file.name}`;
             const res = await fetch("/api/manuscripts", {
               method: "POST",
               headers: { "content-type": "application/json", "authorization": `Bearer ${token}` },
               body: JSON.stringify({
-                agency: slug,
-                file_path: file.file_path,
-                title: file.title,
-                slug: file.slug,
-                date: file.date,
+                agency: agencySlug,
+                file_path: filePath,
+                title,
+                slug,
+                date,
                 html_content: html
               })
             });
@@ -1706,9 +1678,7 @@ ${cardHtml || ""}
               return;
             }
             result.className = "upload-result ok";
-            result.textContent = "✓ 완료";
-            // 상태 갱신
-            setTimeout(renderUploadList, 600);
+            result.textContent = `✓ ${AGENCY_NAMES[agencySlug] || agencySlug}`;
           } catch {
             result.className = "upload-result err";
             result.textContent = "업로드 실패";
@@ -1719,13 +1689,37 @@ ${cardHtml || ""}
       });
     }
 
+    uploadFiles.addEventListener("change", () => {
+      const files = Array.from(uploadFiles.files || []);
+      uploadList.innerHTML = "";
+      if (!files.length) return;
+      for (const file of files) {
+        const { slug, title } = parseUploadFileName(file.name);
+        const row = document.createElement("div");
+        row.className = "upload-row";
+        row.innerHTML = `
+          <div class="upload-info">
+            <div class="upload-title">${escapeHtml(slug)}<span class="upload-title-sub">${escapeHtml(title)}</span></div>
+            <div class="upload-status"><span class="empty">${escapeHtml(file.name)} · ${(file.size / 1024).toFixed(1)} KB</span></div>
+          </div>
+          <div class="upload-actions">
+            ${UPLOAD_AGENCIES.map(s => `<button class="action upload-btn" data-slug="${s}" type="button">${escapeHtml(AGENCY_NAMES[s])}</button>`).join("")}
+          </div>
+          <div class="upload-result"></div>
+        `;
+        attachUploadRowHandlers(row, file, slug, title);
+        uploadList.appendChild(row);
+      }
+    });
+
     showUpload.addEventListener("click", () => {
+      uploadDate.value = formatLocalDate(new Date());
+      uploadFiles.value = "";
+      uploadList.innerHTML = `<p class="modal-empty">위에서 HTML 파일을 선택하세요.</p>`;
       uploadModal.hidden = false;
-      renderUploadList();
     });
     closeUploadModal.addEventListener("click", () => { uploadModal.hidden = true; });
     uploadModal.addEventListener("click", (e) => { if (e.target === uploadModal) uploadModal.hidden = true; });
-    refreshUpload.addEventListener("click", renderUploadList);
 
     agencyTabs.forEach(tab => {
       tab.addEventListener("click", () => {
