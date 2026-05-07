@@ -556,6 +556,58 @@
       cursor: not-allowed;
     }
 
+    .config-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .config-field > label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #374151;
+    }
+
+    .config-field input[type="url"],
+    .config-field input[type="number"],
+    .config-field input[type="text"],
+    .config-field input[type="file"] {
+      width: 100%;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 10px;
+      background: #fff;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .config-field input[type="file"] {
+      padding: 7px 10px;
+    }
+
+    .config-field input:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(36, 84, 166, 0.14);
+    }
+
+    .config-preview {
+      display: block;
+      max-width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .config-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
     @media (max-width: 640px) {
       .sidebar,
       .frame-wrap {
@@ -618,6 +670,7 @@
           </div>
         </div>
         <button id="showPublished" class="action primary" style="width:100%">발행 원고 목록 보기</button>
+        <button id="showConfig" class="action" type="button" style="width:100%">⚙️ 계정 명함·CTA 설정</button>
       </div>
 
       <div id="list" class="list"></div>
@@ -656,6 +709,40 @@
       </div>
     </section>
   </main>
+
+  <div id="configModal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
+      <div class="modal-head">
+        <span id="configModalTitle" class="modal-title">계정 설정</span>
+        <div class="modal-head-actions">
+          <button id="closeConfigModal" class="action" type="button">✕</button>
+        </div>
+      </div>
+      <div class="modal-list" style="gap:14px">
+        <div class="config-field">
+          <label>현재 명함 이미지</label>
+          <img id="bizCardPreview" class="config-preview" alt="명함 미리보기">
+          <p id="bizCardEmpty" class="config-hint" hidden>등록된 명함 이미지가 없습니다.</p>
+        </div>
+        <div class="config-field">
+          <label for="bizCardFile">새 명함 이미지 (PNG/JPG, 3MB 이하)</label>
+          <input id="bizCardFile" type="file" accept="image/png,image/jpeg">
+          <p class="config-hint">파일을 선택하면 미리보기에 반영됩니다. 저장을 눌러야 업로드됩니다.</p>
+        </div>
+        <div class="config-field">
+          <label for="bizCardWidth">명함 너비 (200~900 px)</label>
+          <input id="bizCardWidth" type="number" min="200" max="900" step="1">
+        </div>
+        <div class="config-field">
+          <label for="kakaoUrl">카카오 오픈채팅 URL</label>
+          <input id="kakaoUrl" type="url" placeholder="https://open.kakao.com/...">
+        </div>
+      </div>
+      <div class="modal-foot" style="display:flex;gap:8px">
+        <button id="saveConfig" class="action primary" type="button" style="flex:1">저장</button>
+      </div>
+    </div>
+  </div>
 
   <div id="publishedModal" class="modal-overlay" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -1048,7 +1135,9 @@
     });
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !publishedModal.hidden) publishedModal.hidden = true;
+      if (e.key !== "Escape") return;
+      if (!publishedModal.hidden) publishedModal.hidden = true;
+      if (!configModal.hidden) configModal.hidden = true;
     });
 
     refreshRss.addEventListener("click", async () => {
@@ -1259,6 +1348,100 @@
         window.prompt("명함 HTML을 복사하세요:", config.businessCardHtml);
       }
     });
+
+    const configModal = document.getElementById("configModal");
+    const configModalTitle = document.getElementById("configModalTitle");
+    const closeConfigModal = document.getElementById("closeConfigModal");
+    const bizCardPreview = document.getElementById("bizCardPreview");
+    const bizCardEmpty = document.getElementById("bizCardEmpty");
+    const bizCardFile = document.getElementById("bizCardFile");
+    const bizCardWidth = document.getElementById("bizCardWidth");
+    const kakaoUrlInput = document.getElementById("kakaoUrl");
+    const saveConfig = document.getElementById("saveConfig");
+    const showConfig = document.getElementById("showConfig");
+
+    function setBizCardPreview(src) {
+      if (src) {
+        bizCardPreview.src = src;
+        bizCardPreview.style.display = "block";
+        bizCardEmpty.hidden = true;
+      } else {
+        bizCardPreview.removeAttribute("src");
+        bizCardPreview.style.display = "none";
+        bizCardEmpty.hidden = false;
+      }
+    }
+
+    async function openConfigModal() {
+      configModalTitle.textContent = `${AGENCY_NAMES[currentAgency] || currentAgency} 명함·CTA 설정`;
+      bizCardFile.value = "";
+      agencyConfigCache.delete(currentAgency);
+      try {
+        const res = await fetch(`/api/agency-config?agency=${encodeURIComponent(currentAgency)}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(res.status);
+        const config = await res.json();
+        agencyConfigCache.set(currentAgency, config);
+        setBizCardPreview(config.businessCardHtmlUrl || "");
+        bizCardWidth.value = config.businessCardWidth || 544;
+        kakaoUrlInput.value = config.kakaoUrl || "";
+        configModal.hidden = false;
+      } catch {
+        alert("설정을 불러올 수 없습니다. 로컬에서는 API가 동작하지 않을 수 있습니다.");
+      }
+    }
+
+    bizCardFile.addEventListener("change", () => {
+      const f = bizCardFile.files?.[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = (e) => setBizCardPreview(e.target.result);
+      reader.readAsDataURL(f);
+    });
+
+    saveConfig.addEventListener("click", async () => {
+      saveConfig.disabled = true;
+      const original = saveConfig.textContent;
+      saveConfig.textContent = "저장 중...";
+      try {
+        const file = bizCardFile.files?.[0];
+        let res;
+        if (file) {
+          const fd = new FormData();
+          fd.append("kakaoUrl", kakaoUrlInput.value.trim());
+          fd.append("businessCardWidth", String(bizCardWidth.value || 544));
+          fd.append("businessCardImage", file);
+          res = await fetch(`/api/agency-config?agency=${encodeURIComponent(currentAgency)}`, { method: "POST", body: fd });
+        } else {
+          res = await fetch(`/api/agency-config?agency=${encodeURIComponent(currentAgency)}`, {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              kakaoUrl: kakaoUrlInput.value.trim(),
+              businessCardWidth: Number(bizCardWidth.value || 544)
+            })
+          });
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert(`오류: ${err.error || res.status}`);
+          return;
+        }
+        const saved = await res.json();
+        agencyConfigCache.set(currentAgency, saved);
+        setBizCardPreview(saved.businessCardHtmlUrl || "");
+        bizCardFile.value = "";
+        saveConfig.textContent = "저장됨";
+        setTimeout(() => { configModal.hidden = true; saveConfig.textContent = original; }, 800);
+      } catch {
+        alert("저장 실패");
+      } finally {
+        saveConfig.disabled = false;
+      }
+    });
+
+    showConfig.addEventListener("click", openConfigModal);
+    closeConfigModal.addEventListener("click", () => { configModal.hidden = true; });
+    configModal.addEventListener("click", (e) => { if (e.target === configModal) configModal.hidden = true; });
 
     copyWriteUrl.addEventListener("click", async () => {
       if (selectedDraftAgency === "mih_history") return;
