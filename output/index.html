@@ -490,72 +490,6 @@
       color: #6b7280 !important;
     }
 
-    .draft-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      padding: 10px 20px;
-      border-bottom: 1px solid var(--line);
-      background: #f9fafb;
-    }
-
-    .draft-agency-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .draft-label {
-      font-size: 11px;
-      font-weight: 800;
-      color: var(--muted);
-      white-space: nowrap;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .draft-tabs {
-      display: flex;
-      gap: 4px;
-    }
-
-    .draft-tab {
-      height: 28px;
-      padding: 0 10px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: #ffffff;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s, color 0.15s;
-    }
-
-    .draft-tab.active {
-      border-color: var(--brand);
-      background: var(--brand-soft);
-      color: var(--brand);
-    }
-
-    .draft-tab.history {
-      background: #f3f4f6;
-      color: #9ca3af;
-    }
-
-    .draft-tab.history.active {
-      border-color: #9ca3af;
-      background: #e5e7eb;
-      color: #6b7280;
-    }
-
-    .draft-tab:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
     .config-field {
       display: grid;
       gap: 6px;
@@ -750,27 +684,11 @@
       <div class="viewer-bar">
         <div class="viewer-title">
           <strong id="selectedTitle">원고를 선택하세요</strong>
-          <span id="selectedPath">목록에서 파일을 선택하면 이 영역에 원본 HTML이 표시됩니다.</span>
+          <span id="selectedPath">왼쪽 목록에서 원고를 선택하면 선택한 계정의 명함과 함께 미리보기가 표시됩니다.</span>
         </div>
         <div class="actions">
-          <button id="copyPath" class="action" type="button">경로 복사</button>
-          <a id="openLink" class="action primary" href="#" target="_blank" rel="noopener">새 탭 열기</a>
-        </div>
-      </div>
-      <div id="draftBar" class="draft-bar" hidden>
-        <div class="draft-agency-row">
-          <span class="draft-label">업로드 계정</span>
-          <div class="draft-tabs">
-            <button class="draft-tab" data-draft-agency="mih_speaker" type="button">스피커</button>
-            <button class="draft-tab" data-draft-agency="mih_casting" type="button">캐스팅</button>
-            <button class="draft-tab" data-draft-agency="mih_agency" type="button">에이전시</button>
-            <button class="draft-tab history" data-draft-agency="mih_history" type="button">이력</button>
-          </div>
-        </div>
-        <div class="actions" style="gap:6px">
-          <button id="copyBizCard" class="action" type="button" style="font-size:12px;height:32px">명함 복사</button>
-          <button id="copyWriteUrl" class="action" type="button" style="font-size:12px;height:32px">URL 복사</button>
-          <a id="openWrite" class="action primary" href="#" target="_blank" rel="noopener" style="font-size:12px;height:32px">글쓰기 열기</a>
+          <button id="copyContent" class="action" type="button" disabled>콘텐츠 복사</button>
+          <button id="copyWriteUrl" class="action primary" type="button" disabled>글쓰기 URL 복사</button>
         </div>
       </div>
       <div class="frame-wrap">
@@ -815,7 +733,6 @@
     let currentAgency = "mih_speaker";
     let loading = false;
     let selectedItem = null;
-    let selectedDraftAgency = "mih_speaker";
     const agencyConfigCache = new Map();
 
     const _manuscripts = [
@@ -942,8 +859,8 @@
     const selectedTitle = document.getElementById("selectedTitle");
     const selectedPath = document.getElementById("selectedPath");
     const preview = document.getElementById("preview");
-    const openLink = document.getElementById("openLink");
-    const copyPath = document.getElementById("copyPath");
+    const copyContent = document.getElementById("copyContent");
+    const copyWriteUrl = document.getElementById("copyWriteUrl");
     const startDateFilter = document.getElementById("startDateFilter");
     const endDateFilter = document.getElementById("endDateFilter");
     const resetDateFilter = document.getElementById("resetDateFilter");
@@ -1033,51 +950,106 @@
       return item.url || draftApiUrl(item.path || item.file_path);
     }
 
-    function selectItem(item) {
-      selectedItem = item;
-      updateDraftBar(item);
-      const target = itemTarget(item);
-      const displayTitle = item.url ? item.title : `${item.person} ${item.title}`;
-      selectedPathValue = target;
-      selectedTitle.textContent = displayTitle;
-      selectedPath.textContent = item.url ? `${item.publishedAt} · ${item.url}` : (item.file_path || item.path);
-      openLink.href = target;
-      openLink.textContent = item.url ? "블로그 열기" : "새 탭 열기";
+    let renderToken = 0;
 
-      if (item.url) {
-        preview.removeAttribute("src");
-        preview.srcdoc = `
-          <!doctype html>
-          <html lang="ko">
-          <head>
-            <meta charset="utf-8">
-            <style>
-              body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif; background:#fff; color:#222; }
-              main { max-width:760px; margin:0 auto; padding:48px 28px; line-height:1.7; }
-              .badge { display:inline-block; margin-bottom:16px; padding:6px 10px; border-radius:999px; background:#e7eefc; color:#2454a6; font-weight:700; font-size:13px; }
-              h1 { margin:0 0 16px; font-size:26px; line-height:1.35; letter-spacing:0; }
-              p { margin:0 0 24px; color:#555; }
-              a { display:inline-flex; align-items:center; justify-content:center; height:42px; padding:0 14px; border-radius:8px; background:#2454a6; color:#fff; text-decoration:none; font-weight:700; }
-            </style>
-          </head>
-          <body>
-            <main>
-              <span class="badge">네이버 블로그 발행 원고 · ${escapeHtml(item.publishedAt)}</span>
-              <h1>${escapeHtml(item.title)}</h1>
-              <p>RSS에서 확인된 실제 발행 글입니다. 네이버 블로그 원문은 아래 버튼 또는 우측 상단의 블로그 열기 버튼으로 확인하세요.</p>
-              <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">네이버 블로그에서 보기</a>
-            </main>
-          </body>
-          </html>
-        `;
-      } else {
-        preview.removeAttribute("srcdoc");
-        preview.src = target;
-      }
+    function buildPublishedPreview(item) {
+      return `<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><style>
+body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif; background:#fff; color:#222; }
+main { max-width:760px; margin:0 auto; padding:48px 28px; line-height:1.7; }
+.badge { display:inline-block; margin-bottom:16px; padding:6px 10px; border-radius:999px; background:#e7eefc; color:#2454a6; font-weight:700; font-size:13px; }
+h1 { margin:0 0 16px; font-size:26px; line-height:1.35; }
+p { margin:0 0 24px; color:#555; }
+a { display:inline-flex; align-items:center; justify-content:center; height:42px; padding:0 14px; border-radius:8px; background:#2454a6; color:#fff; text-decoration:none; font-weight:700; }
+</style></head><body>
+<main>
+  <span class="badge">네이버 블로그 발행 원고 · ${escapeHtml(item.publishedAt)}</span>
+  <h1>${escapeHtml(item.title)}</h1>
+  <p>RSS에서 확인된 실제 발행 글입니다.</p>
+  <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">네이버 블로그에서 보기</a>
+</main>
+</body></html>`;
+    }
 
+    function buildDraftPreview(originalHtml, cardHtml) {
+      return `<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><style>
+body { margin:0; padding:24px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif; color:#222; background:#fff; line-height:1.6; }
+img { max-width:100%; height:auto; }
+hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
+</style></head><body>
+${originalHtml || ""}
+${cardHtml || ""}
+</body></html>`;
+    }
+
+    function setHighlight(target) {
       Array.from(document.querySelectorAll(".item")).forEach((button) => {
         button.classList.toggle("active", button.dataset.path === target);
       });
+    }
+
+    async function renderPreview() {
+      const item = selectedItem;
+      const isHistory = currentAgency === "mih_history";
+
+      if (!item) {
+        selectedTitle.textContent = "원고를 선택하세요";
+        selectedPath.textContent = "왼쪽 목록에서 원고를 선택하면 선택한 계정의 명함과 함께 미리보기가 표시됩니다.";
+        preview.removeAttribute("src");
+        preview.removeAttribute("srcdoc");
+        copyContent.disabled = true;
+        copyWriteUrl.disabled = true;
+        return;
+      }
+
+      const isPublished = !!item.url;
+      if (isPublished) {
+        selectedTitle.textContent = item.title;
+        selectedPath.textContent = `${item.publishedAt} · ${item.url}`;
+      } else {
+        selectedTitle.textContent = `${item.person} ${item.title}`;
+        selectedPath.textContent = item.file_path || item.path;
+      }
+
+      copyContent.disabled = isPublished || isHistory;
+      copyWriteUrl.disabled = isHistory;
+
+      const token = ++renderToken;
+
+      if (isPublished) {
+        preview.removeAttribute("src");
+        preview.srcdoc = buildPublishedPreview(item);
+        return;
+      }
+
+      preview.removeAttribute("src");
+      preview.srcdoc = `<!doctype html><html><body style="font-family:sans-serif;padding:24px;color:#999">로딩 중...</body></html>`;
+
+      try {
+        const path = item.file_path || item.path;
+        const targetUrl = draftApiUrl(path);
+        const fetchOriginal = fetch(targetUrl, { cache: "no-store" }).then(r => r.ok ? r.text() : null);
+        const fetchConfig = isHistory ? Promise.resolve(null) : getAgencyConfig(currentAgency);
+        const [originalHtml, config] = await Promise.all([fetchOriginal, fetchConfig]);
+        if (token !== renderToken) return;
+        if (!originalHtml) {
+          preview.srcdoc = `<!doctype html><html><body style="font-family:sans-serif;padding:24px;color:#b00">원고를 불러올 수 없습니다.<br><small>로컬에서는 vercel dev가 필요합니다.</small></body></html>`;
+          return;
+        }
+        preview.srcdoc = buildDraftPreview(originalHtml, config?.businessCardHtml || "");
+      } catch {
+        if (token !== renderToken) return;
+        preview.srcdoc = `<!doctype html><html><body style="font-family:sans-serif;padding:24px;color:#b00">미리보기 생성 실패</body></html>`;
+      }
+    }
+
+    function selectItem(item) {
+      selectedItem = item;
+      const target = itemTarget(item);
+      selectedPathValue = target;
+      setHighlight(target);
+      renderPreview();
     }
 
     function render() {
@@ -1215,17 +1187,40 @@
       }
     });
 
-    copyPath.addEventListener("click", async () => {
-      if (!selectedPathValue) return;
-      const fullPath = selectedPathValue.startsWith("http") ? selectedPathValue : new URL(selectedPathValue, window.location.href).href;
+    copyContent.addEventListener("click", async () => {
+      if (!selectedItem || copyContent.disabled) return;
+      const path = selectedItem.file_path || selectedItem.path;
+      if (!path) return;
+      copyContent.disabled = true;
+      const original = copyContent.textContent;
+      copyContent.textContent = "준비 중...";
       try {
-        await navigator.clipboard.writeText(decodeURI(fullPath));
-        copyPath.textContent = "복사됨";
-        setTimeout(() => {
-          copyPath.textContent = "경로 복사";
-        }, 1200);
+        const targetUrl = draftApiUrl(path);
+        const [originalHtml, config] = await Promise.all([
+          fetch(targetUrl, { cache: "no-store" }).then(r => r.ok ? r.text() : ""),
+          getAgencyConfig(currentAgency)
+        ]);
+        const merged = `${originalHtml}\n${config?.businessCardHtml || ""}`.trim();
+        await navigator.clipboard.writeText(merged);
+        copyContent.textContent = "복사됨";
+        setTimeout(() => { copyContent.textContent = original; copyContent.disabled = false; }, 1500);
       } catch {
-        window.prompt("아래 경로를 복사하세요.", decodeURI(fullPath));
+        copyContent.textContent = original;
+        copyContent.disabled = false;
+        alert("복사 실패");
+      }
+    });
+
+    copyWriteUrl.addEventListener("click", async () => {
+      if (copyWriteUrl.disabled || currentAgency === "mih_history") return;
+      const url = `https://blog.naver.com/${currentAgency}/postwrite`;
+      const original = copyWriteUrl.textContent;
+      try {
+        await navigator.clipboard.writeText(url);
+        copyWriteUrl.textContent = "복사됨";
+        setTimeout(() => { copyWriteUrl.textContent = original; }, 1500);
+      } catch {
+        window.prompt("URL을 복사하세요:", url);
       }
     });
 
@@ -1314,87 +1309,6 @@
         return null;
       }
     }
-
-    const draftBar = document.getElementById("draftBar");
-    const draftTabs = Array.from(document.querySelectorAll(".draft-tab"));
-    const copyBizCard = document.getElementById("copyBizCard");
-    const copyWriteUrl = document.getElementById("copyWriteUrl");
-    const openWrite = document.getElementById("openWrite");
-
-    function updateDraftBarAgency(slug) {
-      selectedDraftAgency = slug;
-      draftTabs.forEach(t => t.classList.toggle("active", t.dataset.draftAgency === slug));
-      if (slug === "mih_history") {
-        openWrite.removeAttribute("href");
-        openWrite.style.opacity = "0.4";
-        openWrite.style.pointerEvents = "none";
-      } else {
-        openWrite.href = `https://blog.naver.com/${slug}/postwrite`;
-        openWrite.style.opacity = "";
-        openWrite.style.pointerEvents = "";
-      }
-    }
-
-    function updateDraftBar(item) {
-      if (!item || item.url) {
-        draftBar.hidden = true;
-        return;
-      }
-      draftBar.hidden = false;
-      updateDraftBarAgency(item.assigned_agency || currentAgency);
-    }
-
-    draftTabs.forEach(tab => {
-      tab.addEventListener("click", async () => {
-        const newAgency = tab.dataset.draftAgency;
-        if (!selectedItem || newAgency === selectedDraftAgency) return;
-        const fromAgency = selectedItem.assigned_agency || currentAgency;
-        if (newAgency === fromAgency) {
-          updateDraftBarAgency(newAgency);
-          selectedItem.assigned_agency = newAgency;
-          return;
-        }
-        const token = getAdminToken();
-        if (!token) return;
-        tab.disabled = true;
-        try {
-          const res = await fetch("/api/manuscripts", {
-            method: "PATCH",
-            headers: { "content-type": "application/json", "authorization": `Bearer ${token}` },
-            body: JSON.stringify({ file_path: selectedItem.file_path, from_agency: fromAgency, to_agency: newAgency })
-          });
-          if (res.ok) {
-            selectedItem.assigned_agency = newAgency;
-            updateDraftBarAgency(newAgency);
-            if (newAgency !== currentAgency) {
-              manuscripts = manuscripts.filter(m => m.file_path !== selectedItem.file_path);
-              selectedItem = null;
-              render();
-            }
-          } else {
-            const err = await res.json().catch(() => ({}));
-            alert(`오류: ${err.error || res.status}`);
-            if (res.status === 401) sessionStorage.removeItem("adminToken");
-          }
-        } catch {
-          alert("요청 실패");
-        } finally {
-          tab.disabled = false;
-        }
-      });
-    });
-
-    copyBizCard.addEventListener("click", async () => {
-      const config = await getAgencyConfig(selectedDraftAgency);
-      if (!config?.businessCardHtml) { alert("명함 HTML을 가져올 수 없습니다."); return; }
-      try {
-        await navigator.clipboard.writeText(config.businessCardHtml);
-        copyBizCard.textContent = "복사됨";
-        setTimeout(() => { copyBizCard.textContent = "명함 복사"; }, 1200);
-      } catch {
-        window.prompt("명함 HTML을 복사하세요:", config.businessCardHtml);
-      }
-    });
 
     const CONFIG_AGENCIES = ["mih_speaker", "mih_casting", "mih_agency"];
     const configModal = document.getElementById("configModal");
@@ -1569,18 +1483,6 @@
     closeConfigModal.addEventListener("click", () => { configModal.hidden = true; });
     configModal.addEventListener("click", (e) => { if (e.target === configModal) configModal.hidden = true; });
 
-    copyWriteUrl.addEventListener("click", async () => {
-      if (selectedDraftAgency === "mih_history") return;
-      const url = `https://blog.naver.com/${selectedDraftAgency}/postwrite`;
-      try {
-        await navigator.clipboard.writeText(url);
-        copyWriteUrl.textContent = "복사됨";
-        setTimeout(() => { copyWriteUrl.textContent = "URL 복사"; }, 1200);
-      } catch {
-        window.prompt("URL을 복사하세요:", url);
-      }
-    });
-
     agencyTabs.forEach(tab => {
       tab.addEventListener("click", () => {
         if (tab.dataset.agency === currentAgency) return;
@@ -1591,12 +1493,8 @@
         publishedPosts = [];
         selectedPathValue = "";
         selectedItem = null;
-        draftBar.hidden = true;
-        selectedTitle.textContent = "원고를 선택하세요";
-        selectedPath.textContent = "목록에서 파일을 선택하면 이 영역에 원본 HTML이 표시됩니다.";
-        preview.removeAttribute("src");
-        preview.removeAttribute("srcdoc");
         render();
+        renderPreview();
         loadManuscripts(currentAgency);
         loadPosts(currentAgency);
       });
