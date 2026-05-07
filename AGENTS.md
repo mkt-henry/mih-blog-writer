@@ -185,7 +185,7 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 - `width="544"`는 네이버 블로그 본문 폭에 맞춘 기본값이다.
 - ⚠️ `data:image/...` 데이터 URI 방식은 네이버 에디터 정책상 차단되므로 절대 사용하지 않는다
 - ⚠️ `src="image.png"` 같은 상대 경로도 복붙 시 이미지가 깨지므로 절대 사용하지 않는다
-- 명함 디자인 또는 오픈채팅 링크 변경 시: `https://mih.bp-studio.com/원고_모아보기.html`의 CTA 설정 관리에서 수정한다.
+- 명함 디자인 또는 오픈채팅 링크 변경 시: `https://mih.bp-studio.com/`의 CTA 설정 관리에서 수정한다.
 
 ### 표(Table) — 시각적 통일성 유지
 
@@ -354,7 +354,7 @@ https://mih.bp-studio.com/assets/agency-card.png
 ```
 
 - 최신 설정 확인 API: `https://mih.bp-studio.com/api/agency-config`
-- 관리 화면: `https://mih.bp-studio.com/원고_모아보기.html` → CTA 설정 관리
+- 관리 화면: `https://mih.bp-studio.com/` → CTA 설정 관리
 - `data:image/...` 데이터 URI 방식은 네이버 스마트에디터가 보안상 차단하므로 **절대 사용 금지**
 - 상대 경로(`src="image.png"`)도 복붙 시 깨지므로 **절대 사용 금지**
 - **톤:** 정중한 존댓말, 행사 기획 담당자 대상, 과장 없음
