@@ -1,10 +1,5 @@
 import { supabase } from "../lib/db.js";
 
-function requireAdmin(request) {
-  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
-  return token === process.env.ADMIN_TOKEN;
-}
-
 async function getAgencyId(slug) {
   const { data } = await supabase.from("agencies").select("id").eq("slug", slug).single();
   return data?.id ?? null;
@@ -41,8 +36,6 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  if (!requireAdmin(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
   const body = await request.json();
   const { agency, file_path, title, slug, date, html_content } = body;
 
@@ -70,8 +63,6 @@ export async function POST(request) {
 }
 
 export async function PATCH(request) {
-  if (!requireAdmin(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
   const body = await request.json();
   const { file_path, from_agency, to_agency } = body;
   if (!file_path || !from_agency || !to_agency) {
@@ -95,8 +86,6 @@ export async function PATCH(request) {
 }
 
 export async function DELETE(request) {
-  if (!requireAdmin(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
   const url = new URL(request.url);
   const agencySlug = url.searchParams.get("agency");
   const filePath = url.searchParams.get("path");

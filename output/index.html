@@ -1437,15 +1437,6 @@ ${cardHtml || ""}
       }
     }
 
-    function getAdminToken() {
-      let token = sessionStorage.getItem("adminToken");
-      if (!token) {
-        token = window.prompt("관리자 토큰을 입력하세요:");
-        if (token) sessionStorage.setItem("adminToken", token.trim());
-      }
-      return token ? token.trim() : "";
-    }
-
     async function getAgencyConfig(slug) {
       if (agencyConfigCache.has(slug)) return agencyConfigCache.get(slug);
       try {
@@ -1668,8 +1659,6 @@ ${cardHtml || ""}
         result.textContent = "날짜 입력 필요";
         return false;
       }
-      const token = getAdminToken();
-      if (!token) return false;
       btn.disabled = true;
       result.className = "upload-result";
       result.textContent = "업로드 중...";
@@ -1678,7 +1667,7 @@ ${cardHtml || ""}
         const filePath = `${date}/${file.name}`;
         const res = await fetch("/api/manuscripts", {
           method: "POST",
-          headers: { "content-type": "application/json", "authorization": `Bearer ${token}` },
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({
             agency: uploadTargetAgency,
             file_path: filePath,
@@ -1692,7 +1681,6 @@ ${cardHtml || ""}
           const err = await res.json().catch(() => ({}));
           result.className = "upload-result err";
           result.textContent = `오류: ${err.error || res.status}`;
-          if (res.status === 401) sessionStorage.removeItem("adminToken");
           return false;
         }
         result.className = "upload-result ok";
