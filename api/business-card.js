@@ -1,7 +1,14 @@
-import { readAgencyConfig } from "../lib/agency.js";
+import { readAgencyConfig, requireAgencySlug } from "../lib/agency.js";
 
 export async function GET(request) {
-  const config = await readAgencyConfig(request);
+  const slug = requireAgencySlug(request);
+  if (!slug) return new Response("agency param required", { status: 400 });
+
+  const config = await readAgencyConfig(slug, request);
+  if (!config.businessCardImageUrl) {
+    return new Response("Business card image not configured.", { status: 404 });
+  }
+
   const image = await fetch(config.businessCardImageUrl, { cache: "no-store" });
   if (!image.ok) {
     return new Response("Business card image is unavailable.", { status: 502 });

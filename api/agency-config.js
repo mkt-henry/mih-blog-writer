@@ -1,20 +1,25 @@
-import { put } from "@vercel/blob";
 import {
-  CARD_PATH,
   json,
   readAgencyConfig,
   saveAgencyConfig,
+  uploadBusinessCardImage,
+  requireAgencySlug,
   isValidHttpsUrl,
   withDerivedUrls
 } from "../lib/agency.js";
 
 export async function GET(request) {
-  const config = await readAgencyConfig(request);
+  const slug = requireAgencySlug(request);
+  if (!slug) return json({ error: "agency param required" }, { status: 400 });
+  const config = await readAgencyConfig(slug, request);
   return json(config);
 }
 
 export async function PUT(request) {
-  const current = await readAgencyConfig(request);
+  const slug = requireAgencySlug(request);
+  if (!slug) return json({ error: "agency param required" }, { status: 400 });
+
+  const current = await readAgencyConfig(slug, request);
   const body = await request.json();
   const next = {
     ...current,
@@ -26,12 +31,15 @@ export async function PUT(request) {
   const validation = validateConfig(next);
   if (validation) return validation;
 
-  const saved = await saveAgencyConfig(next);
+  const saved = await saveAgencyConfig(slug, next);
   return json(withDerivedUrls(saved, request));
 }
 
 export async function POST(request) {
-  const current = await readAgencyConfig(request);
+  const slug = requireAgencySlug(request);
+  if (!slug) return json({ error: "agency param required" }, { status: 400 });
+
+  const current = await readAgencyConfig(slug, request);
   const form = await request.formData();
   const next = {
     ...current,
@@ -49,21 +57,13 @@ export async function POST(request) {
     if (file.size > 3 * 1024 * 1024) {
       return json({ error: "Business card image must be 3MB or smaller." }, { status: 400 });
     }
-
-    const blob = await put(CARD_PATH, file, {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: file.type,
-      cacheControlMaxAge: 60
-    });
-    next.businessCardImageUrl = blob.url;
+    next.businessCardImageUrl = await uploadBusinessCardImage(slug, file);
   }
 
   const validation = validateConfig(next);
   if (validation) return validation;
 
-  const saved = await saveAgencyConfig(next);
+  const saved = await saveAgencyConfig(slug, next);
   return json(withDerivedUrls(saved, request));
 }
 

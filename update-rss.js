@@ -1,24 +1,23 @@
 #!/usr/bin/env node
-// node update-rss.js -> 네이버 블로그 RSS를 받아 index.html / 원고_모아보기.html 발행 목록을 갱신합니다.
+// 모든 계정의 RSS를 가져와 published_posts 테이블에 upsert
+// 실행: node --env-file=.env.local update-rss.js
 
-import { readFileSync, writeFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { createClient } from "@supabase/supabase-js";
 
-const __dir = dirname(fileURLToPath(import.meta.url));
-const RSS_URL = "https://rss.blog.naver.com/mih_ent.xml";
-const TARGET_FILES = [
-  join(__dir, "output", "index.html"),
-  join(__dir, "output", "원고_모아보기.html"),
-];
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false } }
+);
 
 function parseDate(pubDate) {
   const d = new Date(pubDate);
-  if (isNaN(d)) return { date: "", time: "" };
+  if (isNaN(d)) return null;
   const kst = new Date(d.getTime() + 9 * 3600000);
   return {
     date: kst.toISOString().slice(0, 10),
-    time: kst.toISOString().slice(11, 16)
+    time: kst.toISOString().slice(11, 16),
+    iso: d.toISOString()
   };
 }
 
@@ -48,82 +47,58 @@ function parseRss(xml) {
     const linkMatch = block.match(/<link>\s*([\s\S]*?)\s*<\/link>/);
     const pubDateMatch = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
     if (!titleMatch || !linkMatch || !pubDateMatch) continue;
-    const { date, time } = parseDate(pubDateMatch[1].trim());
-    if (!date) continue;
-    items.push({
-      date,
-      time,
-      title: titleMatch[1].trim(),
-      url: cleanUrl(linkMatch[1])
-    });
+    const parsed = parseDate(pubDateMatch[1].trim());
+    if (!parsed) continue;
+    items.push({ date: parsed.date, publishedAt: parsed.iso, title: titleMatch[1].trim(), url: cleanUrl(linkMatch[1]) });
   }
   return items;
 }
 
-function extractExistingUrls(html) {
-  const match = html.match(/const publishedPosts\s*=\s*\[([\s\S]*?)\];/);
-  if (!match) return new Set();
-  const urls = [];
-  const urlRegex = /"url"\s*:\s*"([^"]+)"/g;
-  let m;
-  while ((m = urlRegex.exec(match[1])) !== null) {
-    urls.push(m[1]);
-  }
-  return new Set(urls);
-}
-
-function escapeForJs(str) {
-  return str.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
-
-function injectPublishedPosts(html, freshItems) {
-  const existingUrls = extractExistingUrls(html);
-  const newItems = freshItems.filter((item) => !existingUrls.has(item.url));
-  if (!newItems.length) return { html, count: 0 };
-
-  const lines = newItems.map(
-    (item) =>
-      `      {"source":"published","date":"${item.date}","publishedAt":"${item.date} ${item.time}","title":"${escapeForJs(item.title)}","url":"${item.url}"},`
-  );
-  const insertion = lines.join("\n") + "\n";
-
-  return {
-    html: html.replace(/(\s*const publishedPosts\s*=\s*\[)\s*\n/, `$1\n${insertion}`),
-    count: newItems.length
-  };
+async function fetchRss(rssUrl) {
+  const res = await fetch(rssUrl, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; blog-reader/1.0)" }
+  });
+  if (!res.ok) throw new Error(`RSS fetch failed: ${res.status}`);
+  return parseRss(await res.text());
 }
 
 async function main() {
-  console.log("RSS 가져오는 중:", RSS_URL);
-  const res = await fetch(RSS_URL, {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; blog-reader/1.0)" }
-  });
-  if (!res.ok) throw new Error(`RSS 요청 실패: ${res.status}`);
+  const { data: agencies, error } = await supabase
+    .from("agencies")
+    .select("id, slug, name, rss_url")
+    .neq("rss_url", "");
 
-  const xml = await res.text();
-  const items = parseRss(xml);
-  console.log(`RSS 파싱 완료: ${items.length}개 항목`);
-  if (!items.length) {
-    console.log("항목 없음, 종료");
+  if (error) throw error;
+  if (!agencies?.length) {
+    console.log("RSS URL이 설정된 계정이 없습니다.");
     return;
   }
 
-  let totalCount = 0;
-  for (const filePath of TARGET_FILES) {
-    const fileName = filePath.split(/[/\\]/).pop();
-    const html = readFileSync(filePath, "utf8");
-    const { html: updated, count } = injectPublishedPosts(html, items);
-    if (!count) {
-      console.log(`[${fileName}] 새 항목 없음`);
-      continue;
+  for (const agency of agencies) {
+    console.log(`\n[${agency.name}] RSS 가져오는 중: ${agency.rss_url}`);
+    try {
+      const items = await fetchRss(agency.rss_url);
+      console.log(`  파싱 완료: ${items.length}개`);
+      if (!items.length) continue;
+
+      const rows = items.map(item => ({
+        agency_id: agency.id,
+        url: item.url,
+        title: item.title,
+        date: item.date,
+        published_at: item.publishedAt
+      }));
+
+      const { error: upsertError } = await supabase
+        .from("published_posts")
+        .upsert(rows, { onConflict: "agency_id,url" });
+
+      if (upsertError) console.error(`  업로드 오류:`, upsertError.message);
+      else console.log(`  ${items.length}개 upsert 완료`);
+    } catch (err) {
+      console.error(`  [${agency.slug}] 오류:`, err.message);
     }
-    writeFileSync(filePath, updated, "utf8");
-    console.log(`[${fileName}] ${count}개 항목 추가`);
-    totalCount += count;
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main().catch(err => { console.error(err); process.exit(1); });

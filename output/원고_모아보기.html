@@ -445,6 +445,117 @@
       }
     }
 
+    .agency-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .agency-tab {
+      flex: 1;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .agency-tab.active {
+      border-color: var(--brand);
+      background: var(--brand-soft);
+      color: var(--brand);
+    }
+
+    .loading {
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .history-tab {
+      background: #f3f4f6 !important;
+      color: #9ca3af !important;
+    }
+
+    .history-tab.active {
+      border-color: #9ca3af !important;
+      background: #e5e7eb !important;
+      color: #6b7280 !important;
+    }
+
+    .draft-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--line);
+      background: #f9fafb;
+    }
+
+    .draft-agency-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .draft-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .draft-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .draft-tab {
+      height: 28px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .draft-tab.active {
+      border-color: var(--brand);
+      background: var(--brand-soft);
+      color: var(--brand);
+    }
+
+    .draft-tab.history {
+      background: #f3f4f6;
+      color: #9ca3af;
+    }
+
+    .draft-tab.history.active {
+      border-color: #9ca3af;
+      background: #e5e7eb;
+      color: #6b7280;
+    }
+
+    .draft-tab:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     @media (max-width: 640px) {
       .sidebar,
       .frame-wrap {
@@ -475,10 +586,16 @@
 <body>
   <main class="app">
     <aside class="sidebar">
+      <div class="agency-tabs">
+        <button class="agency-tab active" data-agency="mih_speaker">스피커</button>
+        <button class="agency-tab" data-agency="mih_casting">캐스팅</button>
+        <button class="agency-tab" data-agency="mih_agency">에이전시</button>
+        <button class="agency-tab history-tab" data-agency="mih_history">이력</button>
+      </div>
       <div class="header">
         <div>
           <h1>원고 모아보기</h1>
-          <p class="meta">원본 HTML 파일은 그대로 두고 목록에서 불러와 확인합니다.</p>
+          <p class="meta" id="agencyLabel">메이드인헤븐 스피커</p>
         </div>
         <div class="count"><strong id="visibleCount">0</strong>개</div>
       </div>
@@ -518,6 +635,22 @@
           <a id="openLink" class="action primary" href="#" target="_blank" rel="noopener">새 탭 열기</a>
         </div>
       </div>
+      <div id="draftBar" class="draft-bar" hidden>
+        <div class="draft-agency-row">
+          <span class="draft-label">업로드 계정</span>
+          <div class="draft-tabs">
+            <button class="draft-tab" data-draft-agency="mih_speaker" type="button">스피커</button>
+            <button class="draft-tab" data-draft-agency="mih_casting" type="button">캐스팅</button>
+            <button class="draft-tab" data-draft-agency="mih_agency" type="button">에이전시</button>
+            <button class="draft-tab history" data-draft-agency="mih_history" type="button">이력</button>
+          </div>
+        </div>
+        <div class="actions" style="gap:6px">
+          <button id="copyBizCard" class="action" type="button" style="font-size:12px;height:32px">명함 복사</button>
+          <button id="copyWriteUrl" class="action" type="button" style="font-size:12px;height:32px">URL 복사</button>
+          <a id="openWrite" class="action primary" href="#" target="_blank" rel="noopener" style="font-size:12px;height:32px">글쓰기 열기</a>
+        </div>
+      </div>
       <div class="frame-wrap">
         <iframe id="preview" title="원고 미리보기"></iframe>
       </div>
@@ -541,7 +674,17 @@
   </div>
 
   <script>
-    const manuscripts = [
+    const AGENCY_NAMES = { mih_speaker: "메이드인헤븐 스피커", mih_casting: "메이드인헤븐 캐스팅", mih_agency: "메이드인헤븐 에이전시", mih_history: "이전 발행 원고" };
+
+    let manuscripts = [];
+    let publishedPosts = [];
+    let currentAgency = "mih_speaker";
+    let loading = false;
+    let selectedItem = null;
+    let selectedDraftAgency = "mih_speaker";
+    const agencyConfigCache = new Map();
+
+    const _manuscripts = [
       { date: "2026-05-04", person: "안정환", title: "[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외", path: "./2026-05-05/안정환_[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외.html" },
       { date: "2026-05-04", person: "추성훈", title: "[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외", path: "./2026-05-05/추성훈_[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외.html" },
       { date: "2026-05-04", person: "탁재훈", title: "[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외", path: "./2026-05-05/탁재훈_[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외.html" },
@@ -591,7 +734,7 @@
       { date: "2026-05-06", person: "홍현희", title: "[홍현희 섭외] 리액션 강한 예능 MC, 기업 행사·토크 콘서트 섭외", path: "./2026-05-06/홍현희_[홍현희 섭외] 리액션 강한 예능 MC, 기업 행사·토크 콘서트 섭외.html" }
     ];
 
-    const publishedPosts = [
+    const _publishedPosts = [
       {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:41","title":"[김계란 섭외] 건강·운동 콘텐츠 제작자, 기업 행사·브랜드 캠페인 섭외","url":"https://blog.naver.com/mih_ent/224276750397"},
       {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:41","title":"[서은국 섭외] 행복 심리학 권위자, 기업 특강·공공 인문학 강연 섭외","url":"https://blog.naver.com/mih_ent/224276750011"},
       {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:41","title":"[문세윤 섭외] 먹방·토크 예능 베테랑, 기업 행사·축제 MC 섭외","url":"https://blog.naver.com/mih_ent/224276749704"},
@@ -656,6 +799,8 @@
       {"source":"published","date":"2026-04-17","publishedAt":"2026-04-17 16:43","title":"[김시선 섭외] 구독자 212만 영화평론가 유튜버 김시선 강연·행사 섭외 방법 및 비용 안내","url":"https://blog.naver.com/mih_ent/224255878935"}
     ];
 
+    const agencyTabs = Array.from(document.querySelectorAll(".agency-tab"));
+    const agencyLabel = document.getElementById("agencyLabel");
     const list = document.getElementById("list");
     const search = document.getElementById("search");
     const empty = document.getElementById("empty");
@@ -745,20 +890,23 @@
       });
     }
 
-    function localDraftUrl(path) {
-      return String(path || "").replace(/^\.\//, "/");
+    function draftApiUrl(filePath) {
+      const p = String(filePath || "").replace(/^\.\//, "");
+      return `/api/draft?path=${encodeURIComponent(p)}&agency=${encodeURIComponent(currentAgency)}`;
     }
 
     function itemTarget(item) {
-      return item.url || localDraftUrl(item.path);
+      return item.url || draftApiUrl(item.path || item.file_path);
     }
 
     function selectItem(item) {
+      selectedItem = item;
+      updateDraftBar(item);
       const target = itemTarget(item);
       const displayTitle = item.url ? item.title : `${item.person} ${item.title}`;
       selectedPathValue = target;
       selectedTitle.textContent = displayTitle;
-      selectedPath.textContent = item.url ? `${item.publishedAt} · ${item.url}` : item.path;
+      selectedPath.textContent = item.url ? `${item.publishedAt} · ${item.url}` : (item.file_path || item.path);
       openLink.href = target;
       openLink.textContent = item.url ? "블로그 열기" : "새 탭 열기";
 
@@ -807,7 +955,7 @@
       items.forEach((item) => {
         const target = itemTarget(item);
         const displayTitle = `${item.person} ${item.title}`;
-        const displayPath = item.path;
+        const displayPath = item.file_path || item.path;
         const badge = item.date;
         const button = document.createElement("button");
         button.className = "item";
@@ -945,9 +1093,50 @@
       }
     });
 
+    async function loadManuscripts(agency) {
+      if (loading) return;
+      loading = true;
+      list.innerHTML = `<p class="loading">로딩 중...</p>`;
+      visibleCount.textContent = "…";
+      try {
+        const res = await fetch(`/api/manuscripts?agency=${encodeURIComponent(agency)}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        manuscripts = data.map(m => ({
+          date: m.date,
+          person: m.slug,
+          title: m.title,
+          file_path: m.file_path,
+          assigned_agency: agency
+        }));
+      } catch {
+        manuscripts = [];
+      } finally {
+        loading = false;
+        render();
+      }
+    }
+
+    async function loadPosts(agency) {
+      try {
+        const res = await fetch(`/api/posts?agency=${encodeURIComponent(agency)}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        publishedPosts = data.map(p => ({
+          source: "published",
+          date: String(p.date).slice(0, 10),
+          publishedAt: p.published_at ? p.published_at.slice(0, 16).replace("T", " ") : String(p.date).slice(0, 10),
+          title: p.title,
+          url: p.url
+        }));
+      } catch {
+        publishedPosts = [];
+      }
+    }
+
     async function loadRssPosts() {
       try {
-        const res = await fetch("/api/rss", { cache: "no-store" });
+        const res = await fetch(`/api/rss?agency=${encodeURIComponent(currentAgency)}`, { cache: "no-store" });
         if (!res.ok) return false;
         const items = await res.json();
         if (!Array.isArray(items) || !items.length) return false;
@@ -968,9 +1157,146 @@
       }
     }
 
+    function getAdminToken() {
+      let token = sessionStorage.getItem("adminToken");
+      if (!token) {
+        token = window.prompt("관리자 토큰을 입력하세요:");
+        if (token) sessionStorage.setItem("adminToken", token.trim());
+      }
+      return token ? token.trim() : "";
+    }
+
+    async function getAgencyConfig(slug) {
+      if (agencyConfigCache.has(slug)) return agencyConfigCache.get(slug);
+      try {
+        const res = await fetch(`/api/agency-config?agency=${encodeURIComponent(slug)}`, { cache: "no-store" });
+        if (!res.ok) return null;
+        const data = await res.json();
+        agencyConfigCache.set(slug, data);
+        return data;
+      } catch {
+        return null;
+      }
+    }
+
+    const draftBar = document.getElementById("draftBar");
+    const draftTabs = Array.from(document.querySelectorAll(".draft-tab"));
+    const copyBizCard = document.getElementById("copyBizCard");
+    const copyWriteUrl = document.getElementById("copyWriteUrl");
+    const openWrite = document.getElementById("openWrite");
+
+    function updateDraftBarAgency(slug) {
+      selectedDraftAgency = slug;
+      draftTabs.forEach(t => t.classList.toggle("active", t.dataset.draftAgency === slug));
+      if (slug === "mih_history") {
+        openWrite.removeAttribute("href");
+        openWrite.style.opacity = "0.4";
+        openWrite.style.pointerEvents = "none";
+      } else {
+        openWrite.href = `https://blog.naver.com/${slug}/postwrite`;
+        openWrite.style.opacity = "";
+        openWrite.style.pointerEvents = "";
+      }
+    }
+
+    function updateDraftBar(item) {
+      if (!item || item.url) {
+        draftBar.hidden = true;
+        return;
+      }
+      draftBar.hidden = false;
+      updateDraftBarAgency(item.assigned_agency || currentAgency);
+    }
+
+    draftTabs.forEach(tab => {
+      tab.addEventListener("click", async () => {
+        const newAgency = tab.dataset.draftAgency;
+        if (!selectedItem || newAgency === selectedDraftAgency) return;
+        const fromAgency = selectedItem.assigned_agency || currentAgency;
+        if (newAgency === fromAgency) {
+          updateDraftBarAgency(newAgency);
+          selectedItem.assigned_agency = newAgency;
+          return;
+        }
+        const token = getAdminToken();
+        if (!token) return;
+        tab.disabled = true;
+        try {
+          const res = await fetch("/api/manuscripts", {
+            method: "PATCH",
+            headers: { "content-type": "application/json", "authorization": `Bearer ${token}` },
+            body: JSON.stringify({ file_path: selectedItem.file_path, from_agency: fromAgency, to_agency: newAgency })
+          });
+          if (res.ok) {
+            selectedItem.assigned_agency = newAgency;
+            updateDraftBarAgency(newAgency);
+            if (newAgency !== currentAgency) {
+              manuscripts = manuscripts.filter(m => m.file_path !== selectedItem.file_path);
+              selectedItem = null;
+              render();
+            }
+          } else {
+            const err = await res.json().catch(() => ({}));
+            alert(`오류: ${err.error || res.status}`);
+            if (res.status === 401) sessionStorage.removeItem("adminToken");
+          }
+        } catch {
+          alert("요청 실패");
+        } finally {
+          tab.disabled = false;
+        }
+      });
+    });
+
+    copyBizCard.addEventListener("click", async () => {
+      const config = await getAgencyConfig(selectedDraftAgency);
+      if (!config?.businessCardHtml) { alert("명함 HTML을 가져올 수 없습니다."); return; }
+      try {
+        await navigator.clipboard.writeText(config.businessCardHtml);
+        copyBizCard.textContent = "복사됨";
+        setTimeout(() => { copyBizCard.textContent = "명함 복사"; }, 1200);
+      } catch {
+        window.prompt("명함 HTML을 복사하세요:", config.businessCardHtml);
+      }
+    });
+
+    copyWriteUrl.addEventListener("click", async () => {
+      if (selectedDraftAgency === "mih_history") return;
+      const url = `https://blog.naver.com/${selectedDraftAgency}/postwrite`;
+      try {
+        await navigator.clipboard.writeText(url);
+        copyWriteUrl.textContent = "복사됨";
+        setTimeout(() => { copyWriteUrl.textContent = "URL 복사"; }, 1200);
+      } catch {
+        window.prompt("URL을 복사하세요:", url);
+      }
+    });
+
+    agencyTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        if (tab.dataset.agency === currentAgency) return;
+        currentAgency = tab.dataset.agency;
+        agencyTabs.forEach(t => t.classList.toggle("active", t === tab));
+        agencyLabel.textContent = AGENCY_NAMES[currentAgency] || currentAgency;
+        manuscripts = [];
+        publishedPosts = [];
+        selectedPathValue = "";
+        selectedItem = null;
+        draftBar.hidden = true;
+        selectedTitle.textContent = "원고를 선택하세요";
+        selectedPath.textContent = "목록에서 파일을 선택하면 이 영역에 원본 HTML이 표시됩니다.";
+        preview.removeAttribute("src");
+        preview.removeAttribute("srcdoc");
+        render();
+        loadManuscripts(currentAgency);
+        loadPosts(currentAgency);
+      });
+    });
+
     setTodayFilter();
     render();
-    loadRssPosts();
+    loadManuscripts(currentAgency);
+    loadPosts(currentAgency);
   </script>
 </body>
 </html>

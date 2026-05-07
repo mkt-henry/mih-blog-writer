@@ -3,9 +3,13 @@
   "type": "module",
   "scripts": {
     "dev": "npx serve output",
-    "rss": "node update-rss.js"
+    "rss": "node update-rss.js",
+    "migrate": "node --env-file=.env.local scripts/migrate-manuscripts.js",
+    "migrate:posts": "node --env-file=.env.local scripts/migrate-published-posts.js",
+    "rss:update": "node --env-file=.env.local update-rss.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.3",
     "@vercel/blob": "^2.0.0"
   }
 }

@@ -1,9 +1,8 @@
-const RSS_URL = "https://rss.blog.naver.com/mih_ent.xml";
+import { supabase } from "../lib/db.js";
 
 function parseDate(pubDate) {
   const d = new Date(pubDate);
   if (isNaN(d)) return { date: "", time: "" };
-  // pubDate includes +0900, so add 9h to UTC to recover KST wall clock
   const kst = new Date(d.getTime() + 9 * 3600000);
   return {
     date: kst.toISOString().slice(0, 10),
@@ -39,32 +38,35 @@ function parseRss(xml) {
     if (!titleMatch || !linkMatch || !pubDateMatch) continue;
     const { date, time } = parseDate(pubDateMatch[1].trim());
     if (!date) continue;
-    items.push({
-      date,
-      time,
-      title: titleMatch[1].trim(),
-      url: cleanUrl(linkMatch[1])
-    });
+    items.push({ date, time, title: titleMatch[1].trim(), url: cleanUrl(linkMatch[1]) });
   }
   return items;
 }
 
-export async function GET() {
+export async function GET(request) {
+  const url = new URL(request.url);
+  const slug = url.searchParams.get("agency");
+  if (!slug) return Response.json({ error: "agency param required" }, { status: 400 });
+
+  const { data: agency } = await supabase
+    .from("agencies")
+    .select("rss_url")
+    .eq("slug", slug)
+    .single();
+
+  if (!agency?.rss_url) {
+    return Response.json({ error: "RSS URL not configured for this agency" }, { status: 404 });
+  }
+
   try {
-    const res = await fetch(RSS_URL, {
+    const res = await fetch(agency.rss_url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; blog-reader/1.0)" },
       cache: "no-store"
     });
-    if (!res.ok) {
-      return Response.json({ error: `RSS fetch failed: ${res.status}` }, { status: 502 });
-    }
-    const xml = await res.text();
-    const items = parseRss(xml);
+    if (!res.ok) return Response.json({ error: `RSS fetch failed: ${res.status}` }, { status: 502 });
+    const items = parseRss(await res.text());
     return new Response(JSON.stringify(items), {
-      headers: {
-        "content-type": "application/json",
-        "cache-control": "s-maxage=300, stale-while-revalidate=60"
-      }
+      headers: { "content-type": "application/json", "cache-control": "s-maxage=300, stale-while-revalidate=60" }
     });
   } catch (err) {
     return Response.json({ error: String(err) }, { status: 500 });
