@@ -1101,6 +1101,21 @@ a { display:inline-flex; align-items:center; justify-content:center; height:42px
 </body></html>`;
     }
 
+    // 카카오 오픈채팅 링크가 있는 <p> 바로 앞에 명함 HTML을 끼워넣는다.
+    // 카카오 링크가 없으면 원고 끝에 붙이는 기존 동작으로 폴백.
+    function mergeWithBusinessCard(originalHtml, cardHtml) {
+      if (!cardHtml) return originalHtml || "";
+      if (!originalHtml) return cardHtml;
+      const m = originalHtml.match(/<a\s[^>]*href=["']https:\/\/open\.kakao\.com\//i);
+      if (m && typeof m.index === "number") {
+        const pStart = originalHtml.lastIndexOf("<p ", m.index);
+        if (pStart !== -1) {
+          return originalHtml.slice(0, pStart) + cardHtml + "\n" + originalHtml.slice(pStart);
+        }
+      }
+      return `${originalHtml}\n${cardHtml}`;
+    }
+
     function buildDraftPreview(originalHtml, cardHtml) {
       return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><style>
@@ -1108,8 +1123,7 @@ body { margin:0; padding:24px; font-family:-apple-system,BlinkMacSystemFont,"Seg
 img { max-width:100%; height:auto; }
 hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
 </style></head><body>
-${originalHtml || ""}
-${cardHtml || ""}
+${mergeWithBusinessCard(originalHtml || "", cardHtml || "")}
 </body></html>`;
     }
 
@@ -1349,7 +1363,7 @@ ${cardHtml || ""}
           fetch(targetUrl, { cache: "no-store" }).then(r => r.ok ? r.text() : ""),
           getAgencyConfig(currentAgency)
         ]);
-        const merged = `${originalHtml}\n${config?.businessCardHtml || ""}`.trim();
+        const merged = mergeWithBusinessCard(originalHtml || "", config?.businessCardHtml || "").trim();
         await navigator.clipboard.writeText(merged);
         copyContent.textContent = "복사됨";
         setTimeout(() => { copyContent.textContent = original; copyContent.disabled = false; }, 1500);
