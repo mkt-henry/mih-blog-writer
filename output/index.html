@@ -185,8 +185,7 @@
       <h2 id="selected-title">왼쪽에서 원고를 선택하세요</h2>
       <div class="path" id="selected-path">발행 계정 탭을 누르고 원고를 클릭하면 미리보기가 나옵니다.</div>
     </div>
-    <button id="copy-title" class="secondary" disabled>제목 복사</button>
-    <button id="copy-content" disabled>콘텐츠 복사</button>
+    <button id="copy-title" disabled>제목 복사</button>
   </header>
   <iframe id="preview" sandbox="allow-same-origin"></iframe>
 </main>
@@ -206,7 +205,6 @@
   const previewEl = document.getElementById("preview");
   const titleEl = document.getElementById("selected-title");
   const pathEl = document.getElementById("selected-path");
-  const copyContentBtn = document.getElementById("copy-content");
   const copyTitleBtn = document.getElementById("copy-title");
   const monthFilterEl = document.getElementById("month-filter");
   const dayFilterEl = document.getElementById("day-filter");
@@ -407,13 +405,11 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
     if (!selected) {
       titleEl.textContent = "왼쪽에서 원고를 선택하세요";
       pathEl.textContent = "발행 계정 탭을 누르고 원고를 클릭하면 미리보기가 나옵니다.";
-      copyContentBtn.disabled = true;
       copyTitleBtn.disabled = true;
       return;
     }
     titleEl.textContent = selected.title;
     pathEl.textContent = `${selected.agency} · ${selected.path}`;
-    copyContentBtn.disabled = false;
     copyTitleBtn.disabled = false;
   }
 
@@ -439,21 +435,6 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
       return ok;
     }
   }
-
-  copyContentBtn.addEventListener("click", async () => {
-    if (!selected) return;
-    const cardHtml = buildBusinessCardHtml(selected.agency);
-    const merged = mergeWithBusinessCard(selected.html, cardHtml);
-    copyContentBtn.disabled = true;
-    const original = copyContentBtn.textContent;
-    copyContentBtn.textContent = "준비 중...";
-    const ok = await copyToClipboard(merged.trim());
-    copyContentBtn.textContent = ok ? "복사됨" : "복사 실패";
-    setTimeout(() => {
-      copyContentBtn.textContent = original;
-      copyContentBtn.disabled = false;
-    }, 1500);
-  });
 
   copyTitleBtn.addEventListener("click", async () => {
     if (!selected) return;
