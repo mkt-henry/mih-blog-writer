@@ -51,7 +51,7 @@
     border-bottom: 1px solid #eef0f3;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
   .filter label {
     font-size: 11px;
@@ -59,7 +59,6 @@
     white-space: nowrap;
   }
   .filter select {
-    flex: 1;
     padding: 6px 8px;
     border: 1px solid #d8dbe1;
     border-radius: 6px;
@@ -67,7 +66,11 @@
     font-size: 12px;
     background: #fff;
     color: #333;
+    min-width: 0;
   }
+  .filter select.month { flex: 1.4; }
+  .filter select.day { flex: 1; }
+  .filter select:disabled { background: #f5f6f8; color: #aaa; }
   .meta {
     padding: 8px 20px;
     font-size: 11px;
@@ -169,8 +172,9 @@
   <h1>모아보기</h1>
   <div class="tabs" id="tabs"></div>
   <div class="filter">
-    <label for="date-filter">일자</label>
-    <select id="date-filter"></select>
+    <label>일자</label>
+    <select id="month-filter" class="month"></select>
+    <select id="day-filter" class="day"></select>
   </div>
   <div class="meta" id="meta"></div>
   <div class="list" id="list"></div>
@@ -204,10 +208,12 @@
   const pathEl = document.getElementById("selected-path");
   const copyContentBtn = document.getElementById("copy-content");
   const copyTitleBtn = document.getElementById("copy-title");
-  const dateFilterEl = document.getElementById("date-filter");
+  const monthFilterEl = document.getElementById("month-filter");
+  const dayFilterEl = document.getElementById("day-filter");
 
   let currentAgency = "mih_speaker";
-  let currentDate = "all";
+  let currentMonth = "all"; // "all" 또는 "YYYY-MM"
+  let currentDay = "all";   // "all" 또는 "DD"
   let selected = null;
 
   // ---- 탭 ----
@@ -218,41 +224,97 @@
     btn.addEventListener("click", () => {
       currentAgency = slug;
       selected = null;
-      rebuildDateFilter();
+      rebuildMonthFilter();
+      rebuildDayFilter();
       render();
     });
     tabsEl.appendChild(btn);
   });
 
-  // ---- 일자 필터 ----
-  function rebuildDateFilter() {
-    const dates = Array.from(
-      new Set(data.manuscripts.filter((m) => m.agency === currentAgency).map((m) => m.date))
-    ).sort((a, b) => b.localeCompare(a));
-
-    const previousValue = currentDate;
-    dateFilterEl.innerHTML = "";
-    const allOpt = document.createElement("option");
-    allOpt.value = "all";
-    allOpt.textContent = `전체 (${dates.reduce((acc, d) => acc + data.manuscripts.filter((m) => m.agency === currentAgency && m.date === d).length, 0)})`;
-    dateFilterEl.appendChild(allOpt);
-    for (const d of dates) {
-      const n = data.manuscripts.filter((m) => m.agency === currentAgency && m.date === d).length;
-      const opt = document.createElement("option");
-      opt.value = d;
-      opt.textContent = `${d} (${n})`;
-      dateFilterEl.appendChild(opt);
-    }
-    // 이전 선택 유지 — 해당 일자가 새 계정에도 있으면 유지, 없으면 전체로 리셋
-    currentDate = previousValue !== "all" && dates.includes(previousValue) ? previousValue : "all";
-    dateFilterEl.value = currentDate;
+  // ---- 월/일 필터 ----
+  function manuscriptsForCurrentAgency() {
+    return data.manuscripts.filter((m) => m.agency === currentAgency);
   }
 
-  dateFilterEl.addEventListener("change", () => {
-    currentDate = dateFilterEl.value;
+  function rebuildMonthFilter() {
+    const months = Array.from(
+      new Set(manuscriptsForCurrentAgency().map((m) => m.date.slice(0, 7)))
+    ).sort((a, b) => b.localeCompare(a));
+
+    const previous = currentMonth;
+    monthFilterEl.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = "all";
+    allOpt.textContent = `전체 월 (${manuscriptsForCurrentAgency().length})`;
+    monthFilterEl.appendChild(allOpt);
+    for (const ym of months) {
+      const n = manuscriptsForCurrentAgency().filter((m) => m.date.startsWith(ym)).length;
+      const opt = document.createElement("option");
+      opt.value = ym;
+      opt.textContent = `${ym} (${n})`;
+      monthFilterEl.appendChild(opt);
+    }
+    currentMonth = previous !== "all" && months.includes(previous) ? previous : "all";
+    monthFilterEl.value = currentMonth;
+  }
+
+  function rebuildDayFilter() {
+    dayFilterEl.innerHTML = "";
+    if (currentMonth === "all") {
+      const opt = document.createElement("option");
+      opt.value = "all";
+      opt.textContent = "전체 일";
+      dayFilterEl.appendChild(opt);
+      dayFilterEl.disabled = true;
+      currentDay = "all";
+      return;
+    }
+    dayFilterEl.disabled = false;
+
+    const days = Array.from(
+      new Set(
+        manuscriptsForCurrentAgency()
+          .filter((m) => m.date.startsWith(currentMonth))
+          .map((m) => m.date.slice(8, 10))
+      )
+    ).sort((a, b) => b.localeCompare(a));
+
+    const previous = currentDay;
+    const allOpt = document.createElement("option");
+    allOpt.value = "all";
+    allOpt.textContent = `전체 일 (${manuscriptsForCurrentAgency().filter((m) => m.date.startsWith(currentMonth)).length})`;
+    dayFilterEl.appendChild(allOpt);
+    for (const d of days) {
+      const n = manuscriptsForCurrentAgency().filter((m) => m.date === `${currentMonth}-${d}`).length;
+      const opt = document.createElement("option");
+      opt.value = d;
+      opt.textContent = `${parseInt(d, 10)}일 (${n})`;
+      dayFilterEl.appendChild(opt);
+    }
+    currentDay = previous !== "all" && days.includes(previous) ? previous : "all";
+    dayFilterEl.value = currentDay;
+  }
+
+  monthFilterEl.addEventListener("change", () => {
+    currentMonth = monthFilterEl.value;
+    currentDay = "all";
+    selected = null;
+    rebuildDayFilter();
+    render();
+  });
+
+  dayFilterEl.addEventListener("change", () => {
+    currentDay = dayFilterEl.value;
     selected = null;
     render();
   });
+
+  function dateMatches(date) {
+    if (currentMonth === "all") return true;
+    if (!date.startsWith(currentMonth)) return false;
+    if (currentDay === "all") return true;
+    return date.slice(8, 10) === currentDay;
+  }
 
   // ---- 명함 + 카카오 합성 ----
   // 카카오 오픈채팅 링크가 들어 있는 <p> 바로 앞에 명함 HTML을 끼워넣는다.
@@ -300,16 +362,22 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
     Array.from(tabsEl.children).forEach((b) => b.classList.toggle("active", b.dataset.slug === currentAgency));
 
     const items = data.manuscripts.filter(
-      (m) => m.agency === currentAgency && (currentDate === "all" || m.date === currentDate)
+      (m) => m.agency === currentAgency && dateMatches(m.date)
     );
-    const dateLabel = currentDate === "all" ? "전체 일자" : currentDate;
+    let dateLabel = "전체 일자";
+    if (currentMonth !== "all") {
+      dateLabel = currentDay === "all"
+        ? currentMonth
+        : `${currentMonth}-${currentDay}`;
+    }
     metaEl.textContent = `${items.length}개 원고 · ${dateLabel} · 빌드 ${data.generatedAt.slice(0, 10)}`;
 
     listEl.innerHTML = "";
     if (items.length === 0) {
       const empty = document.createElement("div");
       empty.className = "empty";
-      empty.textContent = currentDate === "all"
+      const noFilter = currentMonth === "all" && currentDay === "all";
+      empty.textContent = noFilter
         ? "이 계정에 등록된 원고가 없습니다."
         : "선택한 일자에 해당하는 원고가 없습니다.";
       listEl.appendChild(empty);
@@ -400,7 +468,8 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
     }, 1500);
   });
 
-  rebuildDateFilter();
+  rebuildMonthFilter();
+  rebuildDayFilter();
   render();
 })();
 </script>
