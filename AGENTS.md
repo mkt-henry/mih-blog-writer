@@ -17,7 +17,7 @@
 2. **원고 작성 에이전트**
    - 참고 지침: `docs/지침/02_원고_작성_지침.md`
    - 역할: 자료 수집 산출물만 근거로 네이버 SE3 복붙용 HTML 원고를 작성한다.
-   - 산출물: `output/YYYY-MM-DD/[아티스트명]_[최종 제목].html` 초안. 본문 근거 출처를 본문에 나열하지 않고, 이미지 출처 표기는 `출처 - [아티스트명] 공식 SNS` 형식만 사용한다.
+   - 산출물: `output/YYYY-MM-DD/{agency_slug}/[아티스트명]_[최종 제목].html` 초안. 본문 근거 출처를 본문에 나열하지 않고, 이미지 출처 표기는 `출처 - [아티스트명] 공식 SNS` 형식만 사용한다.
 
 3. **검토 에이전트**
    - 참고 지침: `docs/지침/03_원고_검토_지침.md`
@@ -44,18 +44,21 @@
 - "유튜버섭외 원고"
 - "기업행사공연", "축제공연섭외", "MC섭외", "인플루언서섭외"처럼 특정 인물이 아닌 섭외 카테고리 요청
 
-**출력 파일명 규칙:** `output/YYYY-MM-DD/[아티스트명]_[원고제목].html`
+**출력 파일명 규칙:** `output/YYYY-MM-DD/{agency_slug}/[아티스트명]_[원고제목].html`
 
-- 반드시 `output/작성일(YYYY-MM-DD)/` 날짜 폴더 안에 저장. 루트 또는 `output/` 바로 아래 직접 저장 금지
+- 반드시 `output/작성일(YYYY-MM-DD)/{agency_slug}/` 안에 저장. 루트, `output/` 바로 아래, 날짜 폴더 바로 아래에 직접 저장 금지
+- **`{agency_slug}`는 발행 계정 슬러그**: `mih_speaker` (스피커), `mih_casting` (캐스팅), `mih_agency` (에이전시), `mih_history` (이전 발행 원고). 사용자가 발행 계정을 명시하지 않았으면 어느 계정에 올릴지 먼저 확인하고 작성한다.
 - `[원고제목]`에는 본문에 사용한 **최종 확정 제목 전체**를 넣는다 (대괄호 포함)
 - 파일명에 쓸 수 없는 Windows 금지 문자(`\ / : * ? " < > |`)는 등장하는 경우 공백 또는 `-` 로 치환한다 (대괄호 `[]`, 쉼표 `,` 는 그대로 유지)
-- 예: `output/2026-05-06/투어스_[투어스 섭외] 청량 에너지 보이후드 팝, 대학 축제 및 브랜드 팝업 섭외.html`
+- 예: `output/2026-05-06/mih_casting/투어스_[투어스 섭외] 청량 에너지 보이후드 팝, 대학 축제 및 브랜드 팝업 섭외.html`
 
-**카테고리 키워드 출력 파일명 규칙:** `output/YYYY-MM-DD/[메인키워드]_[원고제목].html`
+> **자동 동기화:** `main` 브랜치에 push되면 GitHub Action(`.github/workflows/sync-manuscripts.yml`)이 `output/YYYY-MM-DD/{agency_slug}/*.html` 경로를 읽어 Supabase `manuscripts` 테이블에 upsert한다. agency 서브폴더 없이 저장된 파일은 자동 동기화되지 않으므로 배포 사이트(`https://mih.bp-studio.com/`)에 반영되지 않는다.
+
+**카테고리 키워드 출력 파일명 규칙:** `output/YYYY-MM-DD/{agency_slug}/[메인키워드]_[원고제목].html`
 
 - `[메인키워드]`에는 `행사공연`, `개그맨섭외`, `래퍼섭외`, `유튜버섭외`처럼 사용자가 요청한 핵심 검색어를 넣는다.
 - 카테고리 원고 제목은 `[메인키워드]`로 시작한다.
-- 예: `output/2026-05-06/개그맨섭외_[개그맨섭외] 분위기를 살리는 MC·토크쇼·기업 행사 섭외.html`
+- 예: `output/2026-05-06/mih_casting/개그맨섭외_[개그맨섭외] 분위기를 살리는 MC·토크쇼·기업 행사 섭외.html`
 
 요청에 아티스트명만 있고 세부 정보가 없으면, 사용자에게 확인하기 전에 아래 항목을 **반드시 웹 검색으로** 조사해 채운다. 확실치 않은 사실은 비워두거나 일반화된 표현으로 처리하고, 사실 단정은 하지 않는다.
 
@@ -290,13 +293,14 @@ console.log('sentence spacing applied');
 
 카테고리 키워드 원고 요청(`행사공연`, `개그맨섭외`, `래퍼섭외`, `유튜버섭외` 등)은 아래 공통 워크플로우를 따르되, 1~3단계의 세부 기준은 `지침/04_카테고리_키워드_원고_작성_지침.md`를 우선 적용한다.
 
-1. `지침/01_자료_수집_지침.md`에 따라 자료 수집 산출물을 만든다.
-2. `지침/02_원고_작성_지침.md`에 따라 제목을 확정하고 SE3 HTML 초안을 작성한다.
-3. `output/[아티스트명]_[원고제목].html`로 저장한다. 제목은 본문에 사용한 최종 제목 그대로 사용한다.
-4. 문장 끝 여백 후처리 스크립트를 실행해 마침표·물음표·느낌표 뒤 `<br>`을 `<br><br>`로 일괄 치환한다.
-5. `지침/03_원고_검토_지침.md`에 따라 검토한다.
-6. 검토에서 수정 필요 항목이 나오면 HTML을 수정하고 다시 검토한다.
-7. 생성 완료 후 **글자수(본문 텍스트만 기준, HTML 태그 제외)** 와 **메인 키워드 등장 횟수**를 사용자에게 리포트한다.
+1. **발행 계정 결정** — 사용자가 명시하지 않았으면 어느 계정(`mih_speaker` / `mih_casting` / `mih_agency`)에 올릴지 먼저 확인한다.
+2. `지침/01_자료_수집_지침.md`에 따라 자료 수집 산출물을 만든다.
+3. `지침/02_원고_작성_지침.md`에 따라 제목을 확정하고 SE3 HTML 초안을 작성한다.
+4. `output/YYYY-MM-DD/{agency_slug}/[아티스트명]_[원고제목].html`로 저장한다. 제목은 본문에 사용한 최종 제목 그대로 사용한다.
+5. 문장 끝 여백 후처리 스크립트를 실행해 마침표·물음표·느낌표 뒤 `<br>`을 `<br><br>`로 일괄 치환한다.
+6. `지침/03_원고_검토_지침.md`에 따라 검토한다.
+7. 검토에서 수정 필요 항목이 나오면 HTML을 수정하고 다시 검토한다.
+8. 생성 완료 후 **글자수(본문 텍스트만 기준, HTML 태그 제외)** 와 **메인 키워드 등장 횟수**를 사용자에게 리포트한다.
 
 ---
 
@@ -349,10 +353,34 @@ console.log('sentence spacing applied');
 - 상대 경로(`src="image.png"`)도 복붙 시 깨지므로 **절대 사용 금지**
 - **톤:** 정중한 존댓말, 행사 기획 담당자 대상, 과장 없음
 
+# 자동 동기화 (GitHub → Supabase)
+
+`main` 브랜치에 push되면 GitHub Action `.github/workflows/sync-manuscripts.yml`이 `output/YYYY-MM-DD/{agency_slug}/*.html` 파일을 Supabase `manuscripts` 테이블에 upsert한다.
+
+- **agency_id**는 폴더의 `{agency_slug}`에서 결정 (`mih_speaker` / `mih_casting` / `mih_agency` / `mih_history`).
+- **DB의 `file_path`**는 agency 세그먼트 없이 `YYYY-MM-DD/filename.html` 형태로 저장 (유니크 키는 `(agency_id, file_path)`).
+- 같은 파일을 여러 agency에 두고 싶으면 각 agency 서브폴더에 동일 파일을 넣는다.
+- agency 서브폴더 없이 날짜 폴더 바로 아래 저장된 파일은 동기화 대상에서 제외된다.
+
+## GitHub Repository Secrets 등록 (최초 1회)
+
+GitHub repo → Settings → Secrets and variables → Actions에 두 개 등록:
+
+- `SUPABASE_URL` — Supabase 프로젝트 URL (예: `https://djtmniygzdbavxwrppxb.supabase.co`)
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (anon key 아님)
+
+값은 `.env.local`에 동일하게 들어 있는 값을 그대로 쓰면 된다.
+
+## 수동 실행
+
+- 로컬에서 전체 동기화: `npm run sync`
+- dry-run으로 무엇이 올라갈지 미리 보기: `node --env-file=.env.local scripts/sync-manuscripts.js --dry-run`
+- GitHub Actions UI에서 수동 실행 (`workflow_dispatch`) — `Full sync` 체크박스로 변경분이 아닌 전체 재동기화 가능.
+
 # 발행 워크플로우 (작성 → 모아보기 → 네이버 블로그)
 
 1. 원고를 본문 HTML로 작성한다 (명함 `<img>` 태그 포함하지 않음).
-2. 원고를 `manuscripts` 테이블에 저장한다 (어느 활성 계정 풀에 둘지 결정).
+2. 원고를 `output/YYYY-MM-DD/{agency_slug}/...html`로 저장하고 `git push`하면, GitHub Action이 자동으로 `manuscripts` 테이블에 upsert한다 (agency_slug에 해당하는 agency_id로 등록). 수동으로 모아보기 UI 업로드 버튼을 사용해도 된다.
 3. 모아보기(`https://mih.bp-studio.com/`)에서:
    - 사이드바 좌측 상단 탭에서 **발행 계정** 선택 (스피커/캐스팅/에이전시)
    - 좌측 목록에서 발행할 원고 클릭 → 우측 미리보기에 원고 + 그 계정의 명함이 합쳐서 표시됨
