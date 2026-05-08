@@ -1,1792 +1,345 @@
-﻿<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>원고 모아보기</title>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg: #f7f8fa;
-      --panel: #ffffff;
-      --text: #222222;
-      --muted: #6b7280;
-      --line: #d9dee7;
-      --brand: #2454a6;
-      --brand-soft: #e7eefc;
-      --shadow: 0 10px 28px rgba(24, 32, 56, 0.08);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    .app {
-      display: grid;
-      grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
-      min-height: 100vh;
-    }
-
-    .sidebar {
-      border-right: 1px solid var(--line);
-      background: var(--panel);
-      padding: 24px;
-      overflow: auto;
-      max-height: 100vh;
-    }
-
-    .header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 18px;
-    }
-
-    h1 {
-      margin: 0 0 6px;
-      font-size: 24px;
-      letter-spacing: 0;
-    }
-
-    .meta {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .meta a {
-      color: var(--brand);
-      font-weight: 700;
-      text-decoration: none;
-    }
-
-    .count {
-      flex: 0 0 auto;
-      min-width: 62px;
-      padding: 8px 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      text-align: center;
-      font-size: 12px;
-      color: var(--muted);
-      background: #fbfcff;
-    }
-
-    .count strong {
-      display: block;
-      color: var(--brand);
-      font-size: 20px;
-      line-height: 1.1;
-    }
-
-    .toolbar {
-      display: grid;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-
-    .search {
-      width: 100%;
-      height: 42px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 0 12px;
-      font-size: 14px;
-      outline: none;
-      background: #ffffff;
-    }
-
-    .search:focus {
-      border-color: var(--brand);
-      box-shadow: 0 0 0 3px rgba(36, 84, 166, 0.14);
-    }
-
-    .date-filter {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 8px;
-      align-items: end;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fbfcff;
-    }
-
-    .date-field {
-      display: grid;
-      gap: 5px;
-      min-width: 0;
-    }
-
-    .date-field label {
-      color: #374151;
-      font-size: 11px;
-      font-weight: 800;
-    }
-
-    .date-field input {
-      width: 100%;
-      height: 36px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 0 9px;
-      background: #ffffff;
-      color: #111827;
-      font-size: 13px;
-      outline: none;
-    }
-
-    .date-field input:focus {
-      border-color: var(--brand);
-      box-shadow: 0 0 0 3px rgba(36, 84, 166, 0.12);
-    }
-
-    .quick-date-actions {
-      display: grid;
-      grid-column: 1 / -1;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .quick-date-actions .action {
-      height: 34px;
-    }
-
-    .quick-date-actions .action.active {
-      border-color: var(--brand);
-      background: var(--brand-soft);
-      color: var(--brand);
-    }
-
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.45);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      padding: 20px;
-    }
-
-    .modal-overlay[hidden] { display: none; }
-
-    .modal {
-      background: var(--panel);
-      border-radius: 12px;
-      width: 100%;
-      max-width: 540px;
-      max-height: 80vh;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
-    }
-
-    .modal-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--line);
-      flex: 0 0 auto;
-    }
-
-    .modal-title {
-      font-weight: 700;
-      font-size: 15px;
-    }
-
-    .modal-head-actions {
-      display: flex;
-      gap: 8px;
-      flex: 0 0 auto;
-    }
-
-    .modal-list {
-      overflow-y: auto;
-      flex: 1;
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .modal-post {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #ffffff;
-    }
-
-    .modal-post-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .modal-post-title {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #111827;
-      line-height: 1.45;
-      word-break: keep-all;
-      overflow-wrap: anywhere;
-      text-decoration: none;
-    }
-
-    .modal-post-title:hover { color: var(--brand); }
-
-    .modal-post-date {
-      display: block;
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 3px;
-    }
-
-    .modal-empty {
-      padding: 32px 16px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .modal-foot {
-      padding: 14px 20px;
-      border-top: 1px solid var(--line);
-      flex: 0 0 auto;
-    }
-
-    .modal-foot .action { width: 100%; }
-
-    .list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .item {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #ffffff;
-      padding: 13px 14px;
-      text-align: left;
-      cursor: pointer;
-      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-    }
-
-    .item:hover,
-    .item.active {
-      border-color: var(--brand);
-      background: #fbfdff;
-      box-shadow: 0 6px 18px rgba(36, 84, 166, 0.1);
-    }
-
-    .item-title {
-      display: block;
-      margin-bottom: 6px;
-      color: #111827;
-      font-size: 14px;
-      font-weight: 700;
-      line-height: 1.45;
-      word-break: keep-all;
-      overflow-wrap: anywhere;
-    }
-
-    .item-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      height: 22px;
-      padding: 0 8px;
-      border-radius: 999px;
-      background: var(--brand-soft);
-      color: var(--brand);
-      font-weight: 700;
-    }
-
-    .empty {
-      display: none;
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      padding: 24px;
-      color: var(--muted);
-      text-align: center;
-      background: #ffffff;
-      font-size: 14px;
-    }
-
-    .viewer {
-      display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
-      min-width: 0;
-      min-height: 100vh;
-    }
-
-    .viewer-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      min-height: 72px;
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(10px);
-    }
-
-    .viewer-title {
-      min-width: 0;
-    }
-
-    .viewer-title strong {
-      display: block;
-      font-size: 16px;
-      line-height: 1.4;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .viewer-title span {
-      display: block;
-      margin-top: 3px;
-      color: var(--muted);
-      font-size: 12px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex: 0 0 auto;
-    }
-
-    .action {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      height: 38px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 0 12px;
-      background: #ffffff;
-      color: #1f2937;
-      font-size: 13px;
-      font-weight: 700;
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    .action.primary {
-      border-color: var(--brand);
-      background: var(--brand);
-      color: #ffffff;
-    }
-
-    .action:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-
-    .frame-wrap {
-      padding: 20px;
-      min-height: 0;
-    }
-
-    iframe {
-      width: 100%;
-      height: calc(100vh - 112px);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #ffffff;
-      box-shadow: var(--shadow);
-    }
-
-    @media (max-width: 980px) {
-      .app {
-        grid-template-columns: 1fr;
-      }
-
-      .sidebar {
-        max-height: none;
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .viewer {
-        min-height: 70vh;
-      }
-
-      iframe {
-        height: 70vh;
-      }
-    }
-
-    .agency-tabs {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 20px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .agency-tab {
-      flex: 1;
-      height: 34px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #ffffff;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s, color 0.15s;
-    }
-
-    .agency-tab.active {
-      border-color: var(--brand);
-      background: var(--brand-soft);
-      color: var(--brand);
-    }
-
-    .loading {
-      padding: 24px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .history-tab {
-      background: #f3f4f6 !important;
-      color: #9ca3af !important;
-    }
-
-    .history-tab.active {
-      border-color: #9ca3af !important;
-      background: #e5e7eb !important;
-      color: #6b7280 !important;
-    }
-
-    .config-field {
-      display: grid;
-      gap: 6px;
-    }
-
-    .config-field > label {
-      font-size: 12px;
-      font-weight: 800;
-      color: #374151;
-    }
-
-    .config-field input[type="url"],
-    .config-field input[type="number"],
-    .config-field input[type="text"],
-    .config-field input[type="file"] {
-      width: 100%;
-      height: 38px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 0 10px;
-      background: #fff;
-      font-size: 13px;
-      outline: none;
-      font-family: inherit;
-    }
-
-    .config-field input[type="file"] {
-      padding: 7px 10px;
-    }
-
-    .config-field input:focus {
-      border-color: var(--brand);
-      box-shadow: 0 0 0 3px rgba(36, 84, 166, 0.14);
-    }
-
-    .config-preview {
-      display: block;
-      max-width: 100%;
-      max-height: 220px;
-      object-fit: contain;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-      padding: 8px;
-    }
-
-    .config-hint {
-      margin: 0;
-      color: var(--muted);
-      font-size: 11px;
-    }
-
-    .config-card {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 14px;
-      background: #fbfcff;
-      display: grid;
-      grid-template-columns: 180px minmax(0, 1fr);
-      gap: 14px;
-      align-items: start;
-    }
-
-    .config-card-head {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin: 0 0 4px;
-    }
-
-    .config-card-head h3 {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--brand);
-    }
-
-    .config-card-head .config-card-slug {
-      font-size: 11px;
-      color: var(--muted);
-      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-    }
-
-    .config-card-fields {
-      display: grid;
-      gap: 8px;
-      min-width: 0;
-    }
-
-    .config-card-empty {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      min-height: 110px;
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      background: #ffffff;
-      color: var(--muted);
-      font-size: 12px;
-      text-align: center;
-      padding: 10px;
-    }
-
-    .config-card-status {
-      font-size: 11px;
-      color: var(--muted);
-      min-height: 14px;
-    }
-
-    .config-card-status.ok { color: #047857; }
-    .config-card-status.err { color: #b91c1c; }
-
-    @media (max-width: 720px) {
-      .config-card {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .upload-date-sep {
-      padding: 10px 4px 4px;
-      font-size: 12px;
-      font-weight: 800;
-      color: #374151;
-    }
-
-    .upload-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto minmax(80px, auto);
-      gap: 12px;
-      align-items: center;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-    }
-
-    .upload-info { min-width: 0; }
-
-    .upload-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #111827;
-      word-break: keep-all;
-      overflow-wrap: anywhere;
-      margin-bottom: 4px;
-      line-height: 1.4;
-    }
-
-    .upload-title .upload-title-sub {
-      color: var(--muted);
-      font-weight: 400;
-      margin-left: 6px;
-    }
-
-    .upload-status {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-    }
-
-    .upload-tag {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: var(--brand-soft);
-      color: var(--brand);
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .upload-tag.history {
-      background: #f3f4f6;
-      color: #6b7280;
-    }
-
-    .upload-status .empty {
-      color: var(--muted);
-      font-size: 11px;
-    }
-
-    .upload-actions {
-      display: flex;
-      gap: 4px;
-    }
-
-    .upload-actions .upload-btn {
-      height: 28px;
-      padding: 0 10px;
-      font-size: 11px;
-    }
-
-    .upload-actions .upload-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .upload-result {
-      font-size: 11px;
-      color: var(--muted);
-      text-align: right;
-      min-width: 80px;
-    }
-
-    .upload-result.ok { color: #047857; }
-    .upload-result.err { color: #b91c1c; }
-
-    @media (max-width: 720px) {
-      .upload-row {
-        grid-template-columns: 1fr;
-      }
-      .upload-result { text-align: left; }
-    }
-
-    @media (max-width: 640px) {
-      .sidebar,
-      .frame-wrap {
-        padding: 16px;
-      }
-
-      .header,
-      .viewer-bar {
-        align-items: stretch;
-        flex-direction: column;
-      }
-
-      .actions {
-        width: 100%;
-      }
-
-      .action {
-        flex: 1;
-      }
-
-      .viewer-title strong,
-      .viewer-title span {
-        white-space: normal;
-      }
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>모아보기 · MIH</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Arial, sans-serif;
+    color: #222;
+    background: #f5f6f8;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: 100vh;
+  }
+  aside {
+    background: #fff;
+    border-right: 1px solid #e3e5ea;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  aside h1 { font-size: 16px; margin: 0; padding: 16px 20px 8px; }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 16px 12px;
+    border-bottom: 1px solid #eef0f3;
+  }
+  .tabs button {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid #d8dbe1;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #444;
+  }
+  .tabs button.active {
+    background: #1565C0;
+    color: #fff;
+    border-color: #1565C0;
+  }
+  .meta {
+    padding: 8px 20px;
+    font-size: 11px;
+    color: #888;
+    border-bottom: 1px solid #eef0f3;
+  }
+  .list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  .item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    padding: 10px 20px;
+    font: inherit;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+  }
+  .item:hover { background: #f4f6f9; }
+  .item.active { background: #e8f0fe; border-left-color: #1565C0; }
+  .item .slug { font-size: 13px; font-weight: 600; color: #222; }
+  .item .title { font-size: 11px; color: #666; margin-top: 2px; line-height: 1.4; }
+  .item .date { font-size: 10px; color: #999; margin-top: 2px; }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: #f5f6f8;
+  }
+  header.topbar {
+    padding: 12px 20px;
+    border-bottom: 1px solid #e3e5ea;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header.topbar .title-block { flex: 1; min-width: 0; }
+  header.topbar h2 {
+    font-size: 14px;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  header.topbar .path {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  header.topbar button {
+    padding: 8px 14px;
+    border: 1px solid #1565C0;
+    background: #1565C0;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  header.topbar button.secondary {
+    background: #fff;
+    color: #1565C0;
+  }
+  header.topbar button:disabled {
+    background: #d6d8de;
+    border-color: #d6d8de;
+    color: #fff;
+    cursor: not-allowed;
+  }
+  iframe#preview {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #fff;
+  }
+  .empty {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    color: #999;
+    font-size: 14px;
+    padding: 40px;
+    text-align: center;
+  }
+</style>
 </head>
 <body>
-  <main class="app">
-    <aside class="sidebar">
-      <div class="agency-tabs">
-        <button class="agency-tab active" data-agency="mih_speaker">스피커</button>
-        <button class="agency-tab" data-agency="mih_casting">캐스팅</button>
-        <button class="agency-tab" data-agency="mih_agency">에이전시</button>
-        <button class="agency-tab history-tab" data-agency="mih_history">이력</button>
-      </div>
-      <div class="header">
-        <div>
-          <h1>원고 모아보기</h1>
-          <p class="meta" id="agencyLabel">메이드인헤븐 스피커</p>
-        </div>
-        <div class="count"><strong id="visibleCount">0</strong>개</div>
-      </div>
-
-      <div class="toolbar">
-        <input id="search" class="search" type="search" placeholder="이름, 제목, 날짜로 검색">
-        <div class="date-filter" aria-label="원고 일자 필터">
-          <div class="date-field">
-            <label for="startDateFilter">시작일</label>
-            <input id="startDateFilter" type="date">
-          </div>
-          <div class="date-field">
-            <label for="endDateFilter">종료일</label>
-            <input id="endDateFilter" type="date">
-          </div>
-          <div class="quick-date-actions" aria-label="빠른 일자 필터">
-            <button class="action" type="button" data-quick-date="today">오늘</button>
-            <button class="action" type="button" data-quick-date="yesterday">전일</button>
-            <button id="resetDateFilter" class="action" type="button">전체</button>
-          </div>
-        </div>
-        <button id="showPublished" class="action primary" style="width:100%">발행 원고 목록 보기</button>
-        <button id="showUpload" class="action" type="button" style="width:100%">📤 로컬 원고 업로드</button>
-        <button id="showConfig" class="action" type="button" style="width:100%">⚙️ 계정 명함·CTA 설정</button>
-      </div>
-
-      <div id="list" class="list"></div>
-      <div id="empty" class="empty">검색 결과가 없습니다.</div>
-    </aside>
-
-    <section class="viewer" aria-label="원고 미리보기">
-      <div class="viewer-bar">
-        <div class="viewer-title">
-          <strong id="selectedTitle">원고를 선택하세요</strong>
-          <span id="selectedPath">왼쪽 목록에서 원고를 선택하면 선택한 계정의 명함과 함께 미리보기가 표시됩니다.</span>
-        </div>
-        <div class="actions">
-          <button id="copyFileUrl" class="action" type="button" disabled>경로 복사</button>
-          <button id="copyContent" class="action" type="button" disabled>콘텐츠 복사</button>
-          <button id="copyWriteUrl" class="action primary" type="button" disabled>글쓰기 URL 복사</button>
-        </div>
-      </div>
-      <div class="frame-wrap">
-        <iframe id="preview" title="원고 미리보기"></iframe>
-      </div>
-    </section>
-  </main>
-
-  <div id="uploadModal" class="modal-overlay" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle" style="max-width: 820px;">
-      <div class="modal-head">
-        <span id="uploadModalTitle" class="modal-title">HTML 원고 업로드</span>
-        <div class="modal-head-actions">
-          <button id="closeUploadModal" class="action" type="button">✕</button>
-        </div>
-      </div>
-      <div class="modal-list" style="gap:14px">
-        <div class="config-field">
-          <label>발행 계정 (모든 파일에 적용)</label>
-          <div id="uploadAgencyTabs" class="agency-tabs" style="margin:0;padding:0;border:0;">
-            <button class="agency-tab active" data-upload-agency="mih_speaker" type="button">스피커</button>
-            <button class="agency-tab" data-upload-agency="mih_casting" type="button">캐스팅</button>
-            <button class="agency-tab" data-upload-agency="mih_agency" type="button">에이전시</button>
-          </div>
-        </div>
-        <div class="config-field">
-          <label for="uploadDate">날짜 (file_path는 <code>YYYY-MM-DD/파일명.html</code>)</label>
-          <input id="uploadDate" type="date">
-        </div>
-        <div class="config-field">
-          <label for="uploadFiles">HTML 파일 선택 (여러 개 가능)</label>
-          <input id="uploadFiles" type="file" accept=".html,text/html" multiple>
-          <p class="config-hint">파일명은 <code>슬러그_제목.html</code> 패턴이어야 합니다 (예: <code>자우림_[자우림 섭외] 한국 록의 살아있는 명가....html</code>)</p>
-        </div>
-        <div id="uploadList" style="display:flex;flex-direction:column;gap:6px"></div>
-        <button id="uploadAll" class="action primary" type="button" disabled>선택한 계정으로 모두 업로드</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="configModal" class="modal-overlay" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="configModalTitle" style="max-width: 760px;">
-      <div class="modal-head">
-        <span id="configModalTitle" class="modal-title">계정 명함·CTA 설정</span>
-        <div class="modal-head-actions">
-          <button id="closeConfigModal" class="action" type="button">✕</button>
-        </div>
-      </div>
-      <div id="configList" class="modal-list" style="gap:14px"></div>
-    </div>
-  </div>
-
-  <div id="publishedModal" class="modal-overlay" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-head">
-        <span id="modalTitle" class="modal-title">발행 원고 목록</span>
-        <div class="modal-head-actions">
-          <button id="refreshRss" class="action" type="button">↻ 새로고침</button>
-          <button id="closeModal" class="action" type="button">✕</button>
-        </div>
-      </div>
-      <div id="modalList" class="modal-list"></div>
-      <div class="modal-foot">
-        <button id="copyModalUrls" class="action primary" type="button">선택 날짜 URL 모두 복사</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const AGENCY_NAMES = { mih_speaker: "메이드인헤븐 스피커", mih_casting: "메이드인헤븐 캐스팅", mih_agency: "메이드인헤븐 에이전시", mih_history: "이전 발행 원고" };
-
-    let manuscripts = [];
-    let publishedPosts = [];
-    let currentAgency = "mih_speaker";
-    let loading = false;
-    let selectedItem = null;
-    const agencyConfigCache = new Map();
-
-    const _manuscripts = [
-      { date: "2026-05-04", person: "안정환", title: "[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외", path: "./2026-05-05/안정환_[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외.html" },
-      { date: "2026-05-04", person: "추성훈", title: "[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외", path: "./2026-05-05/추성훈_[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외.html" },
-      { date: "2026-05-04", person: "탁재훈", title: "[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외", path: "./2026-05-05/탁재훈_[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외.html" },
-      { date: "2026-05-04", person: "허용별", title: "[허용별 섭외] 허각 신용재 임한별 보컬 트리오, 기업 송년회·웨딩·시민 콘서트 섭외", path: "./2026-05-05/허용별_[허용별 섭외] 허각 신용재 임한별 보컬 트리오, 기업 송년회·웨딩·시민 콘서트 섭외.html" },
-      { date: "2026-05-04", person: "김민석", title: "[김민석(멜로망스) 섭외] 선물 보컬, 결혼식 축가·기업 송년회·시민 음악회 섭외", path: "./2026-05-05/김민석_[김민석(멜로망스) 섭외] 선물 보컬, 결혼식 축가·기업 송년회·시민 음악회 섭외.html" },
-      { date: "2026-05-04", person: "송소희", title: "[송소희 섭외] 경기민요와 팝을 잇는 싱어송라이터, 전통문화 행사·시민 음악회·페스티벌 섭외", path: "./2026-05-05/송소희_[송소희 섭외] 경기민요와 팝을 잇는 싱어송라이터, 전통문화 행사·시민 음악회·페스티벌 섭외.html" },
-      { date: "2026-04-30", person: "김경순", title: "[김경순 섭외] 한약사 건강식재료 전문가, 기업·평생교육 특강 섭외", path: "./2026-05-05/김경순_[김경순 섭외] 한약사 건강식재료 전문가, 기업·평생교육 특강 섭외.html" },
-      { date: "2026-04-30", person: "박준", title: "[박준 섭외] 마음을 읽는 시인의 언어, 도서관·기업 인문학 강연 섭외", path: "./2026-05-05/박준_[박준 섭외] 마음을 읽는 시인의 언어, 도서관·기업 인문학 강연 섭외.html" },
-      { date: "2026-04-30", person: "심재용", title: "[심재용 섭외] 설득 협상 전문가, 기업 교육·세일즈 특강 섭외", path: "./2026-05-05/심재용_[심재용 섭외] 설득 협상 전문가, 기업 교육·세일즈 특강 섭외.html" },
-      { date: "2026-04-30", person: "김필", title: "[김필 섭외] 깊은 감성 싱어송라이터, 기업 행사·대학 축제 섭외", path: "./2026-05-05/김필_[김필 섭외] 깊은 감성 싱어송라이터, 기업 행사·대학 축제 섭외.html" },
-      { date: "2026-04-30", person: "김보경", title: "[김보경 섭외] OST 감성 파워 보컬, 기업 행사·축제 섭외", path: "./2026-05-05/김보경_[김보경 섭외] OST 감성 파워 보컬, 기업 행사·축제 섭외.html" },
-      { date: "2026-04-30", person: "비트펠라하우스", title: "[비트펠라하우스 섭외] 입소리 퍼포먼스, 대학 축제·브랜드 행사 섭외", path: "./2026-05-05/비트펠라하우스_[비트펠라하우스 섭외] 입소리 퍼포먼스, 대학 축제·브랜드 행사 섭외.html" },
-      { date: "2026-04-23", person: "정성호", title: "[정성호 MC 섭외] 성대모사의 달인, 기업 행사 및 결혼식 사회 섭외", path: "./2026-04-23/정성호_[정성호 MC 섭외] 성대모사의 달인, 기업 행사 및 결혼식 사회 섭외.html" },
-      { date: "2026-04-23", person: "허성범", title: "[허성범 섭외] 카이스트 AI 크리에이터, 대학 강연 및 브랜드 콘텐츠 섭외", path: "./2026-04-23/허성범_[허성범 섭외] 카이스트 AI 크리에이터, 대학 강연 및 브랜드 콘텐츠 섭외.html" },
-      { date: "2026-04-23", person: "궤도", title: "[궤도 섭외] 1세대 과학 커뮤니케이터, 대학 강연 및 AI 시대 기업 특강 섭외", path: "./2026-04-23/궤도_[궤도 섭외] 1세대 과학 커뮤니케이터, 대학 강연 및 AI 시대 기업 특강 섭외.html" },
-      { date: "2026-04-23", person: "이혜성", title: "[이혜성 MC 섭외] 서울대 출신 전 KBS 아나운서, 기업 행사 및 결혼식 사회 섭외", path: "./2026-04-23/이혜성_[이혜성 MC 섭외] 서울대 출신 전 KBS 아나운서, 기업 행사 및 결혼식 사회 섭외.html" },
-      { date: "2026-04-24", person: "원밀리언", title: "[원밀리언 섭외] 글로벌 K-댄스 아이콘, 브랜드 런칭 · 대학 축제 · 팝업 공연 섭외", path: "./2026-04-24/원밀리언_[원밀리언 섭외] 글로벌 K-댄스 아이콘, 브랜드 런칭 · 대학 축제 · 팝업 공연 섭외.html" },
-      { date: "2026-04-24", person: "제로베이스원", title: "[제로베이스원 섭외] 9인 완전체 종료 후 멤버별 섭외 가이드 · 5인 체제 · 신인 그룹 · 개별 활동", path: "./2026-04-24/제로베이스원_[제로베이스원 섭외] 9인 완전체 종료 후 멤버별 섭외 가이드 · 5인 체제 · 신인 그룹 · 개별 활동.html" },
-      { date: "2026-04-24", person: "차인표", title: "[차인표 섭외] 30년 차 명배우 · 옥스퍼드 선정 작가 · 선한 영향력 아이콘, 기업 특강 · 토크 콘서트", path: "./2026-04-24/차인표_[차인표 섭외] 30년 차 명배우 · 옥스퍼드 선정 작가 · 선한 영향력 아이콘, 기업 특강 · 토크 콘서트.html" },
-      { date: "2026-04-24", person: "파비앙", title: "[파비앙 섭외] 한국사 1급 프랑스인 방송인, 다문화 특강 · 기업 글로벌 · 관광 · 교육 행사 섭외", path: "./2026-04-24/파비앙_[파비앙 섭외] 한국사 1급 프랑스인 방송인, 다문화 특강 · 기업 글로벌 · 관광 · 교육 행사 섭외.html" },
-      { date: "2026-04-24", person: "윤윤구", title: "[윤윤구 섭외] 학생부 전형의 마술사, EBS 입시 대표강사 · 학부모 대입 설명회 · 지자체 입시 특강", path: "./2026-04-24/윤윤구_[윤윤구 섭외] 학생부 전형의 마술사, EBS 입시 대표강사 · 학부모 대입 설명회 · 지자체 입시 특강.html" },
-      { date: "2026-04-24", person: "하정우", title: "[하정우 AI 수석 섭외] 대한민국 AI 컨트롤타워가 말하는 AI 특강 · 임직원 교양 · 미래 전략 컨퍼런스", path: "./2026-04-24/하정우_[하정우 AI 수석 섭외] 대한민국 AI 컨트롤타워가 말하는 AI 특강 · 임직원 교양 · 미래 전략 컨퍼런스.html" },
-      { date: "2026-04-27", person: "QWER", title: "[QWER 섭외] 직접 연주하는 걸밴드 라이브, 대학 축제·인디 페스티벌·브랜드 팝업 섭외", path: "./2026-04-27/QWER_[QWER 섭외] 직접 연주하는 걸밴드 라이브, 대학 축제·인디 페스티벌·브랜드 팝업 섭외.html" },
-      { date: "2026-04-27", person: "세븐틴", title: "[세븐틴 섭외] 자체제작 13인조의 무대 파워, 대학 축제·K-POP 페스티벌·기업 행사 섭외", path: "./2026-04-27/세븐틴_[세븐틴 섭외] 자체제작 13인조의 무대 파워, 대학 축제·K-POP 페스티벌·기업 행사 섭외.html" },
-      { date: "2026-04-27", person: "유영만", title: "[유영만 교수 섭외] 지식생태학자의 통찰, 기업 특강·리더십 포럼·대학 강연 섭외", path: "./2026-04-27/유영만_[유영만 교수 섭외] 지식생태학자의 통찰, 기업 특강·리더십 포럼·대학 강연 섭외.html" },
-      { date: "2026-04-27", person: "이기용", title: "[이기용 대표 섭외] 블로그·SNS 마케팅 전문가, 기업 교육·소상공인 특강·공공기관 강연 섭외", path: "./2026-04-27/이기용_[이기용 대표 섭외] 블로그·SNS 마케팅 전문가, 기업 교육·소상공인 특강·공공기관 강연 섭외.html" },
-      { date: "2026-04-27", person: "박위", title: "[박위 섭외] 기적을 만드는 위라클 크리에이터, 동기부여 강연·기업 특강·공공기관 행사 섭외", path: "./2026-04-27/박위_[박위 섭외] 기적을 만드는 위라클 크리에이터, 동기부여 강연·기업 특강·공공기관 행사 섭외.html" },
-      { date: "2026-04-27", person: "타일러라쉬", title: "[타일러 라쉬 섭외] 유창한 한국어의 미국인 방송인, 기업 특강·글로벌 포럼·환경 캠페인 섭외", path: "./2026-04-27/타일러라쉬_[타일러 라쉬 섭외] 유창한 한국어의 미국인 방송인, 기업 특강·글로벌 포럼·환경 캠페인 섭외.html" },
-      { date: "2026-04-28", person: "키스오브라이프", title: "[키스오브라이프 섭외] 실력파 핫걸 무대, 대학 축제·브랜드 팝업 섭외", path: "./2026-04-28/키스오브라이프_[키스오브라이프 섭외] 실력파 핫걸 무대, 대학 축제·브랜드 팝업 섭외.html" },
-      { date: "2026-04-28", person: "츄", title: "[츄 섭외] 밝은 에너지 솔로 아티스트, 대학 축제·브랜드 캠페인 섭외", path: "./2026-04-28/츄_[츄 섭외] 밝은 에너지 솔로 아티스트, 대학 축제·브랜드 캠페인 섭외.html" },
-      { date: "2026-04-28", person: "이호선", title: "[이호선 교수 섭외] 가족 상담 전문가, 기업 특강·부부 소통·시니어 아카데미 섭외", path: "./2026-04-28/이호선_[이호선 교수 섭외] 가족 상담 전문가, 기업 특강·부부 소통·시니어 아카데미 섭외.html" },
-      { date: "2026-04-28", person: "궤도", title: "[궤도 섭외] 과학 커뮤니케이터, 기업 특강·청소년 진로교육 섭외", path: "./2026-04-28/궤도_[궤도 섭외] 과학 커뮤니케이터, 기업 특강·청소년 진로교육 섭외.html" },
-      { date: "2026-04-28", person: "조용민", title: "[조용민 대표 섭외] AI 시대 일하는 법, 기업 특강·공공기관 포럼 섭외", path: "./2026-04-28/조용민_[조용민 대표 섭외] AI 시대 일하는 법, 기업 특강·공공기관 포럼 섭외.html" },
-      { date: "2026-04-28", person: "김경일", title: "[김경일 교수 섭외] 인지심리학 명사, 기업 특강·공공기관 아카데미 섭외", path: "./2026-04-28/김경일_[김경일 교수 섭외] 인지심리학 명사, 기업 특강·공공기관 아카데미 섭외.html" },
-      { date: "2026-04-29", person: "바다", title: "[바다 섭외] 세대를 잇는 디바 라이브, 기업 행사·축제·콘서트 섭외", path: "./2026-04-29/바다_[바다 섭외] 세대를 잇는 디바 라이브, 기업 행사·축제·콘서트 섭외.html" },
-      { date: "2026-04-29", person: "민경훈", title: "[민경훈 섭외] 록발라드 감성 보컬, 대학 축제·기업 행사 섭외", path: "./2026-04-29/민경훈_[민경훈 섭외] 록발라드 감성 보컬, 대학 축제·기업 행사 섭외.html" },
-      { date: "2026-04-29", person: "카더가든", title: "[카더가든 섭외] 짙은 음색 싱어송라이터, 대학 축제·기업 행사 섭외", path: "./2026-04-29/카더가든_[카더가든 섭외] 짙은 음색 싱어송라이터, 대학 축제·기업 행사 섭외.html" },
-      { date: "2026-04-29", person: "인순이", title: "[인순이 강연 섭외] 다문화·도전·자존감 메시지, 기업 특강·공공기관 교육 섭외", path: "./2026-04-29/인순이_[인순이 강연 섭외] 다문화·도전·자존감 메시지, 기업 특강·공공기관 교육 섭외.html" },
-      { date: "2026-04-29", person: "박명수", title: "[박명수 강연 섭외] 현실 조언과 유머 소통, 기업 특강·공공기관 교육 섭외", path: "./2026-04-29/박명수_[박명수 강연 섭외] 현실 조언과 유머 소통, 기업 특강·공공기관 교육 섭외.html" },
-      { date: "2026-04-29", person: "조진세·김원훈", title: "[조진세·김원훈 섭외] 숏박스 코미디 듀오, 기업 행사·대학 축제·브랜드 콘텐츠 섭외", path: "./2026-04-29/조진세·김원훈_[조진세·김원훈 섭외] 숏박스 코미디 듀오, 기업 행사·대학 축제·브랜드 콘텐츠 섭외.html" },
-      { date: "2026-05-06", person: "김계란", title: "[김계란 섭외] 건강·운동 콘텐츠 제작자, 기업 행사·브랜드 캠페인 섭외", path: "./2026-05-06/김계란_[김계란 섭외] 건강·운동 콘텐츠 제작자, 기업 행사·브랜드 캠페인 섭외.html" },
-      { date: "2026-05-06", person: "나민애", title: "[나민애 섭외] 서울대 글쓰기 교수, 기업 인문학·학부모 특강 섭외", path: "./2026-05-06/나민애_[나민애 섭외] 서울대 글쓰기 교수, 기업 인문학·학부모 특강 섭외.html" },
-      { date: "2026-05-06", person: "문세윤", title: "[문세윤 섭외] 먹방·토크 예능 베테랑, 기업 행사·축제 MC 섭외", path: "./2026-05-06/문세윤_[문세윤 섭외] 먹방·토크 예능 베테랑, 기업 행사·축제 MC 섭외.html" },
-      { date: "2026-05-06", person: "서은국", title: "[서은국 섭외] 행복 심리학 권위자, 기업 특강·공공 인문학 강연 섭외", path: "./2026-05-06/서은국_[서은국 섭외] 행복 심리학 권위자, 기업 특강·공공 인문학 강연 섭외.html" },
-      { date: "2026-05-06", person: "이찬원", title: "[이찬원 섭외] 세대를 잇는 트롯테이너, 지역 축제·기업 행사·콘서트 섭외", path: "./2026-05-06/이찬원_[이찬원 섭외] 세대를 잇는 트롯테이너, 지역 축제·기업 행사·콘서트 섭외.html" },
-      { date: "2026-05-06", person: "행사공연", title: "[행사공연] 기업 행사와 지역 축제에 맞는 공연팀 섭외 가이드", path: "./2026-05-06/행사공연_[행사공연] 기업 행사와 지역 축제에 맞는 공연팀 섭외 가이드.html" },
-      { date: "2026-05-06", person: "홍현희", title: "[홍현희 섭외] 리액션 강한 예능 MC, 기업 행사·토크 콘서트 섭외", path: "./2026-05-06/홍현희_[홍현희 섭외] 리액션 강한 예능 MC, 기업 행사·토크 콘서트 섭외.html" }
-    ];
-
-    const _publishedPosts = [
-      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:41","title":"[김계란 섭외] 건강·운동 콘텐츠 제작자, 기업 행사·브랜드 캠페인 섭외","url":"https://blog.naver.com/mih_ent/224276750397"},
-      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:41","title":"[서은국 섭외] 행복 심리학 권위자, 기업 특강·공공 인문학 강연 섭외","url":"https://blog.naver.com/mih_ent/224276750011"},
-      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:41","title":"[문세윤 섭외] 먹방·토크 예능 베테랑, 기업 행사·축제 MC 섭외","url":"https://blog.naver.com/mih_ent/224276749704"},
-      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:40","title":"[나민애 섭외] 서울대 글쓰기 교수, 기업 인문학·학부모 특강 섭외","url":"https://blog.naver.com/mih_ent/224276749240"},
-      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:40","title":"[홍현희 섭외] 리액션 강한 예능 MC, 기업 행사·토크 콘서트 섭외","url":"https://blog.naver.com/mih_ent/224276748850"},
-      {"source":"published","date":"2026-05-06","publishedAt":"2026-05-06 17:40","title":"[이찬원 섭외] 세대를 잇는 트롯테이너, 지역 축제·기업 행사·콘서트 섭외","url":"https://blog.naver.com/mih_ent/224276748180"},
-      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:14","title":"[김민석(멜로망스) 섭외] 선물 보컬, 결혼식 축가·기업 송년회·시민 음악회 섭외","url":"https://blog.naver.com/mih_ent/224274553987"},
-      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:13","title":"[송소희 섭외] 경기민요와 팝을 잇는 싱어송라이터, 전통문화 행사·시민 음악회·페스티벌 섭외","url":"https://blog.naver.com/mih_ent/224274552789"},
-      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:13","title":"[안정환 강연 섭외] 2002 월드컵 골든골 신화, 기업 도전 특강·청소년 꿈 강연·신년 행사 섭외","url":"https://blog.naver.com/mih_ent/224274551813"},
-      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:12","title":"[추성훈 섭외] 유도·격투기 전설 출신 방송인, 기업 행사·스포츠 콘퍼런스·강연 섭외","url":"https://blog.naver.com/mih_ent/224274550465"},
-      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:11","title":"[탁재훈 섭외] 컨츄리꼬꼬 출신 만능 엔터테이너, 기업 송년회·시상식·토크 콘서트 섭외","url":"https://blog.naver.com/mih_ent/224274549700"},
-      {"source":"published","date":"2026-05-04","publishedAt":"2026-05-04 17:10","title":"[허용별 섭외] 허각 신용재 임한별 보컬 트리오, 기업 송년회·웨딩·시민 콘서트 섭외","url":"https://blog.naver.com/mih_ent/224274548997"},
-      {"source":"published","date":"2026-04-30","publishedAt":"2026-04-30 17:53","title":"[김필 섭외] 깊은 감성 싱어송라이터, 기업 행사·대학 축제 섭외","url":"https://blog.naver.com/mih_ent/224270694139"},
-      {"source":"published","date":"2026-04-30","publishedAt":"2026-04-30 17:52","title":"[심재용 섭외] 설득 협상 전문가, 기업 교육·세일즈 특강 섭외","url":"https://blog.naver.com/mih_ent/224270693260"},
-      {"source":"published","date":"2026-04-30","publishedAt":"2026-04-30 17:51","title":"[박준 섭외] 마음을 읽는 시인의 언어, 도서관·기업 인문학 강연 섭외","url":"https://blog.naver.com/mih_ent/224270692276"},
-      {"source":"published","date":"2026-04-30","publishedAt":"2026-04-30 17:51","title":"[김경순 섭외] 한약사 건강식재료 전문가, 기업·평생교육 특강 섭외","url":"https://blog.naver.com/mih_ent/224270691707"},
-      {"source":"published","date":"2026-04-30","publishedAt":"2026-04-30 17:48","title":"[김보경 섭외] OST 감성 파워 보컬, 기업 행사·축제 섭외","url":"https://blog.naver.com/mih_ent/224270688446"},
-      {"source":"published","date":"2026-04-30","publishedAt":"2026-04-30 17:47","title":"[비트펠라하우스 섭외] 입소리 퍼포먼스, 대학 축제·브랜드 행사 섭외","url":"https://blog.naver.com/mih_ent/224270687646"},
-      {"source":"published","date":"2026-04-29","publishedAt":"2026-04-29 16:47","title":"[카더가든 섭외] 짙은 음색 싱어송라이터, 대학 축제·기업 행사 섭외","url":"https://blog.naver.com/mih_ent/224269389654"},
-      {"source":"published","date":"2026-04-29","publishedAt":"2026-04-29 16:44","title":"[조진세·김원훈 섭외] 숏박스 코미디 듀오, 기업 행사·대학 축제·브랜드 콘텐츠 섭외","url":"https://blog.naver.com/mih_ent/224269386893"},
-      {"source":"published","date":"2026-04-29","publishedAt":"2026-04-29 16:44","title":"[인순이 강연 섭외] 다문화·도전·자존감 메시지, 기업 특강·공공기관 교육 섭외","url":"https://blog.naver.com/mih_ent/224269386057"},
-      {"source":"published","date":"2026-04-29","publishedAt":"2026-04-29 16:43","title":"[박명수 섭외] 현실 조언과 유머 소통, 기업 특강·공공기관 교육 섭외","url":"https://blog.naver.com/mih_ent/224269385198"},
-      {"source":"published","date":"2026-04-29","publishedAt":"2026-04-29 16:42","title":"[바다 섭외] 세대를 잇는 디바 라이브, 기업 행사·축제·콘서트 섭외","url":"https://blog.naver.com/mih_ent/224269384151"},
-      {"source":"published","date":"2026-04-29","publishedAt":"2026-04-29 16:42","title":"[민경훈 섭외] 록발라드 감성 보컬, 대학 축제·기업 행사 섭외","url":"https://blog.naver.com/mih_ent/224269383364"},
-      {"source":"published","date":"2026-04-28","publishedAt":"2026-04-28 14:38","title":"[김경일 교수 섭외] 인지심리학 명사, 기업 특강·공공기관 아카데미 섭외","url":"https://blog.naver.com/mih_ent/224267969370"},
-      {"source":"published","date":"2026-04-28","publishedAt":"2026-04-28 14:28","title":"[궤도 섭외] 과학 커뮤니케이터, 기업 특강·청소년 진로교육 섭외","url":"https://blog.naver.com/mih_ent/224267956892"},
-      {"source":"published","date":"2026-04-28","publishedAt":"2026-04-28 14:27","title":"[조용민 대표 섭외] AI 시대 일하는 법, 기업 특강·공공기관 포럼 섭외","url":"https://blog.naver.com/mih_ent/224267955302"},
-      {"source":"published","date":"2026-04-28","publishedAt":"2026-04-28 14:26","title":"[이호선 교수 섭외] 가족 상담 전문가, 기업 특강·부부 소통·시니어 아카데미 섭외","url":"https://blog.naver.com/mih_ent/224267953841"},
-      {"source":"published","date":"2026-04-28","publishedAt":"2026-04-28 13:55","title":"[츄 섭외] 밝은 에너지 솔로 아티스트, 대학 축제·브랜드 캠페인 섭외","url":"https://blog.naver.com/mih_ent/224267914588"},
-      {"source":"published","date":"2026-04-28","publishedAt":"2026-04-28 13:54","title":"[키스오브라이프 섭외] 실력파 핫걸 무대, 대학 축제·브랜드 팝업 섭외","url":"https://blog.naver.com/mih_ent/224267913817"},
-      {"source":"published","date":"2026-04-27","publishedAt":"2026-04-27 14:25","title":"[타일러 라쉬 섭외] 유창한 한국어의 미국인 방송인, 기업 특강·글로벌 포럼·환경 캠페인 섭외","url":"https://blog.naver.com/mih_ent/224266701269"},
-      {"source":"published","date":"2026-04-27","publishedAt":"2026-04-27 14:20","title":"[이기용 대표 섭외] 블로그·SNS 마케팅 전문가, 기업 교육·소상공인 특강·공공기관 강연 섭외","url":"https://blog.naver.com/mih_ent/224266694743"},
-      {"source":"published","date":"2026-04-27","publishedAt":"2026-04-27 14:20","title":"[유영만 교수 섭외] 지식생태학자의 통찰, 기업 특강·리더십 포럼·대학 강연 섭외","url":"https://blog.naver.com/mih_ent/224266694020"},
-      {"source":"published","date":"2026-04-27","publishedAt":"2026-04-27 14:19","title":"[세븐틴 섭외] 자체제작 13인조의 무대 파워, 대학 축제·K-POP 페스티벌·기업 행사 섭외","url":"https://blog.naver.com/mih_ent/224266692919"},
-      {"source":"published","date":"2026-04-27","publishedAt":"2026-04-27 14:18","title":"[박위 섭외] 기적을 만드는 위라클 크리에이터, 동기부여 강연·기업 특강·공공기관 행사 섭외","url":"https://blog.naver.com/mih_ent/224266691737"},
-      {"source":"published","date":"2026-04-27","publishedAt":"2026-04-27 14:16","title":"[QWER 섭외] 직접 연주하는 걸밴드 라이브, 대학 축제·인디 페스티벌·브랜드 팝업 섭외","url":"https://blog.naver.com/mih_ent/224266688989"},
-      {"source":"published","date":"2026-04-24","publishedAt":"2026-04-24 16:24","title":"[하정우 AI 수석 섭외] 대한민국 AI 컨트롤타워가 말하는 AI 특강 · 임직원 교양 · 미래 전략 컨퍼런스","url":"https://blog.naver.com/mih_ent/224263833097"},
-      {"source":"published","date":"2026-04-24","publishedAt":"2026-04-24 16:15","title":"[파비앙 섭외] 한국사 1급 프랑스인 방송인, 다문화 특강 · 기업 글로벌 · 관광 · 교육 행사 섭외","url":"https://blog.naver.com/mih_ent/224263821759"},
-      {"source":"published","date":"2026-04-24","publishedAt":"2026-04-24 16:15","title":"[차인표 섭외] 30년 차 명배우 · 옥스퍼드 선정 작가 · 선한 영향력 아이콘, 기업 특강 · 토크 콘서트","url":"https://blog.naver.com/mih_ent/224263820954"},
-      {"source":"published","date":"2026-04-24","publishedAt":"2026-04-24 16:14","title":"[제로베이스원 섭외] 9인 완전체 종료 후 멤버별 섭외 가이드 · 5인 체제 · 신인 그룹 · 개별 활동","url":"https://blog.naver.com/mih_ent/224263820154"},
-      {"source":"published","date":"2026-04-24","publishedAt":"2026-04-24 16:14","title":"[윤윤구 섭외] 학생부 전형의 마술사, EBS 입시 대표강사 · 학부모 대입 설명회 · 지자체 입시 특강","url":"https://blog.naver.com/mih_ent/224263819464"},
-      {"source":"published","date":"2026-04-24","publishedAt":"2026-04-24 16:13","title":"[원밀리언 섭외] 글로벌 K-댄스 아이콘, 브랜드 런칭 · 대학 축제 · 팝업 공연 섭외","url":"https://blog.naver.com/mih_ent/224263818515"},
-      {"source":"published","date":"2026-04-23","publishedAt":"2026-04-23 17:41","title":"[이혜성 섭외] 서울대 출신 전 KBS 아나운서, 기업 행사 및 결혼식 사회 섭외","url":"https://blog.naver.com/mih_ent/224262720873"},
-      {"source":"published","date":"2026-04-23","publishedAt":"2026-04-23 17:25","title":"[궤도 섭외] 1세대 과학 커뮤니케이터, 대학 강연 및 AI 시대 기업 특강 섭외","url":"https://blog.naver.com/mih_ent/224262699683"},
-      {"source":"published","date":"2026-04-23","publishedAt":"2026-04-23 17:02","title":"[허성범 섭외] 카이스트 AI 크리에이터, 대학 강연 및 브랜드 콘텐츠 섭외","url":"https://blog.naver.com/mih_ent/224262671531"},
-      {"source":"published","date":"2026-04-23","publishedAt":"2026-04-23 17:01","title":"[한로로 섭외] 한국대중음악상 올해의 음악인, 감성 무대로 행사를 완성하다","url":"https://blog.naver.com/mih_ent/224262669440"},
-      {"source":"published","date":"2026-04-23","publishedAt":"2026-04-23 17:00","title":"[투어스 섭외] 첫 만남은 계획대로 되지 않아 4,600만뷰, HYBE 청량 보이그룹 행사 섭외 가이드","url":"https://blog.naver.com/mih_ent/224262668195"},
-      {"source":"published","date":"2026-04-23","publishedAt":"2026-04-23 16:57","title":"[정성호 섭외] 성대모사의 달인, 기업 행사 및 결혼식 사회 섭외","url":"https://blog.naver.com/mih_ent/224262664661"},
-      {"source":"published","date":"2026-04-22","publishedAt":"2026-04-22 17:16","title":"[펀치 섭외] 드라마 OST의 여왕, 감성 무대로 행사를 완성하다","url":"https://blog.naver.com/mih_ent/224261446462"},
-      {"source":"published","date":"2026-04-22","publishedAt":"2026-04-22 17:15","title":"[이승기 섭외] 배우·가수·MC 삼관왕, 기업 행사와 공연 무대를 완성하는 법","url":"https://blog.naver.com/mih_ent/224261446173"},
-      {"source":"published","date":"2026-04-22","publishedAt":"2026-04-22 17:14","title":"[엄홍길 섭외] 히말라야 16좌 완등, 도전과 리더십 강연으로 행사를 완성하다","url":"https://blog.naver.com/mih_ent/224261444104"},
-      {"source":"published","date":"2026-04-22","publishedAt":"2026-04-22 17:13","title":"[정재승 교수 섭외] 알쓸신잡 뇌과학자, 기업·공공기관 강연으로 행사를 완성하다","url":"https://blog.naver.com/mih_ent/224261443256"},
-      {"source":"published","date":"2026-04-22","publishedAt":"2026-04-22 17:13","title":"[유현준 교수 섭외] 알쓸신잡 건축가, 공간과 창의성 강연으로 행사를 완성하다","url":"https://blog.naver.com/mih_ent/224261442736"},
-      {"source":"published","date":"2026-04-22","publishedAt":"2026-04-22 17:12","title":"[희철리즘 섭외] 구독자 170만 세계 여행 유튜버, 브랜드 행사와 강연으로 행사를 완성하다","url":"https://blog.naver.com/mih_ent/224261442180"},
-      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:03","title":"[윤대현 섭외] “마음이 지친 직장인에게 딱 맞는 강연” 서울대병원 정신건강의학과 윤대현 교수 섭외 총정리","url":"https://blog.naver.com/mih_ent/224259874259"},
-      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:02","title":"[이민영 섭외] 연 300회 출강 커뮤니케이션 전문가, 이민영 소장 강연 섭외 전 꼭 읽어보세요","url":"https://blog.naver.com/mih_ent/224259873250"},
-      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:01","title":"[신종호 섭외] “AI 시대 살아남는 인재를 만드는 교육법” 서울대 신종호 교수 강연 섭외 총정리","url":"https://blog.naver.com/mih_ent/224259872542"},
-      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:00","title":"[함익병 섭외] 방송에서 검증된 명의, 함익병 원장 건강 강연 섭외 전 꼭 확인하세요","url":"https://blog.naver.com/mih_ent/224259871562"},
-      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 13:00","title":"[십센치 섭외] 아메리카노·봄이 좋냐 그 밴드, 10CM 십센치 공연 섭외 전 꼭 읽어보세요","url":"https://blog.naver.com/mih_ent/224259870801"},
-      {"source":"published","date":"2026-04-21","publishedAt":"2026-04-21 12:59","title":"[소수빈 섭외] 싱어게인3 준우승 '고막남친' 소수빈, 행사 공연 섭외 전 꼭 확인하세요","url":"https://blog.naver.com/mih_ent/224259869967"},
-      {"source":"published","date":"2026-04-17","publishedAt":"2026-04-17 16:44","title":"[곽튜브 섭외] 구독자 215만 여행 유튜버 곽튜브 행사 섭외 방법 및 비용 안내","url":"https://blog.naver.com/mih_ent/224255879726"},
-      {"source":"published","date":"2026-04-17","publishedAt":"2026-04-17 16:43","title":"[김시선 섭외] 구독자 212만 영화평론가 유튜버 김시선 강연·행사 섭외 방법 및 비용 안내","url":"https://blog.naver.com/mih_ent/224255878935"}
-    ];
-
-    const agencyTabs = Array.from(document.querySelectorAll(".agency-tab"));
-    const agencyLabel = document.getElementById("agencyLabel");
-    const list = document.getElementById("list");
-    const search = document.getElementById("search");
-    const empty = document.getElementById("empty");
-    const visibleCount = document.getElementById("visibleCount");
-    const selectedTitle = document.getElementById("selectedTitle");
-    const selectedPath = document.getElementById("selectedPath");
-    const preview = document.getElementById("preview");
-    const copyContent = document.getElementById("copyContent");
-    const copyWriteUrl = document.getElementById("copyWriteUrl");
-    const copyFileUrl = document.getElementById("copyFileUrl");
-    const startDateFilter = document.getElementById("startDateFilter");
-    const endDateFilter = document.getElementById("endDateFilter");
-    const resetDateFilter = document.getElementById("resetDateFilter");
-    const showPublished = document.getElementById("showPublished");
-    const publishedModal = document.getElementById("publishedModal");
-    const modalList = document.getElementById("modalList");
-    const closeModal = document.getElementById("closeModal");
-    const refreshRss = document.getElementById("refreshRss");
-    const copyModalUrls = document.getElementById("copyModalUrls");
-    const quickDateButtons = Array.from(document.querySelectorAll("[data-quick-date]"));
-
-    let activeStartDate = "";
-    let activeEndDate = "";
-    let activeQuickDate = "";
-    let selectedPathValue = "";
-
-    function shouldOpenDirectly() {
-      return window.matchMedia("(max-width: 980px)").matches;
-    }
-
-    function escapeHtml(value) {
-      return String(value).replace(/[&<>"']/g, (char) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        "\"": "&quot;",
-        "'": "&#39;"
-      }[char]));
-    }
-
-    function formatLocalDate(date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    }
-
-    function setDateRange(startDate, endDate, quickDate = "") {
-      activeStartDate = startDate || "";
-      activeEndDate = endDate || "";
-      activeQuickDate = quickDate;
-      startDateFilter.value = activeStartDate;
-      endDateFilter.value = activeEndDate;
-      quickDateButtons.forEach((button) => {
-        button.classList.toggle("active", button.dataset.quickDate === activeQuickDate);
-      });
-    }
-
-    function setTodayFilter() {
-      const today = formatLocalDate(new Date());
-      setDateRange(today, today, "today");
-    }
-
-    function selectedDateRange() {
-      if (activeStartDate && activeEndDate && activeStartDate > activeEndDate) {
-        return { startDate: activeEndDate, endDate: activeStartDate };
-      }
-      return { startDate: activeStartDate, endDate: activeEndDate };
-    }
-
-    function publishedItemsForSelectedDates() {
-      const { startDate, endDate } = selectedDateRange();
-      return publishedPosts.filter((item) => {
-        const matchesStart = !startDate || item.date >= startDate;
-        const matchesEnd = !endDate || item.date <= endDate;
-        return matchesStart && matchesEnd && item.url;
-      });
-    }
-
-    function filteredItems() {
-      const query = search.value.trim().toLowerCase();
-      const { startDate, endDate } = selectedDateRange();
-      return manuscripts.filter((item) => {
-        const matchesStart = !startDate || item.date >= startDate;
-        const matchesEnd = !endDate || item.date <= endDate;
-        const haystack = `${item.person || ""} ${item.title} ${item.date} ${item.publishedAt || ""} ${item.path || ""} ${item.url || ""}`.toLowerCase();
-        return matchesStart && matchesEnd && (!query || haystack.includes(query));
-      });
-    }
-
-    function draftApiUrl(filePath) {
-      const p = String(filePath || "").replace(/^\.\//, "");
-      return `/api/draft?path=${encodeURIComponent(p)}&agency=${encodeURIComponent(currentAgency)}`;
-    }
-
-    function itemTarget(item) {
-      return item.url || draftApiUrl(item.path || item.file_path);
-    }
-
-    let renderToken = 0;
-
-    function buildPublishedPreview(item) {
-      return `<!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><style>
-body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif; background:#fff; color:#222; }
-main { max-width:760px; margin:0 auto; padding:48px 28px; line-height:1.7; }
-.badge { display:inline-block; margin-bottom:16px; padding:6px 10px; border-radius:999px; background:#e7eefc; color:#2454a6; font-weight:700; font-size:13px; }
-h1 { margin:0 0 16px; font-size:26px; line-height:1.35; }
-p { margin:0 0 24px; color:#555; }
-a { display:inline-flex; align-items:center; justify-content:center; height:42px; padding:0 14px; border-radius:8px; background:#2454a6; color:#fff; text-decoration:none; font-weight:700; }
-</style></head><body>
+<aside>
+  <h1>모아보기</h1>
+  <div class="tabs" id="tabs"></div>
+  <div class="meta" id="meta"></div>
+  <div class="list" id="list"></div>
+</aside>
 <main>
-  <span class="badge">네이버 블로그 발행 원고 · ${escapeHtml(item.publishedAt)}</span>
-  <h1>${escapeHtml(item.title)}</h1>
-  <p>RSS에서 확인된 실제 발행 글입니다.</p>
-  <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">네이버 블로그에서 보기</a>
+  <header class="topbar">
+    <div class="title-block">
+      <h2 id="selected-title">왼쪽에서 원고를 선택하세요</h2>
+      <div class="path" id="selected-path">발행 계정 탭을 누르고 원고를 클릭하면 미리보기가 나옵니다.</div>
+    </div>
+    <button id="copy-write-url" class="secondary" disabled>글쓰기 URL 복사</button>
+    <button id="copy-content" disabled>콘텐츠 복사</button>
+  </header>
+  <iframe id="preview" sandbox="allow-same-origin"></iframe>
 </main>
-</body></html>`;
-    }
 
-    // 카카오 오픈채팅 링크가 있는 <p> 바로 앞에 명함 HTML을 끼워넣는다.
-    // 카카오 링크가 없으면 원고 끝에 붙이는 기존 동작으로 폴백.
-    function mergeWithBusinessCard(originalHtml, cardHtml) {
-      if (!cardHtml) return originalHtml || "";
-      if (!originalHtml) return cardHtml;
-      const m = originalHtml.match(/<a\s[^>]*href=["']https:\/\/open\.kakao\.com\//i);
-      if (m && typeof m.index === "number") {
-        const pStart = originalHtml.lastIndexOf("<p ", m.index);
-        if (pStart !== -1) {
-          return originalHtml.slice(0, pStart) + cardHtml + "\n" + originalHtml.slice(pStart);
-        }
+<script src="manifest.js"></script>
+<script>
+(() => {
+  const data = window.MIH;
+  if (!data) {
+    document.body.innerHTML = '<div style="padding:40px;font-family:sans-serif;color:#b00">manifest.js를 찾지 못했습니다. <code>npm run build</code>로 생성하세요.</div>';
+    return;
+  }
+
+  const tabsEl = document.getElementById("tabs");
+  const metaEl = document.getElementById("meta");
+  const listEl = document.getElementById("list");
+  const previewEl = document.getElementById("preview");
+  const titleEl = document.getElementById("selected-title");
+  const pathEl = document.getElementById("selected-path");
+  const copyContentBtn = document.getElementById("copy-content");
+  const copyWriteUrlBtn = document.getElementById("copy-write-url");
+
+  let currentAgency = "mih_speaker";
+  let selected = null;
+
+  // ---- 탭 ----
+  Object.entries(data.agencies).forEach(([slug, info]) => {
+    const btn = document.createElement("button");
+    btn.dataset.slug = slug;
+    btn.textContent = info.short;
+    btn.addEventListener("click", () => {
+      currentAgency = slug;
+      selected = null;
+      render();
+    });
+    tabsEl.appendChild(btn);
+  });
+
+  // ---- 명함 + 카카오 합성 ----
+  // 카카오 오픈채팅 링크가 들어 있는 <p> 바로 앞에 명함 HTML을 끼워넣는다.
+  // 카카오 링크가 없으면 끝에 붙인다.
+  function buildBusinessCardHtml(agencySlug) {
+    const a = data.agencies[agencySlug];
+    if (!a || !a.businessCardImageUrl) return "";
+    const linkUrl = data.businessCardLinkUrl || "";
+    const img = `<img src="${a.businessCardImageUrl}" width="${a.businessCardWidth || 544}">`;
+    const inner = linkUrl ? `<a href="${linkUrl}">${img}</a>` : img;
+    return `<p align="center">${inner}</p>`;
+  }
+
+  function mergeWithBusinessCard(originalHtml, cardHtml) {
+    if (!cardHtml) return originalHtml || "";
+    if (!originalHtml) return cardHtml;
+    const m = originalHtml.match(/<a\s[^>]*href=["']https:\/\/open\.kakao\.com\//i);
+    if (m && typeof m.index === "number") {
+      const pStart = originalHtml.lastIndexOf("<p ", m.index);
+      if (pStart !== -1) {
+        return originalHtml.slice(0, pStart) + cardHtml + "\n" + originalHtml.slice(pStart);
       }
-      return `${originalHtml}\n${cardHtml}`;
     }
+    return `${originalHtml}\n${cardHtml}`;
+  }
 
-    function buildDraftPreview(originalHtml, cardHtml) {
-      return `<!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><style>
+  // ---- 미리보기 ----
+  function renderPreview() {
+    if (!selected) {
+      previewEl.removeAttribute("srcdoc");
+      previewEl.srcdoc = '<!doctype html><body style="font-family:sans-serif;padding:40px;color:#999;display:grid;place-items:center;height:100%;margin:0">왼쪽에서 원고를 선택하세요</body>';
+      return;
+    }
+    const cardHtml = buildBusinessCardHtml(selected.agency);
+    const merged = mergeWithBusinessCard(selected.html, cardHtml);
+    previewEl.srcdoc = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>
 body { margin:0; padding:24px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif; color:#222; background:#fff; line-height:1.6; }
 img { max-width:100%; height:auto; }
 hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
-</style></head><body>
-${mergeWithBusinessCard(originalHtml || "", cardHtml || "")}
-</body></html>`;
+</style></head><body>${merged}</body></html>`;
+  }
+
+  // ---- 목록 ----
+  function render() {
+    Array.from(tabsEl.children).forEach((b) => b.classList.toggle("active", b.dataset.slug === currentAgency));
+
+    const items = data.manuscripts.filter((m) => m.agency === currentAgency);
+    metaEl.textContent = `${items.length}개 원고 · 빌드 ${data.generatedAt.slice(0, 10)}`;
+
+    listEl.innerHTML = "";
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "이 계정에 등록된 원고가 없습니다.";
+      listEl.appendChild(empty);
     }
-
-    function setHighlight(target) {
-      Array.from(document.querySelectorAll(".item")).forEach((button) => {
-        button.classList.toggle("active", button.dataset.path === target);
-      });
-    }
-
-    async function renderPreview() {
-      const item = selectedItem;
-      const isHistory = currentAgency === "mih_history";
-
-      if (!item) {
-        selectedTitle.textContent = "원고를 선택하세요";
-        selectedPath.textContent = "왼쪽 목록에서 원고를 선택하면 선택한 계정의 명함과 함께 미리보기가 표시됩니다.";
-        preview.removeAttribute("src");
-        preview.removeAttribute("srcdoc");
-        copyContent.disabled = true;
-        copyWriteUrl.disabled = true;
-        copyFileUrl.disabled = true;
-        return;
-      }
-
-      const isPublished = !!item.url;
-      if (isPublished) {
-        selectedTitle.textContent = item.title;
-        selectedPath.textContent = `${item.publishedAt} · ${item.url}`;
-      } else {
-        selectedTitle.textContent = `${item.person} ${item.title}`;
-        selectedPath.textContent = item.file_path || item.path;
-      }
-
-      copyContent.disabled = isPublished || isHistory;
-      copyWriteUrl.disabled = isHistory;
-      copyFileUrl.disabled = isPublished;
-
-      const token = ++renderToken;
-
-      if (isPublished) {
-        preview.removeAttribute("src");
-        preview.srcdoc = buildPublishedPreview(item);
-        return;
-      }
-
-      preview.removeAttribute("src");
-      preview.srcdoc = `<!doctype html><html><body style="font-family:sans-serif;padding:24px;color:#999">로딩 중...</body></html>`;
-
-      try {
-        const path = item.file_path || item.path;
-        const targetUrl = draftApiUrl(path);
-        const fetchOriginal = fetch(targetUrl, { cache: "no-store" }).then(r => r.ok ? r.text() : null);
-        const fetchConfig = isHistory ? Promise.resolve(null) : getAgencyConfig(currentAgency);
-        const [originalHtml, config] = await Promise.all([fetchOriginal, fetchConfig]);
-        if (token !== renderToken) return;
-        if (!originalHtml) {
-          preview.srcdoc = `<!doctype html><html><body style="font-family:sans-serif;padding:24px;color:#b00">원고를 불러올 수 없습니다.<br><small>로컬에서는 vercel dev가 필요합니다.</small></body></html>`;
-          return;
-        }
-        preview.srcdoc = buildDraftPreview(originalHtml, config?.businessCardHtml || "");
-      } catch {
-        if (token !== renderToken) return;
-        preview.srcdoc = `<!doctype html><html><body style="font-family:sans-serif;padding:24px;color:#b00">미리보기 생성 실패</body></html>`;
-      }
-    }
-
-    function selectItem(item) {
-      selectedItem = item;
-      const target = itemTarget(item);
-      selectedPathValue = target;
-      setHighlight(target);
-      renderPreview();
-    }
-
-    function render() {
-      const items = filteredItems();
-      list.innerHTML = "";
-      visibleCount.textContent = items.length;
-      empty.style.display = items.length ? "none" : "block";
-
-      items.forEach((item) => {
-        const target = itemTarget(item);
-        const displayTitle = `${item.person} ${item.title}`;
-        const displayPath = item.file_path || item.path;
-        const badge = item.date;
-        const button = document.createElement("button");
-        button.className = "item";
-        button.type = "button";
-        button.dataset.path = target;
-        button.innerHTML = `
-          <span class="item-title">${escapeHtml(displayTitle)}</span>
-          <span class="item-meta">
-            <span>${escapeHtml(displayPath)}</span>
-            <span class="badge">${escapeHtml(badge)}</span>
-          </span>
-        `;
-        button.addEventListener("click", () => {
-          if (shouldOpenDirectly()) {
-            window.location.href = target;
-            return;
-          }
-          selectItem(item);
-        });
-        list.appendChild(button);
-      });
-
-      const stillVisible = items.some((item) => itemTarget(item) === selectedPathValue);
-      if (items.length && !stillVisible) {
-        selectItem(items[0]);
-      }
-    }
-
-    search.addEventListener("input", render);
-
-    startDateFilter.addEventListener("change", () => {
-      setDateRange(startDateFilter.value, activeEndDate);
-      render();
-    });
-
-    endDateFilter.addEventListener("change", () => {
-      setDateRange(activeStartDate, endDateFilter.value);
-      render();
-    });
-
-    quickDateButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const today = new Date();
-        if (button.dataset.quickDate === "yesterday") today.setDate(today.getDate() - 1);
-        const targetDate = formatLocalDate(today);
-        setDateRange(targetDate, targetDate, button.dataset.quickDate);
-        render();
-      });
-    });
-
-    resetDateFilter.addEventListener("click", () => {
-      setDateRange("", "");
-      render();
-    });
-
-    function renderModal() {
-      const items = publishedItemsForSelectedDates();
-      const { startDate, endDate } = selectedDateRange();
-      const dateLabel = startDate === endDate && startDate
-        ? startDate
-        : startDate && endDate ? `${startDate} ~ ${endDate}` : "전체";
-      document.getElementById("modalTitle").textContent = `발행 원고 목록 · ${dateLabel}`;
-      copyModalUrls.disabled = items.length === 0;
-
-      if (!items.length) {
-        modalList.innerHTML = `<p class="modal-empty">선택한 날짜에 발행된 원고가 없습니다.</p>`;
-        return;
-      }
-      modalList.innerHTML = items.map((item) => `
-        <div class="modal-post">
-          <div class="modal-post-info">
-            <a class="modal-post-title" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>
-            <span class="modal-post-date">${escapeHtml(item.publishedAt)}</span>
-          </div>
-        </div>
-      `).join("");
-    }
-
-    showPublished.addEventListener("click", () => {
-      renderModal();
-      publishedModal.hidden = false;
-    });
-
-    closeModal.addEventListener("click", () => {
-      publishedModal.hidden = true;
-    });
-
-    publishedModal.addEventListener("click", (e) => {
-      if (e.target === publishedModal) publishedModal.hidden = true;
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key !== "Escape") return;
-      if (!publishedModal.hidden) publishedModal.hidden = true;
-      const uploadModalEl = document.getElementById("uploadModal");
-      if (uploadModalEl && !uploadModalEl.hidden) uploadModalEl.hidden = true;
-      if (!configModal.hidden) configModal.hidden = true;
-    });
-
-    refreshRss.addEventListener("click", async () => {
-      refreshRss.disabled = true;
-      refreshRss.textContent = "로딩 중...";
-      const ok = await loadRssPosts();
-      refreshRss.textContent = ok ? "완료" : "실패";
-      renderModal();
-      setTimeout(() => {
-        refreshRss.textContent = "↻ 새로고침";
-        refreshRss.disabled = false;
-      }, 1500);
-    });
-
-    copyModalUrls.addEventListener("click", async () => {
-      const urls = [...new Set(publishedItemsForSelectedDates().map((item) => item.url))];
-      if (!urls.length) return;
-      const text = urls.join("\n");
-      try {
-        await navigator.clipboard.writeText(text);
-        copyModalUrls.textContent = `${urls.length}개 복사됨`;
-        setTimeout(() => {
-          copyModalUrls.textContent = "선택 날짜 URL 모두 복사";
-          copyModalUrls.disabled = false;
-        }, 1500);
-      } catch {
-        window.prompt("아래 발행 URL을 복사하세요.", text);
-      }
-    });
-
-    copyFileUrl.addEventListener("click", async () => {
-      if (!selectedItem || copyFileUrl.disabled) return;
-      const rawPath = (selectedItem.file_path || selectedItem.path || "").replace(/^\.\//, "");
-      if (!rawPath) return;
-      const url = `${window.location.origin}/${rawPath}`;
-      const original = copyFileUrl.textContent;
-      try {
-        await navigator.clipboard.writeText(url);
-        copyFileUrl.textContent = "복사됨";
-        setTimeout(() => { copyFileUrl.textContent = original; }, 1500);
-      } catch {
-        window.prompt("경로를 복사하세요:", url);
-      }
-    });
-
-    copyContent.addEventListener("click", async () => {
-      if (!selectedItem || copyContent.disabled) return;
-      const path = selectedItem.file_path || selectedItem.path;
-      if (!path) return;
-      copyContent.disabled = true;
-      const original = copyContent.textContent;
-      copyContent.textContent = "준비 중...";
-      try {
-        const targetUrl = draftApiUrl(path);
-        const [originalHtml, config] = await Promise.all([
-          fetch(targetUrl, { cache: "no-store" }).then(r => r.ok ? r.text() : ""),
-          getAgencyConfig(currentAgency)
-        ]);
-        const merged = mergeWithBusinessCard(originalHtml || "", config?.businessCardHtml || "").trim();
-        await navigator.clipboard.writeText(merged);
-        copyContent.textContent = "복사됨";
-        setTimeout(() => { copyContent.textContent = original; copyContent.disabled = false; }, 1500);
-      } catch {
-        copyContent.textContent = original;
-        copyContent.disabled = false;
-        alert("복사 실패");
-      }
-    });
-
-    copyWriteUrl.addEventListener("click", async () => {
-      if (copyWriteUrl.disabled || currentAgency === "mih_history") return;
-      const url = `https://blog.naver.com/${currentAgency}/postwrite`;
-      const original = copyWriteUrl.textContent;
-      try {
-        await navigator.clipboard.writeText(url);
-        copyWriteUrl.textContent = "복사됨";
-        setTimeout(() => { copyWriteUrl.textContent = original; }, 1500);
-      } catch {
-        window.prompt("URL을 복사하세요:", url);
-      }
-    });
-
-    async function loadManuscripts(agency) {
-      if (loading) return;
-      loading = true;
-      list.innerHTML = `<p class="loading">로딩 중...</p>`;
-      visibleCount.textContent = "…";
-      try {
-        const res = await fetch(`/api/manuscripts?agency=${encodeURIComponent(agency)}`, { cache: "no-store" });
-        if (!res.ok) throw new Error(res.status);
-        const data = await res.json();
-        manuscripts = data.map(m => ({
-          date: m.date,
-          person: m.slug,
-          title: m.title,
-          file_path: m.file_path,
-          assigned_agency: agency
-        }));
-      } catch {
-        manuscripts = _manuscripts.map(m => ({ ...m, assigned_agency: agency }));
-      } finally {
-        loading = false;
-        render();
-      }
-    }
-
-    async function loadPosts(agency) {
-      try {
-        const res = await fetch(`/api/posts?agency=${encodeURIComponent(agency)}`, { cache: "no-store" });
-        if (!res.ok) return;
-        const data = await res.json();
-        publishedPosts = data.map(p => ({
-          source: "published",
-          date: String(p.date).slice(0, 10),
-          publishedAt: p.published_at ? p.published_at.slice(0, 16).replace("T", " ") : String(p.date).slice(0, 10),
-          title: p.title,
-          url: p.url
-        }));
-      } catch {
-        publishedPosts = [];
-      }
-    }
-
-    async function loadRssPosts() {
-      try {
-        const res = await fetch(`/api/rss?agency=${encodeURIComponent(currentAgency)}`, { cache: "no-store" });
-        if (!res.ok) return false;
-        const items = await res.json();
-        if (!Array.isArray(items) || !items.length) return false;
-        const fresh = items.map((item) => ({
-          source: "published",
-          date: item.date,
-          publishedAt: `${item.date} ${item.time}`,
-          title: item.title,
-          url: item.url
-        }));
-        const urlSet = new Set(fresh.map((p) => p.url));
-        const merged = [...fresh, ...publishedPosts.filter((p) => !urlSet.has(p.url))];
-        merged.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
-        publishedPosts.splice(0, publishedPosts.length, ...merged);
-        return true;
-      } catch {
-        return false;
-      }
-    }
-
-    async function getAgencyConfig(slug) {
-      if (agencyConfigCache.has(slug)) return agencyConfigCache.get(slug);
-      try {
-        const res = await fetch(`/api/agency-config?agency=${encodeURIComponent(slug)}`, { cache: "no-store" });
-        if (!res.ok) return null;
-        const data = await res.json();
-        agencyConfigCache.set(slug, data);
-        return data;
-      } catch {
-        return null;
-      }
-    }
-
-    const CONFIG_AGENCIES = ["mih_speaker", "mih_casting", "mih_agency"];
-    const configModal = document.getElementById("configModal");
-    const configList = document.getElementById("configList");
-    const closeConfigModal = document.getElementById("closeConfigModal");
-    const showConfig = document.getElementById("showConfig");
-
-    function buildConfigCard(slug, data, error) {
-      const card = document.createElement("div");
-      card.className = "config-card";
-      card.dataset.slug = slug;
-
-      const head = document.createElement("div");
-      head.className = "config-card-head";
-      head.innerHTML = `<h3>${escapeHtml(AGENCY_NAMES[slug] || slug)}</h3><span class="config-card-slug">${escapeHtml(slug)}</span>`;
-      card.appendChild(head);
-
-      if (error || !data) {
-        const errBox = document.createElement("div");
-        errBox.className = "config-card-empty";
-        errBox.style.gridColumn = "1 / -1";
-        errBox.textContent = "설정을 불러올 수 없습니다. (vercel dev 또는 프로덕션에서 동작합니다)";
-        card.appendChild(errBox);
-        return card;
-      }
-
-      const previewWrap = document.createElement("div");
-      if (data.businessCardHtmlUrl) {
-        const img = document.createElement("img");
-        img.className = "config-preview preview-img";
-        img.src = data.businessCardHtmlUrl;
-        img.alt = `${AGENCY_NAMES[slug] || slug} 명함`;
-        previewWrap.appendChild(img);
-      } else {
-        const empty = document.createElement("div");
-        empty.className = "config-card-empty preview-empty";
-        empty.textContent = "등록된 명함 이미지가 없습니다.";
-        previewWrap.appendChild(empty);
-      }
-      card.appendChild(previewWrap);
-
-      const fields = document.createElement("div");
-      fields.className = "config-card-fields";
-      fields.innerHTML = `
-        <div class="config-field">
-          <label>새 명함 이미지 (PNG/JPG, 3MB 이하)</label>
-          <input class="biz-card-file" type="file" accept="image/png,image/jpeg">
-        </div>
-        <div class="config-field">
-          <label>카카오 오픈채팅 URL</label>
-          <input class="kakao-url" type="url" placeholder="https://open.kakao.com/..." value="${escapeHtml(data.kakaoUrl || "")}">
-        </div>
-        <div class="config-field">
-          <label>RSS URL</label>
-          <input class="rss-url" type="url" placeholder="https://rss.blog.naver.com/${escapeHtml(slug)}.xml" value="${escapeHtml(data.rssUrl || "")}">
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:2px">
-          <button class="action primary save-btn" type="button" style="flex:1">저장</button>
-          <span class="config-card-status"></span>
-        </div>
+    for (const item of items) {
+      const btn = document.createElement("button");
+      btn.className = "item" + (selected && selected.path === item.path ? " active" : "");
+      btn.innerHTML = `
+        <div class="slug">${escapeHtml(item.slug)}</div>
+        <div class="title">${escapeHtml(item.title)}</div>
+        <div class="date">${escapeHtml(item.date)}</div>
       `;
-      card.appendChild(fields);
-
-      return card;
-    }
-
-    function attachConfigCardHandlers(card) {
-      const slug = card.dataset.slug;
-      const fileInput = card.querySelector(".biz-card-file");
-      const kakaoInput = card.querySelector(".kakao-url");
-      const rssInput = card.querySelector(".rss-url");
-      const saveBtn = card.querySelector(".save-btn");
-      const status = card.querySelector(".config-card-status");
-      if (!saveBtn) return;
-
-      const previewWrap = card.children[1];
-
-      function setPreview(src) {
-        if (!previewWrap) return;
-        previewWrap.innerHTML = "";
-        if (src) {
-          const img = document.createElement("img");
-          img.className = "config-preview preview-img";
-          img.src = src;
-          img.alt = `${AGENCY_NAMES[slug] || slug} 명함`;
-          previewWrap.appendChild(img);
-        } else {
-          const empty = document.createElement("div");
-          empty.className = "config-card-empty preview-empty";
-          empty.textContent = "등록된 명함 이미지가 없습니다.";
-          previewWrap.appendChild(empty);
-        }
-      }
-
-      fileInput?.addEventListener("change", () => {
-        const f = fileInput.files?.[0];
-        if (!f) return;
-        const reader = new FileReader();
-        reader.onload = (e) => setPreview(e.target.result);
-        reader.readAsDataURL(f);
-      });
-
-      saveBtn.addEventListener("click", async () => {
-        saveBtn.disabled = true;
-        status.textContent = "저장 중...";
-        status.className = "config-card-status";
-        try {
-          const file = fileInput?.files?.[0];
-          let res;
-          if (file) {
-            const fd = new FormData();
-            fd.append("kakaoUrl", kakaoInput.value.trim());
-            fd.append("rssUrl", rssInput.value.trim());
-            fd.append("businessCardImage", file);
-            res = await fetch(`/api/agency-config?agency=${encodeURIComponent(slug)}`, { method: "POST", body: fd });
-          } else {
-            res = await fetch(`/api/agency-config?agency=${encodeURIComponent(slug)}`, {
-              method: "PUT",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({
-                kakaoUrl: kakaoInput.value.trim(),
-                rssUrl: rssInput.value.trim()
-              })
-            });
-          }
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            status.textContent = `오류: ${err.error || res.status}`;
-            status.classList.add("err");
-            return;
-          }
-          const saved = await res.json();
-          agencyConfigCache.set(slug, saved);
-          setPreview(saved.businessCardHtmlUrl || "");
-          if (fileInput) fileInput.value = "";
-          status.textContent = "저장 완료";
-          status.classList.add("ok");
-          setTimeout(() => { status.textContent = ""; status.className = "config-card-status"; }, 2000);
-        } catch {
-          status.textContent = "저장 실패";
-          status.classList.add("err");
-        } finally {
-          saveBtn.disabled = false;
-        }
-      });
-    }
-
-    async function openConfigModal() {
-      configList.innerHTML = `<p class="modal-empty">불러오는 중...</p>`;
-      configModal.hidden = false;
-      const results = await Promise.all(CONFIG_AGENCIES.map(async slug => {
-        try {
-          agencyConfigCache.delete(slug);
-          const res = await fetch(`/api/agency-config?agency=${encodeURIComponent(slug)}`, { cache: "no-store" });
-          if (!res.ok) return { slug, error: true };
-          const data = await res.json();
-          agencyConfigCache.set(slug, data);
-          return { slug, data };
-        } catch {
-          return { slug, error: true };
-        }
-      }));
-      configList.innerHTML = "";
-      results.forEach(({ slug, data, error }) => {
-        const card = buildConfigCard(slug, data, error);
-        configList.appendChild(card);
-        attachConfigCardHandlers(card);
-      });
-    }
-
-    showConfig.addEventListener("click", openConfigModal);
-    closeConfigModal.addEventListener("click", () => { configModal.hidden = true; });
-    configModal.addEventListener("click", (e) => { if (e.target === configModal) configModal.hidden = true; });
-
-    const uploadModal = document.getElementById("uploadModal");
-    const uploadList = document.getElementById("uploadList");
-    const uploadDate = document.getElementById("uploadDate");
-    const uploadFiles = document.getElementById("uploadFiles");
-    const closeUploadModal = document.getElementById("closeUploadModal");
-    const showUpload = document.getElementById("showUpload");
-    const uploadAgencyTabs = Array.from(document.querySelectorAll("#uploadAgencyTabs .agency-tab"));
-    const uploadAll = document.getElementById("uploadAll");
-
-    let uploadTargetAgency = "mih_speaker";
-    const uploadRows = [];
-
-    uploadAgencyTabs.forEach(tab => {
-      tab.addEventListener("click", () => {
-        uploadTargetAgency = tab.dataset.uploadAgency;
-        uploadAgencyTabs.forEach(t => t.classList.toggle("active", t === tab));
-      });
-    });
-
-    function parseUploadFileName(fileName) {
-      const withoutExt = fileName.replace(/\.html?$/i, "");
-      const idx = withoutExt.indexOf("_");
-      if (idx === -1) return { slug: withoutExt, title: withoutExt };
-      return { slug: withoutExt.slice(0, idx), title: withoutExt.slice(idx + 1) };
-    }
-
-    async function uploadOne(rowState) {
-      const { row, file, slug, title } = rowState;
-      const result = row.querySelector(".upload-result");
-      const btn = row.querySelector(".upload-btn");
-      const date = (uploadDate.value || "").trim();
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        result.className = "upload-result err";
-        result.textContent = "날짜 입력 필요";
-        return false;
-      }
-      btn.disabled = true;
-      result.className = "upload-result";
-      result.textContent = "업로드 중...";
-      try {
-        const html = await file.text();
-        const filePath = `${date}/${file.name}`;
-        const res = await fetch("/api/manuscripts", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            agency: uploadTargetAgency,
-            file_path: filePath,
-            title,
-            slug,
-            date,
-            html_content: html
-          })
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          result.className = "upload-result err";
-          result.textContent = `오류: ${err.error || res.status}`;
-          return false;
-        }
-        result.className = "upload-result ok";
-        result.textContent = `✓ ${AGENCY_NAMES[uploadTargetAgency] || uploadTargetAgency}`;
-        return true;
-      } catch {
-        result.className = "upload-result err";
-        result.textContent = "업로드 실패";
-        return false;
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    uploadFiles.addEventListener("change", () => {
-      const files = Array.from(uploadFiles.files || []);
-      uploadList.innerHTML = "";
-      uploadRows.length = 0;
-      uploadAll.disabled = !files.length;
-      if (!files.length) return;
-      for (const file of files) {
-        const { slug, title } = parseUploadFileName(file.name);
-        const row = document.createElement("div");
-        row.className = "upload-row";
-        row.innerHTML = `
-          <div class="upload-info">
-            <div class="upload-title">${escapeHtml(slug)}<span class="upload-title-sub">${escapeHtml(title)}</span></div>
-            <div class="upload-status"><span class="empty">${escapeHtml(file.name)} · ${(file.size / 1024).toFixed(1)} KB</span></div>
-          </div>
-          <div class="upload-actions">
-            <button class="action upload-btn" type="button">업로드</button>
-          </div>
-          <div class="upload-result"></div>
-        `;
-        const rowState = { row, file, slug, title };
-        row.querySelector(".upload-btn").addEventListener("click", () => uploadOne(rowState));
-        uploadList.appendChild(row);
-        uploadRows.push(rowState);
-      }
-    });
-
-    uploadAll.addEventListener("click", async () => {
-      if (!uploadRows.length) return;
-      uploadAll.disabled = true;
-      const original = uploadAll.textContent;
-      uploadAll.textContent = "업로드 중...";
-      try {
-        let ok = 0;
-        let fail = 0;
-        for (const r of uploadRows) {
-          const success = await uploadOne(r);
-          if (success) ok++; else fail++;
-        }
-        uploadAll.textContent = `완료 (성공 ${ok} / 실패 ${fail})`;
-        setTimeout(() => { uploadAll.textContent = original; }, 2500);
-      } finally {
-        uploadAll.disabled = false;
-      }
-    });
-
-    showUpload.addEventListener("click", () => {
-      uploadDate.value = formatLocalDate(new Date());
-      uploadFiles.value = "";
-      uploadList.innerHTML = `<p class="modal-empty">위에서 HTML 파일을 선택하세요.</p>`;
-      uploadRows.length = 0;
-      uploadAll.disabled = true;
-      uploadModal.hidden = false;
-    });
-    closeUploadModal.addEventListener("click", () => { uploadModal.hidden = true; });
-    uploadModal.addEventListener("click", (e) => { if (e.target === uploadModal) uploadModal.hidden = true; });
-
-    agencyTabs.forEach(tab => {
-      tab.addEventListener("click", () => {
-        if (tab.dataset.agency === currentAgency) return;
-        currentAgency = tab.dataset.agency;
-        agencyTabs.forEach(t => t.classList.toggle("active", t === tab));
-        agencyLabel.textContent = AGENCY_NAMES[currentAgency] || currentAgency;
-        manuscripts = [];
-        publishedPosts = [];
-        selectedPathValue = "";
-        selectedItem = null;
-        render();
+      btn.addEventListener("click", () => {
+        selected = item;
+        updateHeader();
         renderPreview();
-        loadManuscripts(currentAgency);
-        loadPosts(currentAgency);
+        render();
       });
-    });
+      listEl.appendChild(btn);
+    }
 
-    setTodayFilter();
-    render();
-    loadManuscripts(currentAgency);
-    loadPosts(currentAgency);
-  </script>
+    updateHeader();
+    renderPreview();
+  }
+
+  function updateHeader() {
+    if (!selected) {
+      titleEl.textContent = "왼쪽에서 원고를 선택하세요";
+      pathEl.textContent = "발행 계정 탭을 누르고 원고를 클릭하면 미리보기가 나옵니다.";
+      copyContentBtn.disabled = true;
+      copyWriteUrlBtn.disabled = true;
+      return;
+    }
+    titleEl.textContent = selected.title;
+    pathEl.textContent = `${selected.agency} · ${selected.path}`;
+    copyContentBtn.disabled = false;
+    copyWriteUrlBtn.disabled = currentAgency === "mih_history";
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // ---- 복사 ----
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // file:// 환경에서 권한 거부될 수 있음 — fallback
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    }
+  }
+
+  copyContentBtn.addEventListener("click", async () => {
+    if (!selected) return;
+    const cardHtml = buildBusinessCardHtml(selected.agency);
+    const merged = mergeWithBusinessCard(selected.html, cardHtml);
+    copyContentBtn.disabled = true;
+    const original = copyContentBtn.textContent;
+    copyContentBtn.textContent = "준비 중...";
+    const ok = await copyToClipboard(merged.trim());
+    copyContentBtn.textContent = ok ? "복사됨" : "복사 실패";
+    setTimeout(() => {
+      copyContentBtn.textContent = original;
+      copyContentBtn.disabled = false;
+    }, 1500);
+  });
+
+  copyWriteUrlBtn.addEventListener("click", async () => {
+    if (!selected) return;
+    const blogSlug = data.agencies[selected.agency]?.blogSlug || selected.agency;
+    const url = `https://blog.naver.com/${blogSlug}/postwrite`;
+    copyWriteUrlBtn.disabled = true;
+    const original = copyWriteUrlBtn.textContent;
+    copyWriteUrlBtn.textContent = "준비 중...";
+    const ok = await copyToClipboard(url);
+    copyWriteUrlBtn.textContent = ok ? "복사됨" : "복사 실패";
+    setTimeout(() => {
+      copyWriteUrlBtn.textContent = original;
+      copyWriteUrlBtn.disabled = false;
+    }, 1500);
+  });
+
+  render();
+})();
+</script>
 </body>
 </html>

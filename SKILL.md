@@ -94,13 +94,11 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 
 ---
 
-## 7. 명함 이미지 삽입
+## 7. 명함 이미지
 
-```html
-<p align="center"><img src="https://mih.bp-studio.com/assets/agency-card.png" width="544"></p>
-```
+**원고 본문에 명함 `<img>` 태그를 직접 넣지 않는다.** 모아보기(`output/index.html`)가 발행 계정의 명함을 카카오 링크가 들어 있는 `<p>` 직전에 자동으로 합성한다. 본문에 직접 넣으면 중복된다.
 
-상대 경로나 `data:image`를 쓰지 않는다. 명함 이미지는 `원고_모아보기` 사이트의 CTA 설정 관리에서 교체하며, 원고에는 위 고정 HTTPS URL을 사용한다.
+명함 이미지 URL과 클릭 링크는 `scripts/build-manifest.js` 상단의 `AGENCIES` / `BUSINESS_CARD_LINK_URL` 상수에서 관리한다 — 변경 시 그 파일을 수정하고 `npm run build` 를 다시 실행한다. 상대 경로나 `data:image` URI는 어떤 경우에도 사용하지 않는다.
 
 ---
 
