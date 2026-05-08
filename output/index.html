@@ -46,6 +46,28 @@
     color: #fff;
     border-color: #1565C0;
   }
+  .filter {
+    padding: 10px 16px;
+    border-bottom: 1px solid #eef0f3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filter label {
+    font-size: 11px;
+    color: #777;
+    white-space: nowrap;
+  }
+  .filter select {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #d8dbe1;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 12px;
+    background: #fff;
+    color: #333;
+  }
   .meta {
     padding: 8px 20px;
     font-size: 11px;
@@ -146,6 +168,10 @@
 <aside>
   <h1>모아보기</h1>
   <div class="tabs" id="tabs"></div>
+  <div class="filter">
+    <label for="date-filter">일자</label>
+    <select id="date-filter"></select>
+  </div>
   <div class="meta" id="meta"></div>
   <div class="list" id="list"></div>
 </aside>
@@ -178,8 +204,10 @@
   const pathEl = document.getElementById("selected-path");
   const copyContentBtn = document.getElementById("copy-content");
   const copyTitleBtn = document.getElementById("copy-title");
+  const dateFilterEl = document.getElementById("date-filter");
 
   let currentAgency = "mih_speaker";
+  let currentDate = "all";
   let selected = null;
 
   // ---- 탭 ----
@@ -190,9 +218,40 @@
     btn.addEventListener("click", () => {
       currentAgency = slug;
       selected = null;
+      rebuildDateFilter();
       render();
     });
     tabsEl.appendChild(btn);
+  });
+
+  // ---- 일자 필터 ----
+  function rebuildDateFilter() {
+    const dates = Array.from(
+      new Set(data.manuscripts.filter((m) => m.agency === currentAgency).map((m) => m.date))
+    ).sort((a, b) => b.localeCompare(a));
+
+    const previousValue = currentDate;
+    dateFilterEl.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = "all";
+    allOpt.textContent = `전체 (${dates.reduce((acc, d) => acc + data.manuscripts.filter((m) => m.agency === currentAgency && m.date === d).length, 0)})`;
+    dateFilterEl.appendChild(allOpt);
+    for (const d of dates) {
+      const n = data.manuscripts.filter((m) => m.agency === currentAgency && m.date === d).length;
+      const opt = document.createElement("option");
+      opt.value = d;
+      opt.textContent = `${d} (${n})`;
+      dateFilterEl.appendChild(opt);
+    }
+    // 이전 선택 유지 — 해당 일자가 새 계정에도 있으면 유지, 없으면 전체로 리셋
+    currentDate = previousValue !== "all" && dates.includes(previousValue) ? previousValue : "all";
+    dateFilterEl.value = currentDate;
+  }
+
+  dateFilterEl.addEventListener("change", () => {
+    currentDate = dateFilterEl.value;
+    selected = null;
+    render();
   });
 
   // ---- 명함 + 카카오 합성 ----
@@ -240,14 +299,19 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
   function render() {
     Array.from(tabsEl.children).forEach((b) => b.classList.toggle("active", b.dataset.slug === currentAgency));
 
-    const items = data.manuscripts.filter((m) => m.agency === currentAgency);
-    metaEl.textContent = `${items.length}개 원고 · 빌드 ${data.generatedAt.slice(0, 10)}`;
+    const items = data.manuscripts.filter(
+      (m) => m.agency === currentAgency && (currentDate === "all" || m.date === currentDate)
+    );
+    const dateLabel = currentDate === "all" ? "전체 일자" : currentDate;
+    metaEl.textContent = `${items.length}개 원고 · ${dateLabel} · 빌드 ${data.generatedAt.slice(0, 10)}`;
 
     listEl.innerHTML = "";
     if (items.length === 0) {
       const empty = document.createElement("div");
       empty.className = "empty";
-      empty.textContent = "이 계정에 등록된 원고가 없습니다.";
+      empty.textContent = currentDate === "all"
+        ? "이 계정에 등록된 원고가 없습니다."
+        : "선택한 일자에 해당하는 원고가 없습니다.";
       listEl.appendChild(empty);
     }
     for (const item of items) {
@@ -336,6 +400,7 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
     }, 1500);
   });
 
+  rebuildDateFilter();
   render();
 })();
 </script>
