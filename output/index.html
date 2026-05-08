@@ -155,7 +155,7 @@
       <h2 id="selected-title">왼쪽에서 원고를 선택하세요</h2>
       <div class="path" id="selected-path">발행 계정 탭을 누르고 원고를 클릭하면 미리보기가 나옵니다.</div>
     </div>
-    <button id="copy-write-url" class="secondary" disabled>글쓰기 URL 복사</button>
+    <button id="copy-title" class="secondary" disabled>제목 복사</button>
     <button id="copy-content" disabled>콘텐츠 복사</button>
   </header>
   <iframe id="preview" sandbox="allow-same-origin"></iframe>
@@ -177,7 +177,7 @@
   const titleEl = document.getElementById("selected-title");
   const pathEl = document.getElementById("selected-path");
   const copyContentBtn = document.getElementById("copy-content");
-  const copyWriteUrlBtn = document.getElementById("copy-write-url");
+  const copyTitleBtn = document.getElementById("copy-title");
 
   let currentAgency = "mih_speaker";
   let selected = null;
@@ -276,13 +276,13 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
       titleEl.textContent = "왼쪽에서 원고를 선택하세요";
       pathEl.textContent = "발행 계정 탭을 누르고 원고를 클릭하면 미리보기가 나옵니다.";
       copyContentBtn.disabled = true;
-      copyWriteUrlBtn.disabled = true;
+      copyTitleBtn.disabled = true;
       return;
     }
     titleEl.textContent = selected.title;
     pathEl.textContent = `${selected.agency} · ${selected.path}`;
     copyContentBtn.disabled = false;
-    copyWriteUrlBtn.disabled = currentAgency === "mih_history";
+    copyTitleBtn.disabled = false;
   }
 
   function escapeHtml(s) {
@@ -323,18 +323,16 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
     }, 1500);
   });
 
-  copyWriteUrlBtn.addEventListener("click", async () => {
+  copyTitleBtn.addEventListener("click", async () => {
     if (!selected) return;
-    const blogSlug = data.agencies[selected.agency]?.blogSlug || selected.agency;
-    const url = `https://blog.naver.com/${blogSlug}/postwrite`;
-    copyWriteUrlBtn.disabled = true;
-    const original = copyWriteUrlBtn.textContent;
-    copyWriteUrlBtn.textContent = "준비 중...";
-    const ok = await copyToClipboard(url);
-    copyWriteUrlBtn.textContent = ok ? "복사됨" : "복사 실패";
+    copyTitleBtn.disabled = true;
+    const original = copyTitleBtn.textContent;
+    copyTitleBtn.textContent = "준비 중...";
+    const ok = await copyToClipboard(selected.title);
+    copyTitleBtn.textContent = ok ? "복사됨" : "복사 실패";
     setTimeout(() => {
-      copyWriteUrlBtn.textContent = original;
-      copyWriteUrlBtn.disabled = false;
+      copyTitleBtn.textContent = original;
+      copyTitleBtn.disabled = false;
     }, 1500);
   });
 
