@@ -192,9 +192,9 @@ async function main() {
   if (allTodayItems.length > 0) {
     const lines = allTodayItems.map(r => {
       const keyword = findSlug(r.title, manuscripts) ?? r.title.slice(0, 20);
-      return `${todayStr} | ${keyword} | ${r.link}`;
+      return `${keyword} 섭외\n${r.link}`;
     });
-    await sendContent(lines.join('\n'));
+    await sendContent(`▶ ${todayStr}\n\n${lines.join('\n\n')}`);
   }
 
   console.log(`Discord 알림 전송 완료 (${todayStr})`);
