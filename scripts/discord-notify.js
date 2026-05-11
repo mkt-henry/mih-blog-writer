@@ -94,9 +94,7 @@ async function main() {
   const MIH = loadManifest();
   const { manuscripts, agencies } = MIH;
 
-  const todayStr   = kstDateStr(0);
-  const weekAgoStr = kstDateStr(-7);
-  const weekAgoTs  = new Date(weekAgoStr).getTime();
+  const todayStr = kstDateStr(0);
 
   // ── 계정별 RSS 수집 ───────────────────────────────────────────────────────
   const rssMap = {};
@@ -116,50 +114,26 @@ async function main() {
   // ── 계정별 집계 ───────────────────────────────────────────────────────────
   const agencySlugs = Object.keys(agencies);
 
-  // 최근 7일 등록 원고
-  const recentMss = manuscripts.filter(m => m.date >= weekAgoStr && m.date <= todayStr);
+  // 당일 등록 원고
+  const todayMss = manuscripts.filter(m => m.date === todayStr);
 
-  // 발행 여부 판단 (mih_history는 별도 블로그 RSS로 확인)
-  const unpublished = recentMss.filter(m => !isPublished(m, rssMap[m.agency] ?? []));
-  const published   = recentMss.filter(m =>  isPublished(m, rssMap[m.agency] ?? []));
+  // 발행 여부 판단
+  const unpublished = todayMss.filter(m => !isPublished(m, rssMap[m.agency] ?? []));
+  const published   = todayMss.filter(m =>  isPublished(m, rssMap[m.agency] ?? []));
 
-  // ── 계정별 원고·발행 수 ───────────────────────────────────────────────────
-  const countLines = agencySlugs.map(slug => {
-    const total      = manuscripts.filter(m => m.agency === slug).length;
-    const rssCount   = (rssMap[slug] ?? []).length;
-    return `**${AGENCY_LABEL[slug]}**  원고 ${total}개 · RSS ${rssCount}개 확인`;
-  }).join('\n');
-
-  // ── 최근 7일 미발행 목록 ──────────────────────────────────────────────────
-  const unpubLines = unpublished.length === 0
-    ? '✅ 최근 7일 원고 모두 발행 확인됨'
-    : unpublished.map(m => `• [${AGENCY_LABEL[m.agency]}] **${m.slug}** (${m.date})`).join('\n');
-
-  // ── 최근 발행 원고 (RSS 기준, 계정당 최신 3개) ────────────────────────────
-  const rssLines = agencySlugs
-    .filter(slug => (rssMap[slug] ?? []).length > 0)
-    .map(slug => {
-      const recent = (rssMap[slug] ?? []).slice(0, 3)
-        .map(i => `  • ${i.title.length > 35 ? i.title.slice(0, 35) + '…' : i.title}`)
-        .join('\n');
-      return `**${AGENCY_LABEL[slug]}**\n${recent}`;
-    }).join('\n\n');
+  // ── 당일 원고 목록 ────────────────────────────────────────────────────────
+  const todayLines = todayMss.length === 0
+    ? '오늘 등록된 원고가 없습니다.'
+    : todayMss.map(m => {
+        const done = isPublished(m, rssMap[m.agency] ?? []);
+        return `${done ? '✅' : '⏳'} [${AGENCY_LABEL[m.agency]}] **${m.slug}**`;
+      }).join('\n');
 
   // ── 임베드 구성 ──────────────────────────────────────────────────────────
   const fields = [
     {
-      name:   '📁 원고 현황 (총 ' + manuscripts.length + '개)',
-      value:  countLines,
-      inline: false,
-    },
-    {
-      name:   `🗓 최근 7일 원고 (${recentMss.length}개 등록 / ${published.length}개 발행 확인)`,
-      value:  unpubLines.slice(0, 1024),
-      inline: false,
-    },
-    {
-      name:   '📡 네이버 RSS 최근 발행',
-      value:  (rssLines || '확인된 발행 없음').slice(0, 1024),
+      name:   `🗓 오늘 원고 (${todayMss.length}개 등록 / ${published.length}개 발행 확인)`,
+      value:  todayLines.slice(0, 1024),
       inline: false,
     },
   ];
@@ -173,7 +147,7 @@ async function main() {
   }
 
   await sendEmbed([{
-    title:     `📊 MIH 발행 현황 · ${todayStr}`,
+    title:     `📋 MIH 오늘 발행 현황 · ${todayStr}`,
     color:     0x1565C0,
     fields,
     footer:    { text: 'MIH Blog Writer · 매일 10:00 KST' },
