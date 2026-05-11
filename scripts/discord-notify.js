@@ -67,7 +67,7 @@ function isKstToday(ts, todayStr) {
 }
 
 
-// ── Discord 임베드 전송 ───────────────────────────────────────────────────────
+// ── Discord 전송 ─────────────────────────────────────────────────────────────
 async function sendEmbed(embeds) {
   const res = await fetch(WEBHOOK, {
     method:  'POST',
@@ -75,6 +75,24 @@ async function sendEmbed(embeds) {
     body:    JSON.stringify({ embeds }),
   });
   if (!res.ok) throw new Error(`Discord 전송 실패: ${res.status} ${await res.text()}`);
+}
+
+async function sendContent(content) {
+  const res = await fetch(WEBHOOK, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error(`Discord 전송 실패: ${res.status} ${await res.text()}`);
+}
+
+// ── RSS 항목 → 원고 슬러그 매칭 ─────────────────────────────────────────────
+function findSlug(rssTitle, manuscripts) {
+  const m = manuscripts.find(ms =>
+    rssTitle.includes(ms.slug) ||
+    rssTitle.includes(ms.title.replace(/^\[.*?\]\s*/, '').slice(0, 15))
+  );
+  return m ? m.slug : null;
 }
 
 // ── 메인 ─────────────────────────────────────────────────────────────────────
@@ -164,6 +182,19 @@ async function main() {
     footer:    { text: 'MIH Blog Writer · 매일 10:00 KST' },
     timestamp: new Date().toISOString(),
   }]);
+
+  // ── 두 번째 메시지: 날짜 · 키워드 · URL ──────────────────────────────────
+  const allTodayItems = agencySlugs.flatMap(slug =>
+    publishedToday[slug].map(r => ({ ...r, agencySlug: slug }))
+  ).sort((a, b) => a.ts - b.ts);
+
+  if (allTodayItems.length > 0) {
+    const lines = allTodayItems.map(r => {
+      const keyword = findSlug(r.title, manuscripts) ?? r.title.slice(0, 20);
+      return `${todayStr} | ${keyword} | ${r.link}`;
+    });
+    await sendContent(lines.join('\n'));
+  }
 
   console.log(`Discord 알림 전송 완료 (${todayStr})`);
 }
