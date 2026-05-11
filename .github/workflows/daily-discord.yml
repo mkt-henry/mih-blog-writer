@@ -1,0 +1,28 @@
+name: MIH 발행 현황 Discord 알림
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 매일 10:00 KST (01:00 UTC)
+  workflow_dispatch:        # 수동 실행
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: manifest.js 빌드
+        run: npm run build
+
+      - name: Discord 알림 전송
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: node scripts/discord-notify.js
