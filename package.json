@@ -4,5 +4,8 @@
   "scripts": {
     "build": "node scripts/build-manifest.js",
     "dev": "npx serve output"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.3.3"
   }
 }

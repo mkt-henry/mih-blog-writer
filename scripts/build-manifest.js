@@ -17,7 +17,7 @@ const MANIFEST_PATH = join(OUTPUT_DIR, "manifest.js");
 const AGENCIES = {
   mih_speaker: {
     name: "메이드인헤븐 스피커",
-    short: "스피커",
+    short: "mih_speaker",
     blogSlug: "mih_speaker",
     businessCardImageUrl:
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_speaker/business-card.png",
@@ -25,7 +25,7 @@ const AGENCIES = {
   },
   mih_casting: {
     name: "메이드인헤븐 캐스팅",
-    short: "캐스팅",
+    short: "mih_casting",
     blogSlug: "mih_casting",
     businessCardImageUrl:
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_casting/business-card.png",
@@ -33,7 +33,7 @@ const AGENCIES = {
   },
   mih_agency: {
     name: "메이드인헤븐 에이전시",
-    short: "에이전시",
+    short: "mih_agency",
     blogSlug: "mih_agency",
     businessCardImageUrl:
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_agency/business-card.png",

@@ -36,9 +36,19 @@ mih-blog-writer/
    - 카테고리 원고: `04_카테고리_키워드_원고_작성_지침.md` (자료 조사 절차 포함)
 4. `output/YYYY-MM-DD/{agency_slug}/[slug]_[제목].html`로 저장한다.
 5. 문장 끝 여백 후처리 스크립트를 실행한다 (아래 "줄바꿈 규칙" 섹션 참고).
-6. `03_원고_검토_지침.md`로 검토하고 통과시킨다.
-7. **`npm run build`** 를 실행해 `output/manifest.js`를 갱신한다 — 이걸 안 돌리면 모아보기에 새 원고가 안 보인다.
-8. 글자수와 메인 키워드 등장 횟수를 사용자에게 리포트한다.
+6. **이미지 업로드 스크립트를 실행한다** — 인물 원고에만 적용. Instagram CDN URL을 Supabase(아카이브) + Vercel Blob(서빙)에 동시 업로드하고 HTML src를 교체한다.
+
+   ```bash
+   node scripts/upload-article-images.js "output/YYYY-MM-DD/{agency_slug}/파일명.html" 인물이름 ascii-slug
+   ```
+
+   - `ascii-slug`: 인물 이름을 영문 로마자로 변환한 소문자 하이픈 표기. 예: `유현준` → `yoo-hyunjoon`, `김경일` → `kim-gyeongil`
+   - 카테고리 원고(행사공연 등)에는 이미지가 없으므로 이 단계를 건너뛴다.
+
+7. `03_원고_검토_지침.md`로 검토하고 통과시킨다.
+8. **`npm run build`** 를 실행해 `output/manifest.js`를 갱신한다 — 이걸 안 돌리면 모아보기에 새 원고가 안 보인다.
+9. **키워드 DB 등록** — 인물 원고이면 `output/keywords.html`에서 해당 아티스트 키워드를 등록(또는 수정)하고, 공식 인스타그램 URL을 입력한다. 카테고리 원고는 건너뜀.
+10. 글자수와 메인 키워드 등장 횟수를 사용자에게 리포트한다.
 
 ---
 

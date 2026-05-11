@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>발행 현황 · MIH</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Arial, sans-serif;
+    color: #222;
+    background: #f5f6f8;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── 최상단 네비 ── */
+  .topnav {
+    background: #fff;
+    border-bottom: 1px solid #e3e5ea;
+    padding: 0 24px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .topnav a {
+    font-size: 12px;
+    color: #888;
+    text-decoration: none;
+    padding: 4px 8px;
+    border: 1px solid #d8dbe1;
+    border-radius: 5px;
+  }
+  .topnav a:hover { background: #f4f6f9; }
+  .topnav h1 { font-size: 15px; margin: 0; flex: 1; }
+  .btn-fetch {
+    padding: 7px 18px;
+    background: #1565C0;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .btn-fetch:hover { background: #1254A0; }
+  .btn-fetch:disabled { background: #aaa; cursor: not-allowed; }
+
+  /* ── 상태 바 ── */
+  .status-bar {
+    background: #fff;
+    border-bottom: 1px solid #e3e5ea;
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .account-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .account-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #666;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: #f5f6f8;
+    border: 1px solid #e3e5ea;
+  }
+  .account-pill .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .account-pill.ok  { border-color: #e3e5ea; }
+  .account-pill.err { background: #FFEBEE; border-color: #FFCDD2; color: #c62828; }
+  .account-pill.pending { opacity: 0.5; }
+
+  .status-bar .sep { color: #d8dbe1; font-size: 12px; }
+  .status-bar .meta-text { font-size: 11px; color: #aaa; }
+
+  /* ── 필터 바 ── */
+  .filter-bar {
+    background: #fff;
+    border-bottom: 1px solid #e3e5ea;
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .filter-bar label { font-size: 12px; color: #777; }
+  .filter-bar input[type="date"] {
+    padding: 5px 10px;
+    border: 1px solid #d8dbe1;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 12px;
+    color: #333;
+    background: #fff;
+    outline: none;
+    cursor: pointer;
+  }
+  .filter-bar input[type="date"]:focus { border-color: #1565C0; }
+  .filter-bar .range-sep { font-size: 13px; color: #aaa; }
+  .btn-reset-date {
+    padding: 5px 10px;
+    border: 1px solid #d8dbe1;
+    background: #fff;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 11px;
+    color: #888;
+    cursor: pointer;
+  }
+  .btn-reset-date:hover { background: #f4f6f9; color: #333; }
+  .total-count { font-size: 11px; color: #aaa; margin-left: auto; }
+  .btn-copy {
+    padding: 5px 12px;
+    border: 1px solid #d8dbe1;
+    background: #fff;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.12s;
+  }
+  .btn-copy:hover { border-color: #1565C0; color: #1565C0; background: #E3F2FD; }
+  .btn-copy.copied { border-color: #2E7D32; color: #2E7D32; background: #E8F5E9; }
+
+  /* ── 콘텐츠 ── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* 빈 상태 / 로딩 */
+  .state-box {
+    text-align: center;
+    padding: 60px 20px;
+    color: #bbb;
+  }
+  .state-box svg { display: block; margin: 0 auto 16px; opacity: 0.25; }
+  .state-box p { font-size: 14px; margin: 0 0 6px; color: #aaa; }
+  .state-box small { font-size: 12px; }
+  .spinner {
+    width: 30px; height: 30px;
+    border: 3px solid #e3e5ea;
+    border-top-color: #1565C0;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 날짜 그룹 */
+  .date-group { margin-bottom: 28px; }
+  .date-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .date-heading .date-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+  }
+  .date-heading .date-count {
+    font-size: 11px;
+    color: #aaa;
+    background: #eef0f3;
+    padding: 1px 7px;
+    border-radius: 10px;
+  }
+  .date-heading hr {
+    flex: 1;
+    border: none;
+    border-top: 1px solid #e3e5ea;
+    margin: 0;
+  }
+
+  /* 포스트 카드 */
+  .post-card {
+    background: #fff;
+    border: 1px solid #e3e5ea;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 7px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: border-color 0.12s;
+  }
+  .post-card:hover { border-color: #b0bec5; }
+
+  .post-acct {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+  .post-acct .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .post-acct .acct-name {
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    min-width: 52px;
+  }
+
+  .post-body { flex: 1; min-width: 0; }
+  .post-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+    line-height: 1.5;
+    margin-bottom: 4px;
+    word-break: break-all;
+  }
+  .post-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #aaa;
+    flex-wrap: wrap;
+  }
+  .post-url-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 340px;
+  }
+  .match-badge {
+    background: #E8F5E9;
+    color: #2E7D32;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .post-link-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    border: 1px solid #d8dbe1;
+    border-radius: 6px;
+    color: #666;
+    text-decoration: none;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    transition: all 0.12s;
+  }
+  .post-link-btn:hover { background: #E3F2FD; border-color: #1565C0; color: #1565C0; }
+
+  /* 스크롤바 */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d0d3da; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="topnav">
+  <a href="./">← 원고 보기</a>
+  <h1>발행 현황</h1>
+  <button class="btn-fetch" id="btn-fetch">전체 불러오기</button>
+</div>
+
+<div class="status-bar" id="status-bar">
+  <div class="account-pills" id="account-pills"></div>
+  <span class="sep">|</span>
+  <span class="meta-text" id="meta-text">아직 불러오지 않았습니다.</span>
+</div>
+
+<div class="filter-bar" id="filter-bar" style="display:none;">
+  <label>기간</label>
+  <input type="date" id="start-date" />
+  <span class="range-sep">~</span>
+  <input type="date" id="end-date" />
+  <button class="btn-reset-date" id="btn-reset-date">초기화</button>
+  <span class="total-count" id="total-count"></span>
+  <button class="btn-copy" id="btn-copy" style="display:none;">복사</button>
+</div>
+
+<div class="content" id="content">
+  <div class="state-box">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+    </svg>
+    <p>전체 불러오기 버튼을 눌러 모든 계정의 발행 목록을 가져오세요.</p>
+    <small>RSS 피드에서 날짜별로 모든 계정의 게시물을 한눈에 확인할 수 있습니다.</small>
+  </div>
+</div>
+
+<script src="manifest.js"></script>
+<script>
+(() => {
+  const MIH = window.MIH;
+  const AGENCIES = MIH ? MIH.agencies : {};
+  const manuscripts = MIH ? MIH.manuscripts : [];
+
+  /* ── 계정별 색상 ── */
+  const COLORS = {
+    mih_speaker: '#1565C0',
+    mih_casting: '#7B1FA2',
+    mih_agency:  '#2E7D32',
+    mih_history: '#546E7A',
+  };
+
+  const agencySlugs = Object.keys(AGENCIES);
+  const CACHE_KEY = 'mih_rss_cache_v2';
+  let startDate       = '';
+  let endDate         = '';
+  let currentFiltered = [];   // 현재 화면에 보이는 포스트 목록
+
+  /* ── 캐시 ── */
+  function loadCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function saveCache(c) { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); }
+
+  /* ── RSS 가져오기 ── */
+  async function fetchWithTimeout(url, ms) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try {
+      const r = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(t);
+      return r;
+    } catch (e) { clearTimeout(t); throw e; }
+  }
+
+  async function fetchRss(blogSlug) {
+    const base = `https://rss.blog.naver.com/${blogSlug}`;
+    const attempts = [
+      base,
+      `https://corsproxy.io/?${encodeURIComponent(base)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
+    ];
+    let lastErr = '';
+    for (const url of attempts) {
+      try {
+        const res = await fetchWithTimeout(url, 8000);
+        if (!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
+        const text = await res.text();
+        const items = parseRss(text);
+        if (items.length > 0) return items;
+        lastErr = 'RSS 항목 없음';
+      } catch (e) { lastErr = e.message; }
+    }
+    throw new Error(lastErr || '요청 실패');
+  }
+
+  /* ── XML 파싱 ── */
+  function parseRss(xml) {
+    const p = new DOMParser();
+    let doc = p.parseFromString(xml, 'application/xml');
+    if (doc.querySelector('parsererror')) doc = p.parseFromString(xml, 'text/html');
+    const items = [];
+    doc.querySelectorAll('item').forEach(el => {
+      const title   = el.querySelector('title')?.textContent?.trim() || '';
+      const pubDate = el.querySelector('pubDate')?.textContent?.trim() || '';
+      const link    = extractLink(el);
+      if (title) items.push({ title, link, pubDate });
+    });
+    return items;
+  }
+
+  function extractLink(item) {
+    const el = item.querySelector('link');
+    if (el?.textContent?.trim()) return el.textContent.trim();
+    if (el?.getAttribute('href')) return el.getAttribute('href');
+    const guid = item.querySelector('guid');
+    if (guid?.textContent?.startsWith('http')) return guid.textContent.trim();
+    // DOMParser void-element fallback
+    if (el) {
+      let n = el.nextSibling;
+      while (n) {
+        const v = n.textContent?.trim();
+        if (v?.startsWith('http')) return v;
+        n = n.nextSibling;
+      }
+    }
+    return '';
+  }
+
+  /* ── 날짜 포맷 (timezone-safe) ── */
+  const MONTHS_RFC = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+
+  function fmtDate(str) {
+    if (!str) return '';
+    // RFC 2822: "Sat, 09 May 2026 00:00:00 +0900" — 날짜 부분만 직접 추출 (timezone 변환 없음)
+    const rfc = str.match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+    if (rfc) {
+      const d = rfc[1].padStart(2, '0');
+      const m = String(MONTHS_RFC[rfc[2].toLowerCase()] || 1).padStart(2, '0');
+      return `${rfc[3]}-${m}-${d}`;
+    }
+    // ISO 형식 fallback
+    const iso = str.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (iso) return iso[1];
+    return '';
+  }
+  function fmtAge(ts) {
+    const m = Math.floor((Date.now() - ts) / 60000);
+    if (m < 1)  return '방금 전';
+    if (m < 60) return `${m}분 전`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}시간 전`;
+    return `${Math.floor(h/24)}일 전`;
+  }
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  /* ── 로컬 원고 매칭 ── */
+  function hasLocalMs(title, slug) {
+    const t = title.toLowerCase();
+    return manuscripts.some(m => m.agency === slug && m.slug && t.includes(m.slug.toLowerCase()));
+  }
+
+  /* ── 계정 상태 알약 렌더 ── */
+  function renderPills(cache, pendingSlugs = []) {
+    const el = document.getElementById('account-pills');
+    el.innerHTML = agencySlugs.map(slug => {
+      const info  = AGENCIES[slug];
+      const color = COLORS[slug] || '#888';
+      const entry = cache[slug];
+      const isPending = pendingSlugs.includes(slug);
+      let cls = 'account-pill';
+      let label = info.short;
+      if (isPending) { cls += ' pending'; label += ' ···'; }
+      else if (!entry) { cls += ' pending'; }
+      else if (entry.error) { cls += ' err'; label += ' ✗'; }
+      else { cls += ' ok'; label += ` (${entry.items.length})`; }
+      return `<span class="${cls}">
+        <span class="dot" style="background:${color};"></span>
+        ${escHtml(label)}
+      </span>`;
+    }).join('');
+  }
+
+  /* ── 메타 텍스트 렌더 ── */
+  function renderMeta(cache) {
+    const entries = agencySlugs.map(s => cache[s]).filter(Boolean);
+    if (!entries.length) {
+      document.getElementById('meta-text').textContent = '아직 불러오지 않았습니다.';
+      return;
+    }
+    const latest = Math.max(...entries.map(e => e.fetchedAt || 0));
+    const errCount = entries.filter(e => e.error).length;
+    const parts = [`마지막 업데이트: ${fmtAge(latest)}`];
+    if (errCount) parts.push(`${errCount}개 계정 오류`);
+    document.getElementById('meta-text').textContent = parts.join(' · ');
+  }
+
+  /* ── 날짜 input min/max 갱신 ── */
+  function updateDateBounds(allPosts) {
+    const dates = allPosts.map(p => p.date).filter(Boolean).sort();
+    if (!dates.length) return;
+    const min = dates[0];
+    const max = dates[dates.length - 1];
+    const sd = document.getElementById('start-date');
+    const ed = document.getElementById('end-date');
+    sd.min = ed.min = min;
+    sd.max = ed.max = max;
+    document.getElementById('filter-bar').style.display = '';
+  }
+
+  /* ── 메인 렌더 ── */
+  function renderContent() {
+    const cache  = loadCache();
+    const content = document.getElementById('content');
+
+    // 캐시 없으면 초기 안내
+    const hasAny = agencySlugs.some(s => cache[s] && !cache[s].error);
+    if (!hasAny) {
+      content.innerHTML = `<div class="state-box">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+        </svg>
+        <p>전체 불러오기 버튼을 눌러 모든 계정의 발행 목록을 가져오세요.</p>
+        <small>RSS 피드에서 날짜별로 모든 계정의 게시물을 확인할 수 있습니다.</small>
+      </div>`;
+      document.getElementById('filter-bar').style.display = 'none';
+      return;
+    }
+
+    // 모든 포스트 수집
+    const allPosts = [];
+    agencySlugs.forEach(slug => {
+      const entry = cache[slug];
+      if (!entry || entry.error) return;
+      entry.items.forEach(post => {
+        allPosts.push({ ...post, agencySlug: slug, date: fmtDate(post.pubDate) });
+      });
+    });
+
+    // 날짜 내림차순 정렬
+    allPosts.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    // 날짜 input 범위 갱신
+    updateDateBounds(allPosts);
+
+    // 기간 필터 적용
+    const filtered = allPosts.filter(p => {
+      if (startDate && p.date < startDate) return false;
+      if (endDate   && p.date > endDate)   return false;
+      return true;
+    });
+
+    currentFiltered = filtered;
+    document.getElementById('total-count').textContent = `총 ${filtered.length}개 게시물`;
+    document.getElementById('btn-copy').style.display = filtered.length ? '' : 'none';
+
+    if (filtered.length === 0) {
+      content.innerHTML = `<div class="state-box"><p>선택한 기간에 게시물이 없습니다.</p></div>`;
+      return;
+    }
+
+    // 날짜 그룹핑
+    const groups = {};
+    filtered.forEach(post => {
+      const d = post.date || '날짜 없음';
+      if (!groups[d]) groups[d] = [];
+      groups[d].push(post);
+    });
+
+    const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+    content.innerHTML = dates.map(date => {
+      const posts = groups[date];
+      const cards = posts.map(post => {
+        const color = COLORS[post.agencySlug] || '#888';
+        const acctName = AGENCIES[post.agencySlug]?.short || post.agencySlug;
+        const matched = hasLocalMs(post.title, post.agencySlug);
+        const matchBadge = matched ? `<span class="match-badge">원고 있음</span>` : '';
+        const url = cleanUrl(post.link);
+        const urlText = url
+          ? `<span class="post-url-text">${escHtml(url)}</span>` : '';
+        const linkBtn = url
+          ? `<a class="post-link-btn" href="${escHtml(url)}" target="_blank" title="${escHtml(url)}">↗</a>`
+          : '';
+
+        return `<div class="post-card">
+          <div class="post-acct">
+            <span class="dot" style="background:${color};"></span>
+            <span class="acct-name" style="color:${color};">${escHtml(acctName)}</span>
+          </div>
+          <div class="post-body">
+            <div class="post-title">${escHtml(post.title)}</div>
+            <div class="post-sub">${matchBadge}${urlText}</div>
+          </div>
+          ${linkBtn}
+        </div>`;
+      }).join('');
+
+      return `<div class="date-group">
+        <div class="date-heading">
+          <span class="date-label">${escHtml(date)}</span>
+          <span class="date-count">${posts.length}개</span>
+          <hr/>
+        </div>
+        ${cards}
+      </div>`;
+    }).join('');
+  }
+
+  /* ── 불러오기 버튼 ── */
+  const btn = document.getElementById('btn-fetch');
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = '불러오는 중...';
+    document.getElementById('content').innerHTML =
+      `<div class="state-box"><div class="spinner"></div><p>모든 계정 RSS를 가져오는 중입니다...</p></div>`;
+
+    // 병렬 fetch
+    const pending = [...agencySlugs];
+    renderPills(loadCache(), pending);
+
+    const results = await Promise.allSettled(
+      agencySlugs.map(slug =>
+        fetchRss(AGENCIES[slug]?.blogSlug || slug)
+          .then(items  => ({ slug, items, error: null }))
+          .catch(e     => ({ slug, items: [], error: e.message }))
+      )
+    );
+
+    const cache = loadCache();
+    const now = Date.now();
+    results.forEach(r => {
+      if (r.status === 'fulfilled') {
+        cache[r.value.slug] = { items: r.value.items, error: r.value.error, fetchedAt: now };
+      }
+    });
+    saveCache(cache);
+
+    btn.disabled = false;
+    btn.textContent = '새로고침';
+
+    renderPills(cache);
+    renderMeta(cache);
+    renderContent();
+  });
+
+  /* ── 기간 필터 이벤트 ── */
+  document.getElementById('start-date').addEventListener('change', e => {
+    startDate = e.target.value;
+    // 시작일이 종료일보다 늦으면 종료일도 맞춤
+    if (endDate && startDate > endDate) {
+      endDate = startDate;
+      document.getElementById('end-date').value = endDate;
+    }
+    renderContent();
+  });
+
+  document.getElementById('end-date').addEventListener('change', e => {
+    endDate = e.target.value;
+    // 종료일이 시작일보다 이르면 시작일도 맞춤
+    if (startDate && endDate < startDate) {
+      startDate = endDate;
+      document.getElementById('start-date').value = startDate;
+    }
+    renderContent();
+  });
+
+  document.getElementById('btn-reset-date').addEventListener('click', () => {
+    startDate = endDate = '';
+    document.getElementById('start-date').value = '';
+    document.getElementById('end-date').value = '';
+    renderContent();
+  });
+
+  /* ── 복사 ── */
+  document.getElementById('btn-copy').addEventListener('click', async () => {
+    if (!currentFiltered.length) return;
+
+    // 날짜 범위 레이블
+    const dateLabel = startDate && endDate && startDate === endDate
+      ? startDate
+      : startDate && endDate ? `${startDate} ~ ${endDate}`
+      : startDate ? `${startDate} ~`
+      : endDate   ? `~ ${endDate}`
+      : '전체';
+
+    // 날짜 그룹별로 묶어서 텍스트 생성
+    const groups = {};
+    currentFiltered.forEach(p => {
+      const d = p.date || '날짜 없음';
+      if (!groups[d]) groups[d] = [];
+      groups[d].push(p);
+    });
+
+    const sections = [];
+    Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach(date => {
+      const postLines = [`▶ ${date}`];
+      groups[date].forEach(p => {
+        postLines.push(extractKeyword(p.title));
+        if (p.link) postLines.push(cleanUrl(p.link));
+        postLines.push('');
+      });
+      sections.push(postLines.join('\n'));
+    });
+    const lines = [sections.join('\n')];
+
+    const text = lines.join('\n').trimEnd();
+
+    const copyBtn = document.getElementById('btn-copy');
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+
+    copyBtn.textContent = '복사됨!';
+    copyBtn.classList.add('copied');
+    setTimeout(() => {
+      copyBtn.textContent = '복사';
+      copyBtn.classList.remove('copied');
+    }, 1800);
+  });
+
+  /* ── 제목에서 [키워드] 부분만 추출 ── */
+  function extractKeyword(title) {
+    const m = title.match(/\[([^\]]+)\]/);
+    return m ? m[1] : title;
+  }
+
+  /* ── URL 트래킹 파라미터 제거 ── */
+  function cleanUrl(url) {
+    if (!url) return '';
+    return url.split('?')[0];
+  }
+
+  /* ── XSS 방어 ── */
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── 초기화 ── */
+  const initCache = loadCache();
+  renderPills(initCache);
+  renderMeta(initCache);
+  renderContent();
+  const hasData = agencySlugs.some(s => initCache[s]);
+  if (hasData) btn.textContent = '새로고침';
+})();
+</script>
+</body>
+</html>

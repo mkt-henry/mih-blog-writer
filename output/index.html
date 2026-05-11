@@ -22,7 +22,19 @@
     flex-direction: column;
     min-height: 0;
   }
-  aside h1 { font-size: 16px; margin: 0; padding: 16px 20px 8px; }
+  .sidebar-top { display: flex; align-items: center; padding: 16px 20px 8px; gap: 8px; }
+  aside h1 { font-size: 16px; margin: 0; flex: 1; }
+  .sidebar-top a.kw-link {
+    font-size: 11px;
+    color: #888;
+    text-decoration: none;
+    padding: 3px 8px;
+    border: 1px solid #d8dbe1;
+    border-radius: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .sidebar-top a.kw-link:hover { background: #f4f6f9; }
   .tabs {
     display: flex;
     flex-wrap: wrap;
@@ -46,31 +58,114 @@
     color: #fff;
     border-color: #1565C0;
   }
-  .filter {
-    padding: 10px 16px;
+
+  /* ---- 달력 필터 ---- */
+  .date-filter {
+    padding: 10px 16px 12px;
     border-bottom: 1px solid #eef0f3;
+  }
+  .date-filter-header {
     display: flex;
     align-items: center;
-    gap: 6px;
+    margin-bottom: 8px;
   }
-  .filter label {
+  .date-filter-header span {
     font-size: 11px;
     color: #777;
-    white-space: nowrap;
+    flex: 1;
   }
-  .filter select {
-    padding: 6px 8px;
-    border: 1px solid #d8dbe1;
-    border-radius: 6px;
-    font: inherit;
-    font-size: 12px;
-    background: #fff;
+  .date-filter-header button {
+    font-size: 11px;
+    color: #1565C0;
+    background: none;
+    border: 1px solid #c5d5ef;
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+    line-height: 1.6;
+  }
+  .date-filter-header button:hover { background: #e8f0fe; }
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .cal-nav .cal-arrow {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #555;
+    padding: 2px 8px;
+    border-radius: 4px;
+    line-height: 1.4;
+  }
+  .cal-nav .cal-arrow:hover { background: #f0f2f5; }
+  .cal-nav .cal-month-label {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
     color: #333;
-    min-width: 0;
   }
-  .filter select.month { flex: 1.4; }
-  .filter select.day { flex: 1; }
-  .filter select:disabled { background: #f5f6f8; color: #aaa; }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    row-gap: 1px;
+    column-gap: 0;
+    margin-bottom: 6px;
+  }
+  .cal-dow {
+    font-size: 10px;
+    color: #aaa;
+    text-align: center;
+    padding: 3px 0 5px;
+  }
+  .cal-day {
+    font-size: 12px;
+    text-align: center;
+    padding: 5px 0;
+    cursor: pointer;
+    border-radius: 4px;
+    user-select: none;
+    color: #333;
+    line-height: 1.4;
+    position: relative;
+  }
+  .cal-day.cal-empty { cursor: default; }
+  .cal-day.cal-no-data { color: #d0d0d0; cursor: default; }
+  .cal-day:hover:not(.cal-empty):not(.cal-no-data):not(.range-start):not(.range-end) {
+    background: #f0f4fd;
+  }
+  .cal-day.range-start,
+  .cal-day.range-end {
+    background: #1565C0;
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: 4px;
+    z-index: 1;
+  }
+  .cal-day.in-range {
+    background: #dce8fa;
+    border-radius: 0;
+    color: #1a3a6b;
+  }
+  /* 시작·끝이 같은 날(단일 선택)일 때 */
+  .cal-day.range-start.range-end { border-radius: 4px; }
+  /* 범위 연결: start 오른쪽, end 왼쪽 평탄화 */
+  .cal-day.range-start:not(.range-end) { border-radius: 4px 0 0 4px; }
+  .cal-day.range-end:not(.range-start) { border-radius: 0 4px 4px 0; }
+  .cal-day.today:not(.range-start):not(.range-end) {
+    font-weight: 700;
+    color: #1565C0;
+  }
+  .cal-range-label {
+    font-size: 10px;
+    color: #888;
+    text-align: center;
+    min-height: 14px;
+  }
+
   .meta {
     padding: 8px 20px;
     font-size: 11px;
@@ -169,12 +264,24 @@
 </head>
 <body>
 <aside>
-  <h1>모아보기</h1>
+  <div class="sidebar-top">
+    <h1>모아보기</h1>
+    <a class="kw-link" href="keywords.html">키워드 관리</a>
+    <a class="kw-link" href="rss.html">발행 현황</a>
+  </div>
   <div class="tabs" id="tabs"></div>
-  <div class="filter">
-    <label>일자</label>
-    <select id="month-filter" class="month"></select>
-    <select id="day-filter" class="day"></select>
+  <div class="date-filter">
+    <div class="date-filter-header">
+      <span>기간 필터</span>
+      <button id="cal-clear">전체</button>
+    </div>
+    <div class="cal-nav">
+      <button class="cal-arrow" id="cal-prev">&#8249;</button>
+      <span class="cal-month-label" id="cal-month-label"></span>
+      <button class="cal-arrow" id="cal-next">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-range-label" id="cal-range-label">전체 일자</div>
   </div>
   <div class="meta" id="meta"></div>
   <div class="list" id="list"></div>
@@ -206,117 +313,171 @@
   const titleEl = document.getElementById("selected-title");
   const pathEl = document.getElementById("selected-path");
   const copyTitleBtn = document.getElementById("copy-title");
-  const monthFilterEl = document.getElementById("month-filter");
-  const dayFilterEl = document.getElementById("day-filter");
+  const calGridEl = document.getElementById("cal-grid");
+  const calMonthLabelEl = document.getElementById("cal-month-label");
+  const calRangeLabelEl = document.getElementById("cal-range-label");
+  const calPrevBtn = document.getElementById("cal-prev");
+  const calNextBtn = document.getElementById("cal-next");
+  const calClearBtn = document.getElementById("cal-clear");
 
   let currentAgency = "mih_speaker";
-  let currentMonth = "all"; // "all" 또는 "YYYY-MM"
-  let currentDay = "all";   // "all" 또는 "DD"
+  let rangeStart = null;  // "YYYY-MM-DD" | null
+  let rangeEnd = null;    // "YYYY-MM-DD" | null
+  let calYear, calMonth;
   let selected = null;
+
+  const todayObj = new Date();
+  const todayStr = fmtDate(todayObj.getFullYear(), todayObj.getMonth() + 1, todayObj.getDate());
+
+  function fmtDate(y, m, d) {
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
 
   // ---- 탭 ----
   Object.entries(data.agencies).forEach(([slug, info]) => {
     const btn = document.createElement("button");
     btn.dataset.slug = slug;
-    btn.textContent = info.short;
+    btn.textContent = slug === "mih_history" ? "이전 발행" : info.blogSlug;
     btn.addEventListener("click", () => {
       currentAgency = slug;
       selected = null;
-      rebuildMonthFilter();
-      rebuildDayFilter();
+      rangeStart = null;
+      rangeEnd = null;
+      initCalendarMonth();
+      renderCalendar();
       render();
     });
     tabsEl.appendChild(btn);
   });
 
-  // ---- 월/일 필터 ----
+  // ---- 달력 ----
   function manuscriptsForCurrentAgency() {
     return data.manuscripts.filter((m) => m.agency === currentAgency);
   }
 
-  function rebuildMonthFilter() {
-    const months = Array.from(
-      new Set(manuscriptsForCurrentAgency().map((m) => m.date.slice(0, 7)))
-    ).sort((a, b) => b.localeCompare(a));
-
-    const previous = currentMonth;
-    monthFilterEl.innerHTML = "";
-    const allOpt = document.createElement("option");
-    allOpt.value = "all";
-    allOpt.textContent = `전체 월 (${manuscriptsForCurrentAgency().length})`;
-    monthFilterEl.appendChild(allOpt);
-    for (const ym of months) {
-      const n = manuscriptsForCurrentAgency().filter((m) => m.date.startsWith(ym)).length;
-      const opt = document.createElement("option");
-      opt.value = ym;
-      opt.textContent = `${ym} (${n})`;
-      monthFilterEl.appendChild(opt);
-    }
-    currentMonth = previous !== "all" && months.includes(previous) ? previous : "all";
-    monthFilterEl.value = currentMonth;
+  function datesForCurrentAgency() {
+    return new Set(manuscriptsForCurrentAgency().map((m) => m.date));
   }
 
-  function rebuildDayFilter() {
-    dayFilterEl.innerHTML = "";
-    if (currentMonth === "all") {
-      const opt = document.createElement("option");
-      opt.value = "all";
-      opt.textContent = "전체 일";
-      dayFilterEl.appendChild(opt);
-      dayFilterEl.disabled = true;
-      currentDay = "all";
-      return;
+  function initCalendarMonth() {
+    const dates = manuscriptsForCurrentAgency().map((m) => m.date).sort();
+    if (dates.length) {
+      const latest = dates[dates.length - 1];
+      calYear = parseInt(latest.slice(0, 4), 10);
+      calMonth = parseInt(latest.slice(5, 7), 10) - 1;
+    } else {
+      calYear = todayObj.getFullYear();
+      calMonth = todayObj.getMonth();
     }
-    dayFilterEl.disabled = false;
-
-    const days = Array.from(
-      new Set(
-        manuscriptsForCurrentAgency()
-          .filter((m) => m.date.startsWith(currentMonth))
-          .map((m) => m.date.slice(8, 10))
-      )
-    ).sort((a, b) => b.localeCompare(a));
-
-    const previous = currentDay;
-    const allOpt = document.createElement("option");
-    allOpt.value = "all";
-    allOpt.textContent = `전체 일 (${manuscriptsForCurrentAgency().filter((m) => m.date.startsWith(currentMonth)).length})`;
-    dayFilterEl.appendChild(allOpt);
-    for (const d of days) {
-      const n = manuscriptsForCurrentAgency().filter((m) => m.date === `${currentMonth}-${d}`).length;
-      const opt = document.createElement("option");
-      opt.value = d;
-      opt.textContent = `${parseInt(d, 10)}일 (${n})`;
-      dayFilterEl.appendChild(opt);
-    }
-    currentDay = previous !== "all" && days.includes(previous) ? previous : "all";
-    dayFilterEl.value = currentDay;
   }
 
-  monthFilterEl.addEventListener("change", () => {
-    currentMonth = monthFilterEl.value;
-    currentDay = "all";
-    selected = null;
-    rebuildDayFilter();
-    render();
+  function normRange() {
+    if (!rangeStart) return { s: null, e: null };
+    if (!rangeEnd) return { s: rangeStart, e: rangeStart };
+    return rangeStart <= rangeEnd
+      ? { s: rangeStart, e: rangeEnd }
+      : { s: rangeEnd, e: rangeStart };
+  }
+
+  function renderCalendar() {
+    calMonthLabelEl.textContent = `${calYear}년 ${calMonth + 1}월`;
+    calGridEl.innerHTML = "";
+
+    ["일", "월", "화", "수", "목", "금", "토"].forEach((d) => {
+      const el = document.createElement("div");
+      el.className = "cal-dow";
+      el.textContent = d;
+      calGridEl.appendChild(el);
+    });
+
+    const firstDow = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const availDates = datesForCurrentAgency();
+    const { s, e } = normRange();
+
+    for (let i = 0; i < firstDow; i++) {
+      const el = document.createElement("div");
+      el.className = "cal-day cal-empty";
+      calGridEl.appendChild(el);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = fmtDate(calYear, calMonth + 1, d);
+      const el = document.createElement("div");
+      el.className = "cal-day";
+      el.textContent = d;
+
+      const hasData = availDates.has(dateStr);
+      if (!hasData) el.classList.add("cal-no-data");
+      if (dateStr === todayStr) el.classList.add("today");
+
+      if (s) {
+        if (dateStr === s) el.classList.add("range-start");
+        if (dateStr === e) el.classList.add("range-end");
+        if (dateStr > s && dateStr < e) el.classList.add("in-range");
+      }
+
+      if (hasData) {
+        el.addEventListener("click", () => {
+          if (!rangeStart || rangeEnd) {
+            rangeStart = dateStr;
+            rangeEnd = null;
+          } else if (dateStr === rangeStart) {
+            rangeStart = null;
+          } else {
+            rangeEnd = dateStr;
+          }
+          selected = null;
+          renderCalendar();
+          render();
+        });
+      }
+
+      calGridEl.appendChild(el);
+    }
+
+    updateRangeLabel();
+  }
+
+  function updateRangeLabel() {
+    if (!rangeStart) {
+      calRangeLabelEl.textContent = "전체 일자";
+    } else if (!rangeEnd) {
+      calRangeLabelEl.textContent = rangeStart;
+    } else {
+      const { s, e } = normRange();
+      calRangeLabelEl.textContent = `${s} ~ ${e}`;
+    }
+  }
+
+  calPrevBtn.addEventListener("click", () => {
+    calMonth--;
+    if (calMonth < 0) { calMonth = 11; calYear--; }
+    renderCalendar();
   });
 
-  dayFilterEl.addEventListener("change", () => {
-    currentDay = dayFilterEl.value;
+  calNextBtn.addEventListener("click", () => {
+    calMonth++;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    renderCalendar();
+  });
+
+  calClearBtn.addEventListener("click", () => {
+    rangeStart = null;
+    rangeEnd = null;
     selected = null;
+    initCalendarMonth();
+    renderCalendar();
     render();
   });
 
   function dateMatches(date) {
-    if (currentMonth === "all") return true;
-    if (!date.startsWith(currentMonth)) return false;
-    if (currentDay === "all") return true;
-    return date.slice(8, 10) === currentDay;
+    if (!rangeStart) return true;
+    const { s, e } = normRange();
+    return date >= s && date <= e;
   }
 
   // ---- 명함 + 카카오 합성 ----
-  // 카카오 오픈채팅 링크가 들어 있는 <p> 바로 앞에 명함 HTML을 끼워넣는다.
-  // 카카오 링크가 없으면 끝에 붙인다.
   function buildBusinessCardHtml(agencySlug) {
     const a = data.agencies[agencySlug];
     if (!a || !a.businessCardImageUrl) return "";
@@ -342,7 +503,6 @@
   // ---- 미리보기 ----
   function renderPreview() {
     if (!selected) {
-      previewEl.removeAttribute("srcdoc");
       previewEl.srcdoc = '<!doctype html><body style="font-family:sans-serif;padding:40px;color:#999;display:grid;place-items:center;height:100%;margin:0">왼쪽에서 원고를 선택하세요</body>';
       return;
     }
@@ -362,22 +522,24 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
     const items = data.manuscripts.filter(
       (m) => m.agency === currentAgency && dateMatches(m.date)
     );
+
     let dateLabel = "전체 일자";
-    if (currentMonth !== "all") {
-      dateLabel = currentDay === "all"
-        ? currentMonth
-        : `${currentMonth}-${currentDay}`;
+    if (rangeStart && !rangeEnd) {
+      dateLabel = rangeStart;
+    } else if (rangeStart && rangeEnd) {
+      const { s, e } = normRange();
+      dateLabel = `${s} ~ ${e}`;
     }
+
     metaEl.textContent = `${items.length}개 원고 · ${dateLabel} · 빌드 ${data.generatedAt.slice(0, 10)}`;
 
     listEl.innerHTML = "";
     if (items.length === 0) {
       const empty = document.createElement("div");
       empty.className = "empty";
-      const noFilter = currentMonth === "all" && currentDay === "all";
-      empty.textContent = noFilter
+      empty.textContent = !rangeStart
         ? "이 계정에 등록된 원고가 없습니다."
-        : "선택한 일자에 해당하는 원고가 없습니다.";
+        : "선택한 기간에 해당하는 원고가 없습니다.";
       listEl.appendChild(empty);
     }
     for (const item of items) {
@@ -423,7 +585,6 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      // file:// 환경에서 권한 거부될 수 있음 — fallback
       const ta = document.createElement("textarea");
       ta.value = text;
       ta.style.position = "fixed";
@@ -449,9 +610,22 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
     }, 1500);
   });
 
-  rebuildMonthFilter();
-  rebuildDayFilter();
+  initCalendarMonth();
+  renderCalendar();
   render();
+
+  // keywords.html 등에서 ?path=... 로 직접 링크된 경우 해당 원고 자동 선택
+  const deepPath = new URLSearchParams(location.search).get("path");
+  if (deepPath) {
+    const target = data.manuscripts.find((m) => m.path === deepPath);
+    if (target) {
+      currentAgency = target.agency;
+      selected = target;
+      initCalendarMonth();
+      renderCalendar();
+      render();
+    }
+  }
 })();
 </script>
 </body>
