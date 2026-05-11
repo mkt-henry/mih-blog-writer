@@ -66,14 +66,6 @@ function isKstToday(ts, todayStr) {
   return new Date(ts + 9 * 3600_000).toISOString().slice(0, 10) === todayStr;
 }
 
-// ── 원고 발행 여부 확인 ───────────────────────────────────────────────────────
-function isPublished(manuscript, rssItems) {
-  const { slug, title } = manuscript;
-  return rssItems.some(r =>
-    r.title.includes(slug) ||
-    r.title.includes(title.replace(/^\[.*?\]\s*/, '').slice(0, 15))
-  );
-}
 
 // ── Discord 임베드 전송 ───────────────────────────────────────────────────────
 async function sendEmbed(embeds) {
@@ -131,9 +123,6 @@ async function main() {
       .sort((a, b) => a.ts - b.ts);
   }
 
-  // 오늘 등록된 원고 중 미발행 (manifest 기준)
-  const todayMss = manuscripts.filter(m => m.date === todayStr);
-  const unpublishedMss = todayMss.filter(m => !isPublished(m, rssMap[m.agency] ?? []));
 
   // ── RSS 발행 내역 필드 ────────────────────────────────────────────────────
   const rssField = agencySlugs
@@ -151,11 +140,6 @@ async function main() {
 
   const totalPublished = agencySlugs.reduce((s, slug) => s + publishedToday[slug].length, 0);
 
-  // ── 미발행 원고 필드 ─────────────────────────────────────────────────────
-  const unpubField = unpublishedMss.length === 0
-    ? null
-    : unpublishedMss.map(m => `• [${AGENCY_LABEL[m.agency]}] **${m.slug}**`).join('\n');
-
   // ── 임베드 구성 ──────────────────────────────────────────────────────────
   const fields = [
     {
@@ -164,14 +148,6 @@ async function main() {
       inline: false,
     },
   ];
-
-  if (unpubField) {
-    fields.push({
-      name:  `⏳ 오늘 원고 중 미발행 (${unpublishedMss.length}건)`,
-      value: unpubField.slice(0, 1024),
-      inline: false,
-    });
-  }
 
   if (rssErrors.length > 0) {
     fields.push({
