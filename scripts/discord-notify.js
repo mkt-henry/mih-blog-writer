@@ -44,7 +44,8 @@ function parseRss(xml) {
   const items = [];
   for (const [, body] of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
     const title   = (body.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ?? body.match(/<title>(.*?)<\/title>/))?.[1]?.trim() ?? '';
-    const link    = body.match(/<link>(.*?)<\/link>/)?.[1]?.trim() ?? '';
+    const rawLink = body.match(/<link>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/link>/)?.[1]?.trim() ?? '';
+    const link    = rawLink.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim();
     const pubDate = body.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim() ?? '';
     if (title) items.push({ title, link, pubDate, ts: pubDate ? new Date(pubDate).getTime() : 0 });
   }
