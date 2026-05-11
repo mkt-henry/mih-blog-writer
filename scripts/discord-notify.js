@@ -51,13 +51,22 @@ function parseRss(xml) {
   return items;
 }
 
-// ── KST 오늘 날짜 문자열 ──────────────────────────────────────────────────────
+// ── KST 날짜/시각 유틸 ───────────────────────────────────────────────────────
 function kstDateStr(offsetDays = 0) {
   const d = new Date(Date.now() + 9 * 3600_000 + offsetDays * 86400_000);
   return d.toISOString().slice(0, 10);
 }
 
-// ── 원고 제목에서 아티스트명 포함 여부 확인 ──────────────────────────────────
+function kstTimeStr(ts) {
+  // ts: ms 타임스탬프 → KST HH:MM
+  return new Date(ts + 9 * 3600_000).toISOString().slice(11, 16);
+}
+
+function isKstToday(ts, todayStr) {
+  return new Date(ts + 9 * 3600_000).toISOString().slice(0, 10) === todayStr;
+}
+
+// ── 원고 발행 여부 확인 ───────────────────────────────────────────────────────
 function isPublished(manuscript, rssItems) {
   const { slug, title } = manuscript;
   return rssItems.some(r =>
@@ -114,29 +123,55 @@ async function main() {
   // ── 계정별 집계 ───────────────────────────────────────────────────────────
   const agencySlugs = Object.keys(agencies);
 
-  // 당일 등록 원고
+  // RSS 기준 오늘 발행된 항목 (계정별)
+  const publishedToday = {};
+  for (const slug of agencySlugs) {
+    publishedToday[slug] = (rssMap[slug] ?? [])
+      .filter(r => r.ts && isKstToday(r.ts, todayStr))
+      .sort((a, b) => a.ts - b.ts);
+  }
+
+  // 오늘 등록된 원고 중 미발행 (manifest 기준)
   const todayMss = manuscripts.filter(m => m.date === todayStr);
+  const unpublishedMss = todayMss.filter(m => !isPublished(m, rssMap[m.agency] ?? []));
 
-  // 발행 여부 판단
-  const unpublished = todayMss.filter(m => !isPublished(m, rssMap[m.agency] ?? []));
-  const published   = todayMss.filter(m =>  isPublished(m, rssMap[m.agency] ?? []));
-
-  // ── 당일 원고 목록 ────────────────────────────────────────────────────────
-  const todayLines = todayMss.length === 0
-    ? '오늘 등록된 원고가 없습니다.'
-    : todayMss.map(m => {
-        const done = isPublished(m, rssMap[m.agency] ?? []);
-        return `${done ? '✅' : '⏳'} [${AGENCY_LABEL[m.agency]}] **${m.slug}**`;
+  // ── RSS 발행 내역 필드 ────────────────────────────────────────────────────
+  const rssField = agencySlugs
+    .map(slug => {
+      const items = publishedToday[slug];
+      if (items.length === 0) return null;
+      const lines = items.map(r => {
+        const t = r.title.length > 30 ? r.title.slice(0, 30) + '…' : r.title;
+        return `  \`${kstTimeStr(r.ts)}\` ${t}`;
       }).join('\n');
+      return `**[${AGENCY_LABEL[slug]}]**\n${lines}`;
+    })
+    .filter(Boolean)
+    .join('\n\n');
+
+  const totalPublished = agencySlugs.reduce((s, slug) => s + publishedToday[slug].length, 0);
+
+  // ── 미발행 원고 필드 ─────────────────────────────────────────────────────
+  const unpubField = unpublishedMss.length === 0
+    ? null
+    : unpublishedMss.map(m => `• [${AGENCY_LABEL[m.agency]}] **${m.slug}**`).join('\n');
 
   // ── 임베드 구성 ──────────────────────────────────────────────────────────
   const fields = [
     {
-      name:   `🗓 오늘 원고 (${todayMss.length}개 등록 / ${published.length}개 발행 확인)`,
-      value:  todayLines.slice(0, 1024),
+      name:  `📡 오늘 발행 (${totalPublished}건)`,
+      value: (rssField || '아직 발행된 원고가 없습니다.').slice(0, 1024),
       inline: false,
     },
   ];
+
+  if (unpubField) {
+    fields.push({
+      name:  `⏳ 오늘 원고 중 미발행 (${unpublishedMss.length}건)`,
+      value: unpubField.slice(0, 1024),
+      inline: false,
+    });
+  }
 
   if (rssErrors.length > 0) {
     fields.push({
@@ -147,7 +182,7 @@ async function main() {
   }
 
   await sendEmbed([{
-    title:     `📋 MIH 오늘 발행 현황 · ${todayStr}`,
+    title:     `📋 MIH 발행 현황 · ${todayStr}`,
     color:     0x1565C0,
     fields,
     footer:    { text: 'MIH Blog Writer · 매일 10:00 KST' },
