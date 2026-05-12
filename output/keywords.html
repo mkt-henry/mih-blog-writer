@@ -1154,24 +1154,37 @@
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
-  /* ── RSS 발행 캐시 ── */
-  const RSS_CACHE_KEY = 'mih_rss_cache_v2';
-  function loadRssCache() {
-    try { return JSON.parse(localStorage.getItem(RSS_CACHE_KEY)); }
-    catch { return null; }
+  /* ── RSS 발행 캐시 (dev server: /api/rss) ── */
+  // 페이지 부팅 시 서버에서 fetch하고 메모리에 보관.
+  // 서버는 60초 TTL 메모리 캐시를 가지므로 자주 호출해도 외부 부하 없음.
+  let rssData = null;
+  async function refreshRssData() {
+    try {
+      const r = await fetch('/api/rss');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      rssData = await r.json();
+    } catch (e) {
+      rssData = null;
+      showToast('RSS 가져오기 실패: ' + e.message);
+    }
   }
+  function loadRssCache() { return rssData; }
 
   // undefined → 캐시 없음(미확인), null → 캐시 있지만 미발행, object → 발행됨
+  // 모든 계정 RSS를 스캔 — 원고가 다른 계정으로 옮겨 발행돼도 잡힘.
   function getPublishInfo(ms) {
     const cache = loadRssCache();
     if (!cache) return undefined;
-    const entry = cache[ms.agency];
-    if (!entry || entry.error || !Array.isArray(entry.items)) return null;
     const slugLower = (ms.slug || '').toLowerCase();
     if (!slugLower) return null;
-    return entry.items.find(item =>
-      (item.title || '').toLowerCase().includes(slugLower)
-    ) || null;
+    for (const entry of Object.values(cache)) {
+      if (!entry || entry.error || !Array.isArray(entry.items)) continue;
+      const match = entry.items.find(item =>
+        (item.title || '').toLowerCase().includes(slugLower)
+      );
+      if (match) return match;
+    }
+    return null;
   }
 
   /* ── 매칭 로직 ── */
@@ -1967,7 +1980,10 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
 
   /* ── 초기 로드 + 렌더 ── */
   (async () => {
-    keywords = await loadKeywords();
+    await Promise.all([
+      loadKeywords().then(k => { keywords = k; }),
+      refreshRssData(),
+    ]);
     renderList();
     renderDetail();
     updateDupBadge();

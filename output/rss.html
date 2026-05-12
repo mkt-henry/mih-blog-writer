@@ -344,71 +344,6 @@
   }
   function saveCache(c) { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); }
 
-  /* ── RSS 가져오기 ── */
-  async function fetchWithTimeout(url, ms) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), ms);
-    try {
-      const r = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(t);
-      return r;
-    } catch (e) { clearTimeout(t); throw e; }
-  }
-
-  async function fetchRss(blogSlug) {
-    const base = `https://rss.blog.naver.com/${blogSlug}`;
-    const attempts = [
-      base,
-      `https://corsproxy.io/?${encodeURIComponent(base)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
-    ];
-    let lastErr = '';
-    for (const url of attempts) {
-      try {
-        const res = await fetchWithTimeout(url, 8000);
-        if (!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
-        const text = await res.text();
-        const items = parseRss(text);
-        if (items.length > 0) return items;
-        lastErr = 'RSS 항목 없음';
-      } catch (e) { lastErr = e.message; }
-    }
-    throw new Error(lastErr || '요청 실패');
-  }
-
-  /* ── XML 파싱 ── */
-  function parseRss(xml) {
-    const p = new DOMParser();
-    let doc = p.parseFromString(xml, 'application/xml');
-    if (doc.querySelector('parsererror')) doc = p.parseFromString(xml, 'text/html');
-    const items = [];
-    doc.querySelectorAll('item').forEach(el => {
-      const title   = el.querySelector('title')?.textContent?.trim() || '';
-      const pubDate = el.querySelector('pubDate')?.textContent?.trim() || '';
-      const link    = extractLink(el);
-      if (title) items.push({ title, link, pubDate });
-    });
-    return items;
-  }
-
-  function extractLink(item) {
-    const el = item.querySelector('link');
-    if (el?.textContent?.trim()) return el.textContent.trim();
-    if (el?.getAttribute('href')) return el.getAttribute('href');
-    const guid = item.querySelector('guid');
-    if (guid?.textContent?.startsWith('http')) return guid.textContent.trim();
-    // DOMParser void-element fallback
-    if (el) {
-      let n = el.nextSibling;
-      while (n) {
-        const v = n.textContent?.trim();
-        if (v?.startsWith('http')) return v;
-        n = n.nextSibling;
-      }
-    }
-    return '';
-  }
-
   /* ── 날짜 포맷 (timezone-safe) ── */
   const MONTHS_RFC = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
 
@@ -598,25 +533,27 @@
     document.getElementById('content').innerHTML =
       `<div class="state-box"><div class="spinner"></div><p>모든 계정 RSS를 가져오는 중입니다...</p></div>`;
 
-    // 병렬 fetch
     const pending = [...agencySlugs];
     renderPills(loadCache(), pending);
 
-    const results = await Promise.allSettled(
-      agencySlugs.map(slug =>
-        fetchRss(AGENCIES[slug]?.blogSlug || slug)
-          .then(items  => ({ slug, items, error: null }))
-          .catch(e     => ({ slug, items: [], error: e.message }))
-      )
-    );
+    // dev server가 naver RSS를 직접 fetch (60초 TTL 메모리 캐시)
+    let serverData = null;
+    try {
+      const res = await fetch('/api/rss');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      serverData = await res.json();
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = '새로고침';
+      document.getElementById('content').innerHTML =
+        `<div class="state-box"><p>RSS 가져오기 실패: ${escHtml(e.message)}</p><small>dev server가 떠있는지 확인하세요.</small></div>`;
+      return;
+    }
 
     const cache = loadCache();
-    const now = Date.now();
-    results.forEach(r => {
-      if (r.status === 'fulfilled') {
-        cache[r.value.slug] = { items: r.value.items, error: r.value.error, fetchedAt: now };
-      }
-    });
+    for (const slug of agencySlugs) {
+      if (serverData[slug]) cache[slug] = serverData[slug];
+    }
     saveCache(cache);
 
     btn.disabled = false;

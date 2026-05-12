@@ -17,7 +17,9 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dir, '..');
 const STATIC_DIR = join(ROOT, 'output');
 const KEYWORDS_FILE = join(STATIC_DIR, 'keywords.json');
+const MANIFEST_FILE = join(STATIC_DIR, 'manifest.js');
 const PORT = Number(process.env.PORT) || 4321;
+const RSS_TTL_MS = 60 * 1000;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -66,6 +68,64 @@ function validateKeywordsBody(body) {
     if (typeof item.category !== 'string' || !item.category) return `[${i}] category 누락`;
   }
   return null;
+}
+
+// ── manifest 로드 (agency 목록) ─────────────────────────────────────────────
+async function loadAgencies() {
+  const raw = await readFile(MANIFEST_FILE, 'utf8');
+  const json = raw
+    .replace(/^\/\/[^\n]*\n/, '')
+    .replace(/^window\.MIH\s*=\s*/, '')
+    .replace(/;\s*$/, '');
+  const data = JSON.parse(json);
+  return data.agencies || {};
+}
+
+// ── RSS 캐시 & fetch ─────────────────────────────────────────────────────
+// Map<agencySlug, { items, fetchedAt, error }>
+const rssCache = new Map();
+
+function parseRss(xml) {
+  const items = [];
+  for (const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+    const body = m[1];
+    const title = (
+      body.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ??
+      body.match(/<title>(.*?)<\/title>/)
+    )?.[1]?.trim() ?? '';
+    const rawLink = body.match(/<link>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/link>/)?.[1]?.trim() ?? '';
+    const link = rawLink.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim();
+    const pubDate = body.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim() ?? '';
+    if (title) items.push({ title, link, pubDate });
+  }
+  return items;
+}
+
+async function fetchAgencyRss(blogSlug) {
+  const url = `https://rss.blog.naver.com/${blogSlug}`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MIH-Dev/1.0)' },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseRss(await res.text());
+}
+
+async function getRssEntry(slug, blogSlug) {
+  const cached = rssCache.get(slug);
+  if (cached && !cached.error && Date.now() - cached.fetchedAt < RSS_TTL_MS) {
+    return cached;
+  }
+  try {
+    const items = await fetchAgencyRss(blogSlug);
+    const entry = { items, fetchedAt: Date.now(), error: null };
+    rssCache.set(slug, entry);
+    return entry;
+  } catch (e) {
+    const entry = { items: [], fetchedAt: Date.now(), error: e.message };
+    rssCache.set(slug, entry);
+    return entry;
+  }
 }
 
 // ── HTTP 응답 헬퍼 ─────────────────────────────────────────────────────────
@@ -137,6 +197,34 @@ async function handleApiKeywords(req, res) {
   res.end();
 }
 
+async function handleApiRss(req, res) {
+  if (req.method !== 'GET') {
+    res.writeHead(405, { 'Allow': 'GET' });
+    res.end();
+    return;
+  }
+  let agencies;
+  try {
+    agencies = await loadAgencies();
+  } catch (e) {
+    console.error('[GET /api/rss] manifest load failed:', e);
+    sendJson(res, 500, { error: 'manifest 로드 실패', message: e.message });
+    return;
+  }
+  const slugs = Object.keys(agencies);
+  const entries = await Promise.all(
+    slugs.map(async (slug) => {
+      const info = agencies[slug] || {};
+      const blogSlug = info.blogSlug || slug;
+      const entry = await getRssEntry(slug, blogSlug);
+      return [slug, entry];
+    })
+  );
+  console.log(`[GET /api/rss] ${slugs.length} agencies (` +
+    slugs.map(s => `${s}:${rssCache.get(s)?.error ? 'err' : (rssCache.get(s)?.items.length || 0)}`).join(', ') + ')');
+  sendJson(res, 200, Object.fromEntries(entries));
+}
+
 async function handleStatic(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { 'Allow': 'GET, HEAD' });
@@ -188,6 +276,8 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     if (url.pathname === '/api/keywords') {
       await handleApiKeywords(req, res);
+    } else if (url.pathname === '/api/rss') {
+      await handleApiRss(req, res);
     } else {
       await handleStatic(req, res);
     }
