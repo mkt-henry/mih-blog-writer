@@ -166,13 +166,6 @@
   .agency-filter button[data-agency="mih_speaker"].active { background: #E3F2FD; color: #1565C0; border-color: #1565C0; }
   .agency-filter button[data-agency="mih_casting"].active { background: #F3E5F5; color: #7B1FA2; border-color: #7B1FA2; }
   .agency-filter button[data-agency="mih_agency"].active  { background: #E8F5E9; color: #2E7D32; border-color: #2E7D32; }
-  .agency-filter button .ct {
-    color: #999;
-    font-weight: 500;
-    margin-left: 3px;
-  }
-  .agency-filter button.active .ct { color: currentColor; opacity: 0.75; }
-
   /* IG 확인 배지 */
   .ig-badge {
     display: inline-flex;
@@ -376,6 +369,44 @@
   .btn-insta:hover { background: #FCE4EC; }
   .btn-insta.no-url:hover { background: #f4f6f9; }
 
+  .topbar-counts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .topbar-counts-legend {
+    font-size: 11px;
+    color: #aaa;
+    margin-right: 2px;
+  }
+  .topbar-counts-legend b { color: #777; font-weight: 600; }
+  .topbar-count-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    border: 1px solid #e3e5ea;
+    background: #f5f6f8;
+    color: #555;
+  }
+  .topbar-count-pill .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .topbar-count-pill .ct { color: #999; font-weight: 500; margin-left: 1px; }
+  .topbar-count-pill-total {
+    background: #E3F2FD;
+    border-color: #90CAF9;
+    color: #1565C0;
+    font-weight: 600;
+  }
+  .topbar-count-pill-total .ct { color: #1565C0; opacity: 0.75; }
+
   /* 상세 패널 */
   .detail {
     flex: 1;
@@ -409,6 +440,27 @@
     align-items: center;
     gap: 12px;
     margin-bottom: 8px;
+  }
+  .kw-header-card .kw-title-row .kw-title-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+  .kw-header-card .kw-title-row .kw-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .kw-header-card .kw-title-row .kw-actions .btn-icon {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    font-weight: 600;
   }
   .kw-header-card h3 {
     font-size: 22px;
@@ -1026,9 +1078,9 @@
   </div>
   <div class="agency-filter" id="agency-filter">
     <button class="active" data-agency="all">전체</button>
-    <button data-agency="mih_speaker">스피커<span class="ct" data-ct="mih_speaker"></span></button>
-    <button data-agency="mih_casting">캐스팅<span class="ct" data-ct="mih_casting"></span></button>
-    <button data-agency="mih_agency">에이전시<span class="ct" data-ct="mih_agency"></span></button>
+    <button data-agency="mih_speaker">스피커</button>
+    <button data-agency="mih_casting">캐스팅</button>
+    <button data-agency="mih_agency">에이전시</button>
   </div>
 
   <div class="list-meta">
@@ -1198,6 +1250,55 @@
     mih_agency:  '에이전시',
   };
 
+  const AGENCY_COLORS = {
+    mih_speaker: '#1565C0',
+    mih_casting: '#7B1FA2',
+    mih_agency:  '#2E7D32',
+  };
+
+  function topbarCountsHtml() {
+    const rssReady = loadRssCache() !== null;
+    // 키워드별 매칭 원고 + 발행 여부 사전 계산
+    const perKw = keywords.map(kw => {
+      const ms = matchManuscripts(kw.keyword);
+      const agencySet = new Set(ms.map(m => m.agency));
+      const publishedAgencySet = new Set(
+        ms.filter(m => !!getPublishInfo(m)).map(m => m.agency)
+      );
+      return { agencySet, publishedAgencySet, hasAny: ms.length > 0, hasPublished: publishedAgencySet.size > 0 };
+    });
+
+    let totalWritten = 0;
+    let totalPublished = 0;
+    perKw.forEach(k => {
+      if (k.hasAny) totalWritten++;
+      if (k.hasPublished) totalPublished++;
+    });
+
+    const pills = Object.keys(AGENCY_NAMES).map(slug => {
+      let written = 0;
+      let published = 0;
+      perKw.forEach(k => {
+        if (k.agencySet.has(slug)) written++;
+        if (k.publishedAgencySet.has(slug)) published++;
+      });
+      const unpublished = Math.max(0, written - published);
+      const countText = rssReady ? `${unpublished}/${published}` : `${written}`;
+      return `<span class="topbar-count-pill" title="${AGENCY_NAMES[slug]} 미발행 ${unpublished}개${rssReady ? ` / 발행 ${published}개` : ''}">
+        <span class="dot" style="background:${AGENCY_COLORS[slug]};"></span>
+        ${AGENCY_NAMES[slug]}<span class="ct">(${countText})</span>
+      </span>`;
+    }).join('');
+
+    const totalUnpublished = Math.max(0, totalWritten - totalPublished);
+    const totalCountText = rssReady ? `${totalUnpublished}/${totalPublished}` : `${totalWritten}`;
+    const totalPill = `<span class="topbar-count-pill topbar-count-pill-total" title="전체 미발행 ${totalUnpublished}개${rssReady ? ` / 발행 ${totalPublished}개` : ''}">
+      전체<span class="ct">(${totalCountText})</span>
+    </span>`;
+    const legend = `<span class="topbar-counts-legend"><b>미발행</b>/<b>발행</b></span>`;
+    return `<div class="topbar-counts">${legend}${totalPill}${pills}</div>`;
+  }
+
   /* ── 원고 데이터 ── */
   let manuscripts = (window.MIH && window.MIH.manuscripts) || [];
 
@@ -1260,21 +1361,9 @@
       rssData = null;
       showToast('RSS 가져오기 실패: ' + e.message);
     }
-    renderAgencyCounts();
+    renderDetail();
   }
   function loadRssCache() { return rssData; }
-
-  function renderAgencyCounts() {
-    document.querySelectorAll('.agency-filter .ct[data-ct]').forEach(el => {
-      const slug = el.dataset.ct;
-      const msCount = manuscripts.filter(m => m.agency === slug).length;
-      const entry = rssData && rssData[slug];
-      const rssCount = entry && !entry.error && Array.isArray(entry.items) ? entry.items.length : null;
-      el.textContent = rssCount == null
-        ? ` (${msCount})`
-        : ` (${msCount}/${rssCount})`;
-    });
-  }
 
   // undefined → 캐시 없음(미확인), null → 캐시 있지만 미발행, object → 발행됨
   // 모든 계정 RSS를 스캔 — 원고가 다른 계정으로 옮겨 발행돼도 잡힘.
@@ -1428,6 +1517,7 @@
     previewingPath = ms.path;
     const topbar = document.getElementById('topbar');
     const detail  = document.getElementById('detail');
+    topbar.style.display = '';
 
     const MIH = window.MIH;
     let html = ms.html || '';
@@ -1510,7 +1600,8 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
     detail.style.overflow = '';
 
     if (!selectedId) {
-      topbar.innerHTML = `<h2 style="color:#bbb;">키워드를 선택하면 매칭 원고가 표시됩니다.</h2>`;
+      topbar.style.display = '';
+      topbar.innerHTML = `<h2 style="color:#bbb;">키워드를 선택하면 매칭 원고가 표시됩니다.</h2>${topbarCountsHtml()}`;
       detail.innerHTML = `<div class="detail-empty">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M7 7h10M7 11h6M7 15h4"/><rect x="3" y="3" width="18" height="18" rx="3"/>
@@ -1527,24 +1618,8 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
     const matches = matchManuscripts(kw.keyword);
     const c = CAT_MAP[kw.category];
 
-    topbar.innerHTML = `
-      <h2 style="flex:1;">${escHtml(kw.keyword)} ${catBadgeHtml(kw.category)}</h2>
-      ${kw.instagram
-        ? `<button class="btn-icon btn-insta" id="btn-insta">인스타 복사</button>`
-        : `<button class="btn-icon btn-insta no-url" id="btn-insta">인스타 URL 등록</button>`}
-      <button class="btn-icon btn-edit" id="btn-edit">수정</button>
-      <button class="btn-icon btn-delete" id="btn-delete">삭제</button>
-    `;
-    document.getElementById('btn-edit').addEventListener('click', () => openModal(kw.id));
-    document.getElementById('btn-delete').addEventListener('click', () => openConfirm(kw.id));
-    document.getElementById('btn-insta').addEventListener('click', () => {
-      if (kw.instagram) {
-        navigator.clipboard.writeText(kw.instagram)
-          .then(() => showToast('인스타그램 링크를 복사했습니다.'));
-      } else {
-        openModal(kw.id);
-      }
-    });
+    topbar.style.display = '';
+    topbar.innerHTML = topbarCountsHtml();
 
     const matchBadge = matches.length > 0
       ? `<span class="match-count-badge">${matches.length}개</span>`
@@ -1595,8 +1670,17 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
     detail.innerHTML = `
       <div class="kw-header-card">
         <div class="kw-title-row">
-          <h3>${escHtml(kw.keyword)}</h3>
-          ${catBadgeHtml(kw.category)}
+          <div class="kw-title-main">
+            <h3>${escHtml(kw.keyword)}</h3>
+            ${catBadgeHtml(kw.category)}
+          </div>
+          <div class="kw-actions">
+            ${kw.instagram
+              ? `<button class="btn-icon btn-insta" id="btn-insta">인스타 복사</button>`
+              : `<button class="btn-icon btn-insta no-url" id="btn-insta">인스타 URL 등록</button>`}
+            <button class="btn-icon btn-edit" id="btn-edit">수정</button>
+            <button class="btn-icon btn-delete" id="btn-delete">삭제</button>
+          </div>
         </div>
         <div class="created">등록일 ${formatDate(kw.createdAt)}</div>
         ${instaHtml}
@@ -1606,6 +1690,17 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
       ${rssNotice}
       ${msHtml}
     `;
+
+    document.getElementById('btn-edit').addEventListener('click', () => openModal(kw.id));
+    document.getElementById('btn-delete').addEventListener('click', () => openConfirm(kw.id));
+    document.getElementById('btn-insta').addEventListener('click', () => {
+      if (kw.instagram) {
+        navigator.clipboard.writeText(kw.instagram)
+          .then(() => showToast('인스타그램 링크를 복사했습니다.'));
+      } else {
+        openModal(kw.id);
+      }
+    });
 
     detail.querySelectorAll('.ms-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -2129,7 +2224,6 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
       window.MIH = newMih;
       manuscripts = newMih.manuscripts || [];
       keywords = kwArr;
-      renderAgencyCounts();
       renderList();
       renderDetail();
       updateDupBadge();
