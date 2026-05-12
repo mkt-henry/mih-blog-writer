@@ -996,6 +996,7 @@
   <div class="sidebar-header">
     <a href="index.html">← 원고 보기</a>
     <h1>키워드 관리</h1>
+    <button class="btn-dup-check" id="btn-refresh" title="원고·발행·키워드 다시 불러오기 (필터 유지)">↻</button>
     <button class="btn-dup-check" id="btn-dup-open">
       중복 확인
       <span class="dup-badge" id="dup-badge">0</span>
@@ -1202,7 +1203,7 @@
   };
 
   /* ── 원고 데이터 ── */
-  const manuscripts = (window.MIH && window.MIH.manuscripts) || [];
+  let manuscripts = (window.MIH && window.MIH.manuscripts) || [];
 
   /* ── 키워드 영속화 (dev server: output/keywords.json) ── */
   async function loadKeywords() {
@@ -2096,6 +2097,39 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
     renderDetail();
     if (addedCount > 0) showToast(`${addedCount}개 키워드가 등록됐습니다.`);
   });
+
+  /* ── 새로고침 (필터·선택 유지) ── */
+  async function refreshAll() {
+    const btn = document.getElementById('btn-refresh');
+    btn.disabled = true;
+    btn.textContent = '⟳';
+    try {
+      const [manifestText, kwArr] = await Promise.all([
+        fetch('/manifest.js?_=' + Date.now()).then(r => r.text()),
+        loadKeywords(),
+        refreshRssData(),
+      ]);
+      // manifest.js 형식: window.MIH = {...};
+      const json = manifestText
+        .replace(/^\/\/[^\n]*\n/, '')
+        .replace(/^window\.MIH\s*=\s*/, '')
+        .replace(/;\s*$/, '');
+      const newMih = JSON.parse(json);
+      window.MIH = newMih;
+      manuscripts = newMih.manuscripts || [];
+      keywords = kwArr;
+      renderList();
+      renderDetail();
+      updateDupBadge();
+      showToast('새로고침 완료');
+    } catch (e) {
+      showToast('새로고침 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '↻';
+    }
+  }
+  document.getElementById('btn-refresh').addEventListener('click', refreshAll);
 
   /* ── 토스트 알림 ── */
   function showToast(msg) {
