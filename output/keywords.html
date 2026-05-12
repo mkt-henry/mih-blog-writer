@@ -144,6 +144,30 @@
   .ig-filter button[data-ig="has"].active    { background: #FCE4EC; color: #AD1457; border-color: #F48FB1; }
   .ig-filter button[data-ig="none"].active   { background: #F5F5F5; color: #555;    border-color: #bbb; }
 
+  /* 게시 계정(blog) 필터 */
+  .agency-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 16px 10px;
+    border-bottom: 1px solid #eef0f3;
+  }
+  .agency-filter button {
+    padding: 4px 10px;
+    border: 1px solid #d8dbe1;
+    background: #fff;
+    border-radius: 20px;
+    font-size: 11px;
+    cursor: pointer;
+    color: #555;
+    font-family: inherit;
+  }
+  .agency-filter button[data-agency="all"].active         { background: #E3F2FD; color: #1565C0; border-color: #90CAF9; }
+  .agency-filter button[data-agency="mih_speaker"].active { background: #E3F2FD; color: #1565C0; border-color: #1565C0; }
+  .agency-filter button[data-agency="mih_casting"].active { background: #F3E5F5; color: #7B1FA2; border-color: #7B1FA2; }
+  .agency-filter button[data-agency="mih_agency"].active  { background: #E8F5E9; color: #2E7D32; border-color: #2E7D32; }
+  .agency-filter button[data-agency="mih_history"].active { background: #ECEFF1; color: #546E7A; border-color: #546E7A; }
+
   /* IG 확인 배지 */
   .ig-badge {
     display: inline-flex;
@@ -995,6 +1019,13 @@
     <button data-ig="has">📷 IG 확인</button>
     <button data-ig="none">IG 미확인</button>
   </div>
+  <div class="agency-filter" id="agency-filter">
+    <button class="active" data-agency="all">전체</button>
+    <button data-agency="mih_speaker">스피커</button>
+    <button data-agency="mih_casting">캐스팅</button>
+    <button data-agency="mih_agency">에이전시</button>
+    <button data-agency="mih_history">이전 발행</button>
+  </div>
 
   <div class="list-meta">
     <span id="list-count">0개의 키워드</span>
@@ -1265,8 +1296,9 @@
   let searchQ = '';
   let editingId = null; // null = 신규, string = 수정 중
   let previewingPath = null;
-  let filterPub = 'all';
-  let filterIg  = 'all';
+  let filterPub    = 'all';
+  let filterIg     = 'all';
+  let filterAgency = 'all';
 
   /* ── 유틸 ── */
   function catBadgeHtml(catId) {
@@ -1299,6 +1331,10 @@
         const hasIg = !!(kw.instagram && kw.instagram.trim());
         if (filterIg === 'has'  && !hasIg) return false;
         if (filterIg === 'none' &&  hasIg) return false;
+      }
+      if (filterAgency !== 'all') {
+        const ms = matchManuscripts(kw.keyword);
+        if (!ms.some(m => m.agency === filterAgency)) return false;
       }
       return true;
     });
@@ -1573,6 +1609,14 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
     if (!btn) return;
     filterIg = btn.dataset.ig;
     document.querySelectorAll('#ig-filter button').forEach(b => b.classList.toggle('active', b === btn));
+    renderList();
+  });
+
+  document.getElementById('agency-filter').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-agency]');
+    if (!btn) return;
+    filterAgency = btn.dataset.agency;
+    document.querySelectorAll('#agency-filter button').forEach(b => b.classList.toggle('active', b === btn));
     renderList();
   });
 
