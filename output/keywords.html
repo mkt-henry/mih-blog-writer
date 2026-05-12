@@ -1293,14 +1293,19 @@
     return null;
   }
 
-  /* ── 매칭 로직 ── */
+  /* ── 매칭 로직 ──
+   * 1글자 키워드(예: "비", "린", "츄")는 slug 정확 일치만 인정한다.
+   *   부분 일치로 풀면 제목에 그 글자가 들어간 다른 원고까지 잡아 false positive 발생.
+   * 2글자 이상 키워드: 슬러그/제목 부분 일치 + 역방향(슬러그가 키워드에 포함)도 허용. */
   function matchManuscripts(keyword) {
     if (!keyword || !keyword.trim()) return [];
     const q = keyword.trim().toLowerCase();
+    if (q.length === 1) {
+      return manuscripts.filter(m => (m.slug || '').toLowerCase() === q);
+    }
     return manuscripts.filter(m => {
       const slug  = (m.slug  || '').toLowerCase();
       const title = (m.title || '').toLowerCase();
-      // 키워드가 슬러그/제목에 포함되거나, 슬러그(2자 이상)가 키워드에 포함되면 매칭
       return title.includes(q) || slug.includes(q) || (slug.length >= 2 && q.includes(slug));
     });
   }
