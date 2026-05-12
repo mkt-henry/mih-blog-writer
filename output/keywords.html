@@ -462,12 +462,15 @@
   }
   .ms-card .ms-agency {
     font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 3px;
-    background: #eef0f3;
-    color: #555;
-    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
   }
+  .ms-card .ms-agency.mih_speaker { background: #E3F2FD; color: #1565C0; }
+  .ms-card .ms-agency.mih_casting { background: #F3E5F5; color: #7B1FA2; }
+  .ms-card .ms-agency.mih_agency  { background: #E8F5E9; color: #2E7D32; }
+  .ms-card .ms-agency.mih_history { background: #ECEFF1; color: #546E7A; }
   .ms-card .ms-title {
     font-size: 13px;
     color: #333;
@@ -1153,11 +1156,11 @@
 
   const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
 
-  /* ── 에이전시 표시 이름 ── */
+  /* ── 에이전시 표시 이름 (어느 블로그용 원고인지) ── */
   const AGENCY_NAMES = {
-    mih_speaker: 'mih_speaker',
-    mih_casting: 'mih_casting',
-    mih_agency:  'mih_agency',
+    mih_speaker: '스피커',
+    mih_casting: '캐스팅',
+    mih_agency:  '에이전시',
     mih_history: '이전 발행',
   };
 
@@ -1501,7 +1504,7 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
           return `<div class="ms-card" data-path="${m.path}">
             <div class="ms-meta">
               <span>${m.date || ''}</span>
-              <span class="ms-agency">${agencyLabel}</span>
+              <span class="ms-agency ${escHtml(m.agency)}" title="${escHtml(m.agency)} 블로그 게시용">${escHtml(agencyLabel)}</span>
               ${pubBadge}
               ${pubLink}
             </div>
