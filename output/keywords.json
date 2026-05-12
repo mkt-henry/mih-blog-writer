@@ -5374,5 +5374,33 @@
     "category": "가수",
     "notes": "",
     "createdAt": "2026-05-12T01:44:12.923Z"
+  },
+  {
+    "id": "mp256cbxxa5b",
+    "keyword": "솔비",
+    "category": "가수",
+    "notes": "",
+    "createdAt": "2026-05-12T04:39:54.861Z"
+  },
+  {
+    "id": "mp256r9mqbmq",
+    "keyword": "강사초빙",
+    "category": "단순키워드",
+    "notes": "",
+    "createdAt": "2026-05-12T04:40:14.218Z"
+  },
+  {
+    "id": "mp256r9mktry",
+    "keyword": "공연에이전시",
+    "category": "단순키워드",
+    "notes": "",
+    "createdAt": "2026-05-12T04:40:14.218Z"
+  },
+  {
+    "id": "mp256r9mqxyh",
+    "keyword": "전문사회자섭외",
+    "category": "단순키워드",
+    "notes": "",
+    "createdAt": "2026-05-12T04:40:14.218Z"
   }
 ]
