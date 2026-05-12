@@ -8,7 +8,7 @@
 `output/keywords.html` 의 키워드 데이터가 브라우저 `localStorage` (key `mih_keywords`) 에만 저장되고 있다. 이로 인해 다음 상황에서 데이터가 사라진다.
 
 - 다른 브라우저/프로필에서 열기 — Chrome 에서 등록한 데이터가 Edge 에서 안 보임
-- 다른 origin 에서 열기 — `npx serve` 가 포트 점유 시 fallback 으로 3000 → 5000 등으로 옮겨가면 origin 이 바뀌어 localStorage 가 분리됨
+- 다른 origin 에서 열기 — `npx serve` 가 포트 점유 시 fallback 으로 4321 → 5000 등으로 옮겨가면 origin 이 바뀌어 localStorage 가 분리됨
 - 브라우저 데이터 삭제 / 시크릿 창
 - 다른 컴퓨터에서 `git sync` 해도 키워드는 따라오지 않음 (저장소에 데이터가 없으므로)
 
@@ -70,7 +70,7 @@ b91037e (2026-05-08) "Simplify project: local-only, drop Supabase" 커밋에서 
 | GET | `/*` | `output/` 디렉터리의 정적 파일 서빙 (MIME 타입 기본 셋: html, js, css, json, png, jpg) |
 
 **포트 정책:**
-- 3000 고정. 점유 시 에러 종료 (fallback 없음 — origin 분리 방지)
+- 4321 고정 (다른 프로젝트의 3000 충돌을 피하기 위해 MIH 전용 포트 선정). 점유 시 에러 종료 (fallback 없음 — origin 분리 방지)
 - `PORT` 환경변수로 오버라이드 가능
 
 **POST 검증:**
@@ -166,7 +166,7 @@ b91037e (2026-05-08) "Simplify project: local-only, drop Supabase" 커밋에서 
 
 수동 시나리오:
 
-1. `npm run dev` → 브라우저 `http://localhost:3000/keywords.html`
+1. `npm run dev` → 브라우저 `http://localhost:4321/keywords.html`
 2. 키워드 1개 등록 → `output/keywords.json` 생성·내용 확인
 3. 페이지 새로고침 → 등록한 키워드 표시 확인
 4. 대량 등록 5개 → 파일 즉시 반영 확인

@@ -1108,15 +1108,47 @@
   /* ── 원고 데이터 ── */
   const manuscripts = (window.MIH && window.MIH.manuscripts) || [];
 
-  /* ── localStorage 키워드 저장소 ── */
-  const STORE_KEY = 'mih_keywords';
-
-  function loadKeywords() {
-    try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }
-    catch { return []; }
+  /* ── 키워드 영속화 (dev server: output/keywords.json) ── */
+  async function loadKeywords() {
+    try {
+      const r = await fetch('/api/keywords');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      showToast('서버 응답 없음 — npm run dev 가 떠 있는지 확인하세요');
+      return [];
+    }
   }
+
+  // saveKeywords: 인-메모리 변경 → 서버에 전체 배열 POST.
+  // 동시 호출 시 마지막 상태만 살아남도록 큐잉(coalesce).
+  let _saveInFlight = false;
+  let _pendingSave  = null;
   function saveKeywords(arr) {
-    localStorage.setItem(STORE_KEY, JSON.stringify(arr));
+    _pendingSave = arr;
+    if (_saveInFlight) return;
+    _saveInFlight = true;
+    (async () => {
+      while (_pendingSave) {
+        const toSave = _pendingSave;
+        _pendingSave = null;
+        try {
+          const r = await fetch('/api/keywords', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(toSave),
+          });
+          if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            showToast('저장 실패: ' + (err.message || ('HTTP ' + r.status)));
+          }
+        } catch (e) {
+          showToast('저장 실패: ' + e.message);
+        }
+      }
+      _saveInFlight = false;
+    })();
   }
   function genId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -1155,7 +1187,7 @@
   }
 
   /* ── 상태 ── */
-  let keywords = loadKeywords();
+  let keywords = [];
   let selectedId = null;
   let filterCat = 'all';
   let searchQ = '';
@@ -1933,10 +1965,13 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
       .replace(/"/g, '&quot;');
   }
 
-  /* ── 초기 렌더 ── */
-  renderList();
-  renderDetail();
-  updateDupBadge();
+  /* ── 초기 로드 + 렌더 ── */
+  (async () => {
+    keywords = await loadKeywords();
+    renderList();
+    renderDetail();
+    updateDupBadge();
+  })();
 })();
 </script>
 </body>
