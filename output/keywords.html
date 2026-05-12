@@ -1319,13 +1319,20 @@
     const filtered = keywords.filter(kw => {
       if (filterCat !== 'all' && kw.category !== filterCat) return false;
       if (searchQ && !kw.keyword.toLowerCase().includes(searchQ)) return false;
+      // 발행/계정 필터는 매칭 원고를 공통으로 본다
+      const ms = (filterPub !== 'all' || filterAgency !== 'all')
+        ? matchManuscripts(kw.keyword)
+        : null;
+
       if (filterPub !== 'all') {
-        const ms = matchManuscripts(kw.keyword);
-        if (filterPub === 'no-ms') return ms.length === 0;
-        if (ms.length === 0) return false;
-        const pubCount = ms.filter(m => !!getPublishInfo(m)).length;
-        if (filterPub === 'published')   return pubCount > 0;
-        if (filterPub === 'unpublished') return rssLoadedForFilter && pubCount === 0;
+        if (filterPub === 'no-ms') {
+          if (ms.length > 0) return false;
+        } else {
+          if (ms.length === 0) return false;
+          const pubCount = ms.filter(m => !!getPublishInfo(m)).length;
+          if (filterPub === 'published'   && pubCount === 0) return false;
+          if (filterPub === 'unpublished' && !(rssLoadedForFilter && pubCount === 0)) return false;
+        }
       }
       if (filterIg !== 'all') {
         const hasIg = !!(kw.instagram && kw.instagram.trim());
@@ -1333,7 +1340,6 @@
         if (filterIg === 'none' &&  hasIg) return false;
       }
       if (filterAgency !== 'all') {
-        const ms = matchManuscripts(kw.keyword);
         if (!ms.some(m => m.agency === filterAgency)) return false;
       }
       return true;
