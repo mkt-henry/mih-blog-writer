@@ -1294,9 +1294,11 @@
   }
 
   /* ── 매칭 로직 ──
-   * 1글자 키워드(예: "비", "린", "츄")는 slug 정확 일치만 인정한다.
-   *   부분 일치로 풀면 제목에 그 글자가 들어간 다른 원고까지 잡아 false positive 발생.
-   * 2글자 이상 키워드: 슬러그/제목 부분 일치 + 역방향(슬러그가 키워드에 포함)도 허용. */
+   * false positive 방지를 위해 제목 본문 부분 일치는 허용하지 않는다.
+   *   - 1글자 키워드: slug 정확 일치만 인정 (예: "비")
+   *   - 2글자 이상: ① slug 부분 일치 ② slug 역포함 ③ 제목 대괄호 안 [...] 핵심 키워드 영역 매치
+   *     본문(대괄호 이후 설명문)에 키워드가 들어가도 매치하지 않음.
+   *     예: "카이" 키워드가 "[허성범 섭외] 카이스트 AI ..." 에 잘못 잡히던 문제 해결. */
   function matchManuscripts(keyword) {
     if (!keyword || !keyword.trim()) return [];
     const q = keyword.trim().toLowerCase();
@@ -1306,7 +1308,12 @@
     return manuscripts.filter(m => {
       const slug  = (m.slug  || '').toLowerCase();
       const title = (m.title || '').toLowerCase();
-      return title.includes(q) || slug.includes(q) || (slug.length >= 2 && q.includes(slug));
+      if (slug === q) return true;
+      if (slug.includes(q)) return true;
+      if (slug.length >= 2 && q.includes(slug)) return true;
+      const bracket = title.match(/^\[([^\]]+)\]/);
+      if (bracket && bracket[1].includes(q)) return true;
+      return false;
     });
   }
 
