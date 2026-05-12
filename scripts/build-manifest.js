@@ -39,13 +39,6 @@ const AGENCIES = {
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_agency/business-card.png",
     businessCardWidth: 544,
   },
-  mih_history: {
-    name: "이전 발행 원고",
-    short: "이전 발행",
-    blogSlug: "mih_history",
-    businessCardImageUrl: "",
-    businessCardWidth: 544,
-  },
 };
 
 const KAKAO_URL = "https://open.kakao.com/o/squEahWg";

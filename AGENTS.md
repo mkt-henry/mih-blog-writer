@@ -58,7 +58,7 @@ mih-blog-writer/
 output/YYYY-MM-DD/{agency_slug}/[slug]_[원고제목].html
 ```
 
-- `{agency_slug}`: `mih_speaker` (스피커), `mih_casting` (캐스팅), `mih_agency` (에이전시), `mih_history` (이전 발행 원고)
+- `{agency_slug}`: `mih_speaker` (스피커), `mih_casting` (캐스팅), `mih_agency` (에이전시)
 - `[slug]`: 인물 원고는 아티스트명, 카테고리 원고는 메인 키워드
 - `[원고제목]`: 본문에 사용한 **최종 확정 제목 전체**(대괄호 포함)
 - Windows 금지 문자(`\ / : * ? " < > |`)는 공백 또는 `-` 로 치환 (대괄호 `[]`, 쉼표 `,` 는 그대로 유지)
@@ -323,7 +323,7 @@ console.log('sentence spacing applied');
 # 에이전시 고정 정보
 
 - **에이전시명:** 메이드인헤븐
-- **활성 발행 계정:** `mih_speaker` (스피커), `mih_casting` (캐스팅), `mih_agency` (에이전시), `mih_history` (이전 발행 원고 보관)
+- **활성 발행 계정:** `mih_speaker` (스피커), `mih_casting` (캐스팅), `mih_agency` (에이전시)
 - **카카오 오픈채팅 URL (모든 계정 공통):** `https://open.kakao.com/o/squEahWg`
 - **명함 이미지 URL** (모아보기가 자동으로 합성하므로 원고에 직접 넣지 않음):
   - `mih_speaker`: `https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_speaker/business-card.png`

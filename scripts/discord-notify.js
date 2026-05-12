@@ -101,13 +101,11 @@ const AGENCY_LABEL = {
   mih_speaker: '스피커',
   mih_casting: '캐스팅',
   mih_agency:  '에이전시',
-  mih_history: '이전발행',
 };
 const AGENCY_COLOR = {
   mih_speaker: 0x1565C0,
   mih_casting: 0x7B1FA2,
   mih_agency:  0x2E7D32,
-  mih_history: 0x546E7A,
 };
 
 async function main() {

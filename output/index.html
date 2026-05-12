@@ -339,8 +339,7 @@
   Object.entries(data.agencies).forEach(([slug, info]) => {
     const btn = document.createElement("button");
     btn.dataset.slug = slug;
-    const baseLabel = slug === "mih_history" ? "이전 발행" : info.blogSlug;
-    btn.textContent = baseLabel;
+    btn.textContent = info.blogSlug;
     const ct = document.createElement('span');
     ct.className = 'tab-ct';
     ct.dataset.ct = slug;
