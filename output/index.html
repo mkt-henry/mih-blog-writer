@@ -357,16 +357,24 @@
     tabsEl.appendChild(btn);
   });
 
-  // ---- RSS 발행 건수 표시 ----
+  // ---- 탭 라벨에 원고/발행 건수 표시 ----
+  // 우선 원고 수만 즉시 노출 (RSS는 비동기로 합쳐서 갱신)
+  document.querySelectorAll('.tab-ct[data-ct]').forEach(el => {
+    const slug = el.dataset.ct;
+    const msCount = data.manuscripts.filter(m => m.agency === slug).length;
+    el.textContent = ` (${msCount})`;
+  });
   (async () => {
     try {
       const r = await fetch('/api/rss');
       if (!r.ok) return;
       const rss = await r.json();
       document.querySelectorAll('.tab-ct[data-ct]').forEach(el => {
-        const entry = rss[el.dataset.ct];
+        const slug = el.dataset.ct;
+        const msCount = data.manuscripts.filter(m => m.agency === slug).length;
+        const entry = rss[slug];
         const n = entry && !entry.error && Array.isArray(entry.items) ? entry.items.length : null;
-        if (n != null) el.textContent = ` (${n})`;
+        el.textContent = n == null ? ` (${msCount})` : ` (${msCount}/${n})`;
       });
     } catch {}
   })();

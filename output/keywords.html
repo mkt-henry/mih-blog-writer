@@ -1271,9 +1271,12 @@
   function renderAgencyCounts() {
     document.querySelectorAll('.agency-filter .ct[data-ct]').forEach(el => {
       const slug = el.dataset.ct;
+      const msCount = manuscripts.filter(m => m.agency === slug).length;
       const entry = rssData && rssData[slug];
-      const n = entry && !entry.error && Array.isArray(entry.items) ? entry.items.length : null;
-      el.textContent = n == null ? '' : ` (${n})`;
+      const rssCount = entry && !entry.error && Array.isArray(entry.items) ? entry.items.length : null;
+      el.textContent = rssCount == null
+        ? ` (${msCount})`
+        : ` (${msCount}/${rssCount})`;
     });
   }
 
@@ -2118,6 +2121,7 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
       window.MIH = newMih;
       manuscripts = newMih.manuscripts || [];
       keywords = kwArr;
+      renderAgencyCounts();
       renderList();
       renderDetail();
       updateDupBadge();
