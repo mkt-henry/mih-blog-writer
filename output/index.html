@@ -58,6 +58,8 @@
     color: #fff;
     border-color: #1565C0;
   }
+  .tabs .tab-ct { color: #999; font-weight: 500; }
+  .tabs button.active .tab-ct { color: #fff; opacity: 0.85; }
 
   /* ---- 달력 필터 ---- */
   .date-filter {
@@ -337,7 +339,12 @@
   Object.entries(data.agencies).forEach(([slug, info]) => {
     const btn = document.createElement("button");
     btn.dataset.slug = slug;
-    btn.textContent = slug === "mih_history" ? "이전 발행" : info.blogSlug;
+    const baseLabel = slug === "mih_history" ? "이전 발행" : info.blogSlug;
+    btn.textContent = baseLabel;
+    const ct = document.createElement('span');
+    ct.className = 'tab-ct';
+    ct.dataset.ct = slug;
+    btn.appendChild(ct);
     btn.addEventListener("click", () => {
       currentAgency = slug;
       selected = null;
@@ -349,6 +356,20 @@
     });
     tabsEl.appendChild(btn);
   });
+
+  // ---- RSS 발행 건수 표시 ----
+  (async () => {
+    try {
+      const r = await fetch('/api/rss');
+      if (!r.ok) return;
+      const rss = await r.json();
+      document.querySelectorAll('.tab-ct[data-ct]').forEach(el => {
+        const entry = rss[el.dataset.ct];
+        const n = entry && !entry.error && Array.isArray(entry.items) ? entry.items.length : null;
+        if (n != null) el.textContent = ` (${n})`;
+      });
+    } catch {}
+  })();
 
   // ---- 달력 ----
   function manuscriptsForCurrentAgency() {

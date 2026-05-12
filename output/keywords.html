@@ -167,6 +167,12 @@
   .agency-filter button[data-agency="mih_casting"].active { background: #F3E5F5; color: #7B1FA2; border-color: #7B1FA2; }
   .agency-filter button[data-agency="mih_agency"].active  { background: #E8F5E9; color: #2E7D32; border-color: #2E7D32; }
   .agency-filter button[data-agency="mih_history"].active { background: #ECEFF1; color: #546E7A; border-color: #546E7A; }
+  .agency-filter button .ct {
+    color: #999;
+    font-weight: 500;
+    margin-left: 3px;
+  }
+  .agency-filter button.active .ct { color: currentColor; opacity: 0.75; }
 
   /* IG 확인 배지 */
   .ig-badge {
@@ -1021,10 +1027,10 @@
   </div>
   <div class="agency-filter" id="agency-filter">
     <button class="active" data-agency="all">전체</button>
-    <button data-agency="mih_speaker">스피커</button>
-    <button data-agency="mih_casting">캐스팅</button>
-    <button data-agency="mih_agency">에이전시</button>
-    <button data-agency="mih_history">이전 발행</button>
+    <button data-agency="mih_speaker">스피커<span class="ct" data-ct="mih_speaker"></span></button>
+    <button data-agency="mih_casting">캐스팅<span class="ct" data-ct="mih_casting"></span></button>
+    <button data-agency="mih_agency">에이전시<span class="ct" data-ct="mih_agency"></span></button>
+    <button data-agency="mih_history">이전 발행<span class="ct" data-ct="mih_history"></span></button>
   </div>
 
   <div class="list-meta">
@@ -1257,8 +1263,18 @@
       rssData = null;
       showToast('RSS 가져오기 실패: ' + e.message);
     }
+    renderAgencyCounts();
   }
   function loadRssCache() { return rssData; }
+
+  function renderAgencyCounts() {
+    document.querySelectorAll('.agency-filter .ct[data-ct]').forEach(el => {
+      const slug = el.dataset.ct;
+      const entry = rssData && rssData[slug];
+      const n = entry && !entry.error && Array.isArray(entry.items) ? entry.items.length : null;
+      el.textContent = n == null ? '' : ` (${n})`;
+    });
+  }
 
   // undefined → 캐시 없음(미확인), null → 캐시 있지만 미발행, object → 발행됨
   // 모든 계정 RSS를 스캔 — 원고가 다른 계정으로 옮겨 발행돼도 잡힘.
