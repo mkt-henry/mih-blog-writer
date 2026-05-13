@@ -1370,12 +1370,14 @@
   function getPublishInfo(ms) {
     const cache = loadRssCache();
     if (!cache) return undefined;
-    const slugLower = (ms.slug || '').toLowerCase();
+    // slug 는 공백을 뺀 형태(예: "타일러라쉬")로 저장되지만 네이버 제목은 공백을 포함("타일러 라쉬")할 수 있어
+    // 양쪽 공백을 제거하고 비교한다.
+    const slugLower = (ms.slug || '').toLowerCase().replace(/\s+/g, '');
     if (!slugLower) return null;
     for (const entry of Object.values(cache)) {
       if (!entry || entry.error || !Array.isArray(entry.items)) continue;
       const match = entry.items.find(item =>
-        (item.title || '').toLowerCase().includes(slugLower)
+        (item.title || '').toLowerCase().replace(/\s+/g, '').includes(slugLower)
       );
       if (match) return match;
     }
