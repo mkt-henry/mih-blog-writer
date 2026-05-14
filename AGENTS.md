@@ -191,7 +191,7 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 ### CTA / 명함 / 카카오 링크 규칙
 
 - **명함 이미지(`<img src=...agency-card>`)는 원고 본문에 포함하지 않는다.** 모아보기가 발행 계정의 명함을 카카오 링크 직전에 자동 삽입한다. 본문에 직접 넣으면 중복된다.
-- **카카오톡 오픈채팅 URL은 모든 계정 공통 단일 값**: `https://open.kakao.com/o/squEahWg`. 다른 카카오 URL 절대 사용 금지.
+- **카카오톡 오픈채팅 URL은 모든 계정 공통 단일 값**: `https://open.kakao.com/o/snG6VXti`. 다른 카카오 URL 절대 사용 금지.
 - 명함 또는 카카오 URL을 변경해야 하면 `scripts/build-manifest.js` 상단의 `AGENCIES` / `KAKAO_URL` 상수를 수정 → `npm run build` 다시 실행.
 - ⚠️ `data:image/...` 데이터 URI는 네이버 에디터 정책상 차단되므로 절대 사용 금지.
 
@@ -286,7 +286,7 @@ console.log('sentence spacing applied');
 7. **출처 불명 사실 단정 금지** — 확실하지 않으면 일반화하거나 생략.
 8. **학습 데이터만으로 프로필 작성 금지** — 반드시 WebSearch/WebFetch로 1차 확인 후 작성.
 9. **명함 `<img>` 태그를 원고에 직접 넣지 않는다** — 모아보기가 자동 합성한다.
-10. **카카오 URL은 `https://open.kakao.com/o/squEahWg` 만 사용**.
+10. **카카오 URL은 `https://open.kakao.com/o/snG6VXti` 만 사용**.
 
 ---
 
@@ -309,7 +309,7 @@ console.log('sentence spacing applied');
 - [ ] 유튜브 URL 정확히 2개 (raw URL)
 - [ ] 따옴표 인용구 1~2회 (도입부/핵심 메시지/마무리)
 - [ ] 명함 `<img>` 태그 본문에 없음
-- [ ] 카카오 URL이 `https://open.kakao.com/o/squEahWg`
+- [ ] 카카오 URL이 `https://open.kakao.com/o/snG6VXti`
 - [ ] `data:image/...` 또는 `image.png` 같은 깨지는 src 없음
 - [ ] 해시태그 단락 20개 이상
 - [ ] 메인 키워드(아티스트명+섭외) 본문 10~20회
@@ -324,7 +324,7 @@ console.log('sentence spacing applied');
 
 - **에이전시명:** 메이드인헤븐
 - **활성 발행 계정:** `mih_speaker` (스피커), `mih_casting` (캐스팅), `mih_agency` (에이전시)
-- **카카오 오픈채팅 URL (모든 계정 공통):** `https://open.kakao.com/o/squEahWg`
+- **카카오 오픈채팅 URL (모든 계정 공통):** `https://open.kakao.com/o/snG6VXti`
 - **명함 이미지 URL** (모아보기가 자동으로 합성하므로 원고에 직접 넣지 않음):
   - `mih_speaker`: `https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_speaker/business-card.png`
   - `mih_casting`: `https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_casting/business-card.png`

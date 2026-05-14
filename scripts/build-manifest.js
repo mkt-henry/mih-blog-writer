@@ -41,7 +41,7 @@ const AGENCIES = {
   },
 };
 
-const KAKAO_URL = "https://open.kakao.com/o/squEahWg";
+const KAKAO_URL = "https://open.kakao.com/o/snG6VXti";
 const BUSINESS_CARD_LINK_URL = "tel:01054881456";
 
 function parseFileName(filename) {
