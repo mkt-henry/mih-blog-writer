@@ -1,122 +1,30 @@
--- 기존 per-INSERT 트리거 제거
-DROP TRIGGER IF EXISTS discord_notify_on_publish ON published_posts;
-DROP FUNCTION IF EXISTS notify_discord_on_publish();
+-- 매일 10:00 KST에 Supabase Edge Function(discord-notify)을 호출해
+-- Discord로 발행 현황을 알려주는 pg_cron 잡 설정.
+--
+-- 적용: Supabase SQL Editor에 이 파일을 통째로 붙여 실행하거나
+--       npx supabase db push (마이그레이션으로 둘 때) 로 적용한다.
 
--- pg_cron 활성화
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-
--- 일일 Discord 리포트 함수
-CREATE OR REPLACE FUNCTION send_daily_discord_report()
-RETURNS void
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  v_today        text;
-  v_webhook      constant text := 'https://discordapp.com/api/webhooks/1503361197087658076/flMPRAdb4rEle3eno1zLg_fpb7tQ9YEvmrOlqPlqqWbnfvnb6MO1TYajU77gBreIog1m';
-  v_total        int  := 0;
-  v_rss_field    text := '';
-  v_text_lines   text := '';
-  v_agency_block text;
-  v_agency_count int;
-  v_time_str     text;
-  v_title_short  text;
-  v_keyword      text;
-  v_label        text;
-  v_slug         text;
-  v_rec          record;
-  v_slugs        text[] := ARRAY['mih_speaker', 'mih_casting', 'mih_agency'];
+-- 1) 이전 구현 정리 — published_posts 테이블을 직접 조회하던 함수와 잡 제거
+DO $$
 BEGIN
-  v_today := to_char(now() AT TIME ZONE 'Asia/Seoul', 'YYYY-MM-DD');
+  PERFORM cron.unschedule('mih-daily-discord');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-  FOREACH v_slug IN ARRAY v_slugs LOOP
-    v_agency_block := '';
-    v_agency_count := 0;
+DROP FUNCTION IF EXISTS send_daily_discord_report();
 
-    FOR v_rec IN
-      SELECT pp.title, pp.url, pp.published_at
-      FROM published_posts pp
-      JOIN agencies a ON a.id = pp.agency_id
-      WHERE a.slug = v_slug
-        AND pp.date = (now() AT TIME ZONE 'Asia/Seoul')::date
-      ORDER BY pp.published_at
-    LOOP
-      v_agency_count := v_agency_count + 1;
-      v_total        := v_total + 1;
+-- 2) 필요한 확장 보장
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
 
-      v_time_str    := to_char(v_rec.published_at AT TIME ZONE 'Asia/Seoul', 'HH24:MI');
-      v_title_short := left(v_rec.title, 30);
-      IF length(v_rec.title) > 30 THEN
-        v_title_short := v_title_short || '…';
-      END IF;
-
-      v_agency_block := v_agency_block || E'\n  `' || v_time_str || '` ' || v_title_short;
-
-      -- "[이름 섭외] ..." 패턴에서 이름 추출
-      v_keyword := substring(v_rec.title FROM '^\[([^\]]+) 섭외\]');
-      IF v_keyword IS NULL THEN
-        v_keyword := left(v_rec.title, 20);
-      END IF;
-
-      v_text_lines := v_text_lines || v_keyword || ' 섭외' || E'\n' || v_rec.url || E'\n\n';
-    END LOOP;
-
-    IF v_agency_count > 0 THEN
-      v_label := CASE v_slug
-        WHEN 'mih_speaker' THEN '스피커'
-        WHEN 'mih_casting' THEN '캐스팅'
-        WHEN 'mih_agency'  THEN '에이전시'
-        ELSE v_slug
-      END;
-      IF v_rss_field != '' THEN
-        v_rss_field := v_rss_field || E'\n\n';
-      END IF;
-      v_rss_field := v_rss_field || '**[' || v_label || ']**' || v_agency_block;
-    END IF;
-  END LOOP;
-
-  IF v_rss_field = '' THEN
-    v_rss_field := '아직 발행된 원고가 없습니다.';
-  END IF;
-
-  -- 메시지 1: 임베드
-  PERFORM net.http_post(
-    url     := v_webhook,
-    headers := '{"Content-Type": "application/json"}'::jsonb,
-    body    := jsonb_build_object(
-      'embeds', jsonb_build_array(
-        jsonb_build_object(
-          'title',  '📋 MIH 발행 현황 · ' || v_today,
-          'color',  1398208,
-          'fields', jsonb_build_array(
-            jsonb_build_object(
-              'name',   '📡 오늘 발행 (' || v_total || '건)',
-              'value',  left(v_rss_field, 1024),
-              'inline', false
-            )
-          ),
-          'footer',    jsonb_build_object('text', 'MIH Blog Writer · 매일 10:00 KST'),
-          'timestamp', to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-        )
-      )
-    )
-  );
-
-  -- 메시지 2: 텍스트 (발행 건이 있을 때만)
-  IF v_total > 0 THEN
-    PERFORM net.http_post(
-      url     := v_webhook,
-      headers := '{"Content-Type": "application/json"}'::jsonb,
-      body    := jsonb_build_object(
-        'content', '▶ ' || v_today || E'\n\n' || rtrim(v_text_lines, E'\n')
-      )
-    );
-  END IF;
-END;
-$$;
-
--- 매일 01:00 UTC (10:00 KST) 실행
+-- 3) 매일 01:00 UTC (10:00 KST)에 Edge Function 호출
+--    Edge Function은 --no-verify-jwt 로 배포되어 별도 인증 헤더 없이 호출 가능.
 SELECT cron.schedule(
   'mih-daily-discord',
   '0 1 * * *',
-  $$SELECT send_daily_discord_report()$$
+  $$SELECT net.http_post(
+      url     := 'https://djtmniygzdbavxwrppxb.supabase.co/functions/v1/discord-notify',
+      headers := '{"Content-Type":"application/json"}'::jsonb,
+      body    := '{}'::jsonb
+  )$$
 );
