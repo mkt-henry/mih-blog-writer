@@ -1389,7 +1389,8 @@
    *   - 1글자 키워드: slug 정확 일치만 인정 (예: "비")
    *   - 2글자 이상: ① slug 부분 일치 ② slug 역포함 ③ 제목 대괄호 안 [...] 핵심 키워드 영역 매치
    *     본문(대괄호 이후 설명문)에 키워드가 들어가도 매치하지 않음.
-   *     예: "카이" 키워드가 "[허성범 섭외] 카이스트 AI ..." 에 잘못 잡히던 문제 해결. */
+   *     예: "카이" 키워드가 "[허성범 섭외] 카이스트 AI ..." 에 잘못 잡히던 문제 해결.
+   *   - 1글자 slug 예외: 키워드가 'slug(' 패턴으로 시작하면 매칭 허용 (예: "션(강연)" ↔ slug "션"). */
   function matchManuscripts(keyword) {
     if (!keyword || !keyword.trim()) return [];
     const q = keyword.trim().toLowerCase();
@@ -1402,6 +1403,7 @@
       if (slug === q) return true;
       if (slug.includes(q)) return true;
       if (slug.length >= 2 && q.includes(slug)) return true;
+      if (slug.length === 1 && q.startsWith(slug + '(')) return true;
       const bracket = title.match(/^\[([^\]]+)\]/);
       if (bracket && bracket[1].includes(q)) return true;
       return false;
