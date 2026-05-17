@@ -13,6 +13,7 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dir, "..");
 const OUTPUT_DIR = join(ROOT, "output");
 const MANIFEST_PATH = join(OUTPUT_DIR, "manifest.js");
+const INDEX_PATH = join(OUTPUT_DIR, "index.html");
 
 const AGENCIES = {
   mih_speaker: {
@@ -86,8 +87,9 @@ function collectManuscripts() {
 
 function build() {
   const manuscripts = collectManuscripts();
+  const generatedAt = new Date().toISOString();
   const data = {
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     kakaoUrl: KAKAO_URL,
     businessCardLinkUrl: BUSINESS_CARD_LINK_URL,
     agencies: AGENCIES,
@@ -103,6 +105,16 @@ function build() {
     ";\n";
 
   writeFileSync(MANIFEST_PATH, content, "utf8");
+  const indexHtml = readFileSync(INDEX_PATH, "utf8");
+  const manifestVersion = Date.parse(generatedAt);
+  const updatedIndexHtml = indexHtml.replace(
+    /<script src="manifest\.js(?:\?v=\d+)?"><\/script>/,
+    `<script src="manifest.js?v=${manifestVersion}"></script>`
+  );
+  if (updatedIndexHtml !== indexHtml) {
+    writeFileSync(INDEX_PATH, updatedIndexHtml, "utf8");
+    console.log(`Updated ${INDEX_PATH}`);
+  }
   console.log(`Wrote ${MANIFEST_PATH}`);
   console.log(`  manuscripts: ${manuscripts.length}`);
   for (const slug of Object.keys(AGENCIES)) {
