@@ -201,6 +201,12 @@
     border-bottom: 1px solid #eef0f3;
   }
   .list-meta span { font-size: 11px; color: #888; }
+  .manifest-status {
+    display: block;
+    margin-top: 2px;
+    font-size: 10px;
+    color: #aaa;
+  }
   .btn-add {
     padding: 6px 12px;
     background: #1565C0;
@@ -1084,7 +1090,10 @@
   </div>
 
   <div class="list-meta">
-    <span id="list-count">0개의 키워드</span>
+    <div>
+      <span id="list-count">0개의 키워드</span>
+      <span class="manifest-status" id="manifest-status">원고 데이터 확인 중</span>
+    </div>
     <div style="display:flex;gap:6px;">
       <button class="btn-bulk" id="btn-bulk-open">대량 등록</button>
       <button class="btn-add" id="btn-add-open">＋ 등록</button>
@@ -1229,7 +1238,7 @@
   </div>
 </div>
 
-<script src="manifest.js?v=1779016843566"></script>
+<script src="manifest.js?v=1779017140517"></script>
 <script>
 (() => {
   /* ── 카테고리 설정 ── */
@@ -1301,6 +1310,13 @@
 
   /* ── 원고 데이터 ── */
   let manuscripts = (window.MIH && window.MIH.manuscripts) || [];
+
+  function manifestStatusText() {
+    const generatedAt = window.MIH && window.MIH.generatedAt
+      ? window.MIH.generatedAt.slice(0, 16).replace('T', ' ')
+      : '없음';
+    return `원고 ${manuscripts.length}개 · manifest ${generatedAt}`;
+  }
 
   /* ── 키워드 영속화 (dev server: output/keywords.json) ── */
   async function loadKeywords() {
@@ -1468,6 +1484,7 @@
 
     const countEl = document.getElementById('list-count');
     countEl.textContent = `${filtered.length}개의 키워드`;
+    document.getElementById('manifest-status').textContent = manifestStatusText();
 
     const listEl = document.getElementById('kw-list');
     if (filtered.length === 0) {
@@ -1637,7 +1654,10 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
     const msHtml = matches.length === 0
       ? `<div class="no-match">
            이 키워드로 작성된 원고가 아직 없습니다.<br>
-           <span style="font-size:11px;color:#ccc;margin-top:6px;display:block;">제목 또는 슬러그에 키워드가 포함된 원고를 자동 검색합니다.</span>
+           <span style="font-size:11px;color:#ccc;margin-top:6px;display:block;">
+             제목 또는 슬러그에 키워드가 포함된 원고를 자동 검색합니다.<br>
+             현재 로드된 원고 데이터: ${manuscripts.length}개
+           </span>
          </div>`
       : matches.map(m => {
           const agencyLabel = AGENCY_NAMES[m.agency] || m.agency;
