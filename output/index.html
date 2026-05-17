@@ -299,7 +299,7 @@
   <iframe id="preview" sandbox="allow-same-origin"></iframe>
 </main>
 
-<script src="manifest.js?v=1779016221760"></script>
+<script src="manifest.js?v=1779016455499"></script>
 <script>
 (() => {
   const data = window.MIH;
@@ -322,7 +322,7 @@
   const calNextBtn = document.getElementById("cal-next");
   const calClearBtn = document.getElementById("cal-clear");
 
-  let currentAgency = "mih_speaker";
+  let currentAgency = "all";
   let rangeStart = null;  // "YYYY-MM-DD" | null
   let rangeEnd = null;    // "YYYY-MM-DD" | null
   let calYear, calMonth;
@@ -336,6 +336,24 @@
   }
 
   // ---- 탭 ----
+  const allBtn = document.createElement("button");
+  allBtn.dataset.slug = "all";
+  allBtn.textContent = "전체";
+  const allCt = document.createElement("span");
+  allCt.className = "tab-ct";
+  allCt.textContent = ` (${data.manuscripts.length})`;
+  allBtn.appendChild(allCt);
+  allBtn.addEventListener("click", () => {
+    currentAgency = "all";
+    selected = null;
+    rangeStart = null;
+    rangeEnd = null;
+    initCalendarMonth();
+    renderCalendar();
+    render();
+  });
+  tabsEl.appendChild(allBtn);
+
   Object.entries(data.agencies).forEach(([slug, info]) => {
     const btn = document.createElement("button");
     btn.dataset.slug = slug;
@@ -380,6 +398,7 @@
 
   // ---- 달력 ----
   function manuscriptsForCurrentAgency() {
+    if (currentAgency === "all") return data.manuscripts;
     return data.manuscripts.filter((m) => m.agency === currentAgency);
   }
 
@@ -548,7 +567,7 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
     Array.from(tabsEl.children).forEach((b) => b.classList.toggle("active", b.dataset.slug === currentAgency));
 
     const items = data.manuscripts.filter(
-      (m) => m.agency === currentAgency && dateMatches(m.date)
+      (m) => (currentAgency === "all" || m.agency === currentAgency) && dateMatches(m.date)
     );
 
     let dateLabel = "전체 일자";
@@ -566,7 +585,7 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
       const empty = document.createElement("div");
       empty.className = "empty";
       empty.textContent = !rangeStart
-        ? "이 계정에 등록된 원고가 없습니다."
+        ? "등록된 원고가 없습니다."
         : "선택한 기간에 해당하는 원고가 없습니다.";
       listEl.appendChild(empty);
     }
