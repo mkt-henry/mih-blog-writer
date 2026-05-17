@@ -13,7 +13,10 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dir, "..");
 const OUTPUT_DIR = join(ROOT, "output");
 const MANIFEST_PATH = join(OUTPUT_DIR, "manifest.js");
-const INDEX_PATH = join(OUTPUT_DIR, "index.html");
+const HTML_WITH_MANIFEST_PATHS = [
+  join(OUTPUT_DIR, "index.html"),
+  join(OUTPUT_DIR, "keywords.html"),
+];
 
 const AGENCIES = {
   mih_speaker: {
@@ -105,15 +108,17 @@ function build() {
     ";\n";
 
   writeFileSync(MANIFEST_PATH, content, "utf8");
-  const indexHtml = readFileSync(INDEX_PATH, "utf8");
   const manifestVersion = Date.parse(generatedAt);
-  const updatedIndexHtml = indexHtml.replace(
-    /<script src="manifest\.js(?:\?v=\d+)?"><\/script>/,
-    `<script src="manifest.js?v=${manifestVersion}"></script>`
-  );
-  if (updatedIndexHtml !== indexHtml) {
-    writeFileSync(INDEX_PATH, updatedIndexHtml, "utf8");
-    console.log(`Updated ${INDEX_PATH}`);
+  for (const htmlPath of HTML_WITH_MANIFEST_PATHS) {
+    const html = readFileSync(htmlPath, "utf8");
+    const updatedHtml = html.replace(
+      /<script src="manifest\.js(?:\?v=\d+)?"><\/script>/,
+      `<script src="manifest.js?v=${manifestVersion}"></script>`
+    );
+    if (updatedHtml !== html) {
+      writeFileSync(htmlPath, updatedHtml, "utf8");
+      console.log(`Updated ${htmlPath}`);
+    }
   }
   console.log(`Wrote ${MANIFEST_PATH}`);
   console.log(`  manuscripts: ${manuscripts.length}`);
