@@ -34,15 +34,18 @@ mih-blog-writer/
 3. **자료 조사 및 작성**
    - 인물 원고: `01_자료_수집_지침.md` → `02_원고_작성_지침.md`
    - 카테고리 원고: `04_카테고리_키워드_원고_작성_지침.md` (자료 조사 절차 포함)
+   - 인물 원고는 작성 전에 반드시 **공식 SNS 또는 소속사/공식 프로필 페이지의 실제 이미지 URL 4개**를 확보한다. 이미지 URL 4개가 없으면 최종 원고를 저장하지 말고 사용자에게 차단 사유를 보고한다.
 4. `output/YYYY-MM-DD/{agency_slug}/[slug]_[제목].html`로 저장한다.
 5. 문장 끝 여백 후처리 스크립트를 실행한다 (아래 "줄바꿈 규칙" 섹션 참고).
-6. **이미지 업로드 스크립트를 실행한다** — 인물 원고에만 적용. Instagram CDN URL을 Supabase(아카이브) + Vercel Blob(서빙)에 동시 업로드하고 HTML src를 교체한다.
+6. **이미지 업로드 스크립트를 실행한다** — 인물 원고에만 적용. 공식 SNS 또는 소속사/공식 프로필 페이지 이미지 URL을 Supabase(아카이브) + Vercel Blob(서빙)에 동시 업로드하고 HTML src를 교체한다.
 
    ```bash
    node scripts/upload-article-images.js "output/YYYY-MM-DD/{agency_slug}/파일명.html" 인물이름 ascii-slug
    ```
 
    - `ascii-slug`: 인물 이름을 영문 로마자로 변환한 소문자 하이픈 표기. 예: `유현준` → `yoo-hyunjoon`, `김경일` → `kim-gyeongil`
+   - 인물 원고에서 업로드 스크립트 결과가 `처리할 이미지가 없습니다`이면 먼저 HTML에 실제 본문 이미지 `<img>`가 4개 있는지 확인한다. 본문 이미지가 4개 미만이면 실패이며, 출처 표기만 남긴 원고로 통과시키지 않는다.
+   - 업로드 후 최종 HTML에는 본문 이미지 `<img>` 4개와 이미지 출처 표기 4개가 모두 있어야 한다. 명함 이미지는 이 개수에 포함하지 않는다.
    - 카테고리 원고(행사공연 등)에는 이미지가 없으므로 이 단계를 건너뛴다.
 
 7. `03_원고_검토_지침.md`로 검토하고 통과시킨다.
@@ -135,7 +138,7 @@ output/YYYY-MM-DD/{agency_slug}/[slug]_[원고제목].html
 7. **섭외 절차 안내** — HYBE 등 대형 기획사는 직접 접근 어려움 강조
 8. **마무리 CTA** — 카카오톡 오픈채팅 링크 (명함은 모아보기가 자동 합성하므로 본문에 넣지 않는다)
 9. **해시태그 단락** — 20개 이상
-10. **이미지 출처 표기** — 본문 전체에 정확히 4개 고정
+10. **이미지 삽입 및 출처 표기** — 본문 이미지 `<img>` 4개 + 이미지 출처 표기 4개 고정
 
 ### 태그
 - 10~17개 범위 (해시태그 단락과 별개)
@@ -175,6 +178,7 @@ output/YYYY-MM-DD/{agency_slug}/[slug]_[원고제목].html
 <hr style="border:none; border-top:1px solid #e0e0e0; margin:20px 0;">
 
 <!-- 이미지 출처 표기 (가운데 정렬, 회색, 13px) -->
+<p align="center"><img src="[공식 SNS/소속사/공식 프로필 이미지 URL 또는 업로드 후 Vercel Blob URL]" width="544"></p>
 <p class="se-text-paragraph se-text-paragraph-align-center" style="" id="SE-srcN"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">출처 - [아티스트명] 공식 SNS</span></p>
 
 <!-- 유튜브 — raw URL만 붙이기 (iframe 사용 시 504 케이스 많음) -->
@@ -194,6 +198,24 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 - **카카오톡 오픈채팅 URL은 모든 계정 공통 단일 값**: `https://open.kakao.com/o/snG6VXti`. 다른 카카오 URL 절대 사용 금지.
 - 명함 또는 카카오 URL을 변경해야 하면 `scripts/build-manifest.js` 상단의 `AGENCIES` / `KAKAO_URL` 상수를 수정 → `npm run build` 다시 실행.
 - ⚠️ `data:image/...` 데이터 URI는 네이버 에디터 정책상 차단되므로 절대 사용 금지.
+
+### 인물 원고 이미지 필수 규칙
+
+인물 원고는 텍스트만 있는 원고로 통과할 수 없다. 공식 SNS 또는 소속사/공식 프로필 페이지 이미지 4개를 실제 `<img>` 태그로 본문에 삽입하고, 각 이미지 바로 아래에 출처 표기를 붙인다.
+
+```html
+<p align="center"><img src="[displayUrl]" width="544"></p>
+<p class="se-text-paragraph se-text-paragraph-align-center" style="" id="SE-srcN"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">출처 - [아티스트명] 공식 SNS</span></p>
+```
+
+- 이미지 수집 허용 소스는 공식 인스타그램, 공식 페이스북, 공식 X/트위터, 아티스트 공식 홈페이지, 소속사 공식 프로필 페이지다.
+- 우선순위는 공식 SNS → 소속사/공식 프로필 페이지 순이다. 공식 SNS에서 4개 확보가 어려울 때만 소속사/공식 프로필 페이지 이미지를 사용한다.
+- 보도자료, 언론 기사, 방송사 기사, 방송 캡처, 팬 계정, 커뮤니티, 이미지 검색 썸네일은 사용하지 않는다.
+- 인스타그램은 가능하면 `apify/instagram-post-scraper`로 공식 인스타그램 계정에서 수집한다. MCP/CLI가 없으면 agent-browser 등으로 공식 계정에 직접 접근해 이미지 URL을 확보할 수 있다.
+- 최종 원고 저장 전 HTML에는 본문 이미지 `<img>`가 정확히 4개 있어야 한다. 명함 이미지, 카카오 링크 이미지, `business-card` 이미지는 본문 이미지 개수에 포함하지 않는다.
+- 허용 소스에서 이미지 4개를 확보하지 못하면 최종 원고를 저장하지 않는다. 사용자에게 “허용 이미지 4개 확보 불가”를 보고하고 진행 방향을 확인한다.
+- 출처 표기 4개만 있고 실제 `<img>` 4개가 없으면 실패다.
+- 업로드 스크립트 실행 후에는 외부 이미지 URL이 Vercel Blob URL로 교체됐는지 확인한다. 이미 깨끗한 Vercel Blob URL 4개가 들어 있는 경우만 `처리할 이미지가 없습니다`를 정상으로 본다.
 
 ### 표(Table) — 시각적 통일성 유지
 
@@ -276,7 +298,8 @@ console.log('sentence spacing applied');
 
 ## C. 절대 금지
 
-1. **`📷 사진 N 삽입 위치` placeholder 텍스트 금지** — 출처 표기만 남긴다 (`출처 - [아티스트명] 공식 SNS`).
+1. **`📷 사진 N 삽입 위치` placeholder 텍스트 금지** — 인물 원고는 placeholder 대신 실제 이미지 `<img>`와 출처 표기를 한 세트로 넣는다.
+1-1. **인물 원고에서 실제 본문 이미지 없이 출처 표기만 4개 남기는 것 금지** — 반드시 `<img>` 4개와 출처 표기 4개가 한 세트여야 한다.
 2. **인용구(`se-quotation-container`)를 소제목 강조에 사용 금지** — 따옴표 스타일로 고정 렌더링됨.
 3. **인용구 텍스트에 `"` 따옴표 직접 추가 금지** — SE가 자동으로 장식 따옴표를 붙여 중복된다.
 4. **일반 `<p>` 태그로 본문 작성 금지** — 반드시 `se-text-paragraph` 클래스 구조 사용.
@@ -305,7 +328,12 @@ console.log('sentence spacing applied');
 - [ ] 행사 유형 표 1개 (`table-layout:fixed` + 헤더 왼쪽 `width:28~32%`)
 - [ ] 모든 `<table>`에 `table-layout:fixed`
 - [ ] 왼쪽 세로선 박스 2세트 각 3행
-- [ ] 이미지 출처 표기 4개, 모두 `출처 - [아티스트명] 공식 SNS` 형식
+- [ ] 본문 이미지 `<img>` 정확히 4개 (명함 이미지 제외)
+- [ ] 이미지 출처 표기 4개, 모두 `출처 - [아티스트명] 공식 SNS` 또는 `출처 - [아티스트명] 공식 자료` 형식
+- [ ] 이미지 소스가 공식 SNS 또는 소속사/공식 프로필 페이지임
+- [ ] 보도자료·기사·방송 캡처·팬 계정 이미지가 없음
+- [ ] 이미지 4개가 모두 CTA 이전 본문 안에 배치됨
+- [ ] 이미지 업로드 스크립트 실행 후 본문 이미지 src가 Vercel Blob URL로 교체됨
 - [ ] 유튜브 URL 정확히 2개 (raw URL)
 - [ ] 따옴표 인용구 1~2회 (도입부/핵심 메시지/마무리)
 - [ ] 명함 `<img>` 태그 본문에 없음
