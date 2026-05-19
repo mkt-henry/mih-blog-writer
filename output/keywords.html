@@ -1469,6 +1469,7 @@
         const hasPublishedUrl = !!(kw.publishedUrl && kw.publishedUrl.trim());
         if (filterPub === 'no-ms') {
           if (ms.length > 0) return false;
+          if (hasPublishedUrl) return false;
         } else {
           const pubCount = ms.length > 0 ? ms.filter(m => !!getPublishInfo(m)).length : 0;
           const isPublished = pubCount > 0 || hasPublishedUrl;
