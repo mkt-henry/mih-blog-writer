@@ -318,7 +318,8 @@
     "createdAt": "2026-05-12T01:44:12.923Z",
     "instagram": "https://www.instagram.com/831x10/",
     "agency": "mih_casting",
-    "updatedAt": "2026-05-17T06:12:59.356Z"
+    "updatedAt": "2026-05-17T06:12:59.356Z",
+    "publishedUrl": "https://blog.naver.com/mih_casting/224289500067"
   },
   {
     "id": "mp1ywe4bxckd",
@@ -339,21 +340,24 @@
     "keyword": "영탁",
     "category": "가수",
     "notes": "",
-    "createdAt": "2026-05-12T01:44:12.923Z"
+    "createdAt": "2026-05-12T01:44:12.923Z",
+    "publishedUrl": "https://blog.naver.com/mih_casting/224289224267"
   },
   {
     "id": "mp1ywe4bj65m",
     "keyword": "틴탑",
     "category": "가수",
     "notes": "",
-    "createdAt": "2026-05-12T01:44:12.923Z"
+    "createdAt": "2026-05-12T01:44:12.923Z",
+    "publishedUrl": "https://blog.naver.com/mih_casting/224289230529"
   },
   {
     "id": "mp1ywe4bpuav",
     "keyword": "진성",
     "category": "가수",
     "notes": "",
-    "createdAt": "2026-05-12T01:44:12.923Z"
+    "createdAt": "2026-05-12T01:44:12.923Z",
+    "publishedUrl": "https://blog.naver.com/mih_casting/224289231650"
   },
   {
     "id": "mp1ywe4bmpn3",
@@ -381,7 +385,8 @@
     "keyword": "진해성",
     "category": "가수",
     "notes": "",
-    "createdAt": "2026-05-12T01:44:12.923Z"
+    "createdAt": "2026-05-12T01:44:12.923Z",
+    "publishedUrl": "https://blog.naver.com/mih_agency/224289215089"
   },
   {
     "id": "mp1ywe4bq3x9",
@@ -395,14 +400,16 @@
     "keyword": "김다현",
     "category": "가수",
     "notes": "",
-    "createdAt": "2026-05-12T01:44:12.923Z"
+    "createdAt": "2026-05-12T01:44:12.923Z",
+    "publishedUrl": "https://blog.naver.com/mih_agency/224289217276"
   },
   {
     "id": "mp1ywe4b0ytn",
     "keyword": "강문경",
     "category": "방송인",
     "notes": "",
-    "createdAt": "2026-05-12T01:44:12.923Z"
+    "createdAt": "2026-05-12T01:44:12.923Z",
+    "publishedUrl": "https://blog.naver.com/mih_speaker/224289233369"
   },
   {
     "id": "mp1ywe4buiwj",

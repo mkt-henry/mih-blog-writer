@@ -1145,6 +1145,10 @@
         <textarea id="input-notes" placeholder="예: 2026년 집중 관리 키워드, 월 2편 목표 등"></textarea>
       </div>
       <div class="field">
+        <label>발행 URL <span style="color:#bbb;font-weight:400;">(선택 · 원고 파일 없이 발행됨 표시)</span></label>
+        <input type="text" id="input-published-url" placeholder="https://blog.naver.com/..." autocomplete="off" />
+      </div>
+      <div class="field">
         <label>매칭 원고 미리보기</label>
         <div class="preview-section" id="preview-section">
           <div class="preview-label" id="preview-label">키워드를 입력하면 원고를 검색합니다.</div>
@@ -1462,13 +1466,15 @@
         : null;
 
       if (filterPub !== 'all') {
+        const hasPublishedUrl = !!(kw.publishedUrl && kw.publishedUrl.trim());
         if (filterPub === 'no-ms') {
           if (ms.length > 0) return false;
         } else {
-          if (ms.length === 0) return false;
-          const pubCount = ms.filter(m => !!getPublishInfo(m)).length;
-          if (filterPub === 'published'   && pubCount === 0) return false;
-          if (filterPub === 'unpublished' && !(rssLoadedForFilter && pubCount === 0)) return false;
+          const pubCount = ms.length > 0 ? ms.filter(m => !!getPublishInfo(m)).length : 0;
+          const isPublished = pubCount > 0 || hasPublishedUrl;
+          if (ms.length === 0 && !hasPublishedUrl) return false;
+          if (filterPub === 'published'   && !isPublished) return false;
+          if (filterPub === 'unpublished' && !(rssLoadedForFilter && ms.length > 0 && pubCount === 0)) return false;
         }
       }
       if (filterIg !== 'all') {
@@ -1497,12 +1503,13 @@
     const rssLoaded = loadRssCache() !== null;
     listEl.innerHTML = filtered.map(kw => {
       const matches = matchManuscripts(kw.keyword);
+      const hasPublishedUrl = !!(kw.publishedUrl && kw.publishedUrl.trim());
       const pubCount = matches.filter(m => !!getPublishInfo(m)).length;
-      const hasDot = matches.length === 0 ? 'none'
-        : (!rssLoaded || pubCount > 0) ? 'has'
+      const hasDot = (matches.length === 0 && !hasPublishedUrl) ? 'none'
+        : (hasPublishedUrl || !rssLoaded || pubCount > 0) ? 'has'
         : 'partial';
       const countText = matches.length === 0
-        ? '원고 없음'
+        ? (hasPublishedUrl ? '발행됨' : '원고 없음')
         : !rssLoaded
           ? `원고 ${matches.length}개`
           : pubCount > 0
@@ -1651,14 +1658,24 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
       ? `<div class="rss-notice">발행 현황이 로드되지 않았습니다. <a href="rss.html">발행 현황</a>에서 불러오기를 먼저 실행하세요.</div>`
       : '';
 
+    const hasPublishedUrl = !!(kw.publishedUrl && kw.publishedUrl.trim());
     const msHtml = matches.length === 0
-      ? `<div class="no-match">
-           이 키워드로 작성된 원고가 아직 없습니다.<br>
-           <span style="font-size:11px;color:#ccc;margin-top:6px;display:block;">
-             제목 또는 슬러그에 키워드가 포함된 원고를 자동 검색합니다.<br>
-             현재 로드된 원고 데이터: ${manuscripts.length}개
-           </span>
-         </div>`
+      ? (hasPublishedUrl
+        ? `<div class="ms-card">
+             <div class="ms-meta">
+               <span class="pub-badge published">발행됨</span>
+               <a class="pub-link" href="${escHtml(kw.publishedUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ 블로그</a>
+             </div>
+             <div class="ms-title">원고 파일 없이 발행됨 — 네이버 블로그 게시물만 존재</div>
+             <div style="font-size:11px;color:#aaa;margin-top:4px;">${escHtml(kw.publishedUrl)}</div>
+           </div>`
+        : `<div class="no-match">
+             이 키워드로 작성된 원고가 아직 없습니다.<br>
+             <span style="font-size:11px;color:#ccc;margin-top:6px;display:block;">
+               제목 또는 슬러그에 키워드가 포함된 원고를 자동 검색합니다.<br>
+               현재 로드된 원고 데이터: ${manuscripts.length}개
+             </span>
+           </div>`)
       : matches.map(m => {
           const agencyLabel = AGENCY_NAMES[m.agency] || m.agency;
           const pubInfo = getPublishInfo(m);
@@ -1807,6 +1824,7 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
     document.getElementById('input-keyword').value = kw ? kw.keyword : '';
     document.getElementById('input-instagram').value = kw ? (kw.instagram || '') : '';
     document.getElementById('input-notes').value = kw ? (kw.notes || '') : '';
+    document.getElementById('input-published-url').value = kw ? (kw.publishedUrl || '') : '';
     buildCatRadios(kw ? kw.category : '');
     updateModalSubmitBtn();
     updatePreview();
@@ -1865,22 +1883,27 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:20px 0;}
     const catInput = document.querySelector('#cat-radio-group input:checked');
     const instaVal = document.getElementById('input-instagram').value.trim();
     const notesVal = document.getElementById('input-notes').value.trim();
+    const pubUrlVal = document.getElementById('input-published-url').value.trim();
     if (!kwVal || !catInput) return;
 
     if (editingId) {
-      keywords = keywords.map(k => k.id === editingId
-        ? { ...k, keyword: kwVal, category: catInput.value, instagram: instaVal, notes: notesVal }
-        : k
-      );
+      keywords = keywords.map(k => {
+        if (k.id !== editingId) return k;
+        const obj = { ...k, keyword: kwVal, category: catInput.value, instagram: instaVal, notes: notesVal };
+        if (pubUrlVal) obj.publishedUrl = pubUrlVal; else delete obj.publishedUrl;
+        return obj;
+      });
     } else {
-      keywords.push({
+      const obj = {
         id: genId(),
         keyword: kwVal,
         category: catInput.value,
         instagram: instaVal,
         notes: notesVal,
         createdAt: new Date().toISOString(),
-      });
+      };
+      if (pubUrlVal) obj.publishedUrl = pubUrlVal;
+      keywords.push(obj);
     }
     saveKeywords(keywords);
     closeModal();
