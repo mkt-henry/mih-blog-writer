@@ -107,16 +107,12 @@ if (!htmlPath || !personName) {
 
 let html = readFileSync(htmlPath, 'utf8');
 
-// Instagram CDN / Supabase / Vercel Blob(랜덤 접미사 포함) URL 매칭
-// 이미 깔끔한 Vercel Blob URL(랜덤 접미사 없음)은 건너뜀
+// 모든 외부 이미지 src 매칭 (이미 깔끔한 Vercel Blob URL만 제외)
 const BLOB_STORE = 'un1nlrbeiyjhkrdj.public.blob.vercel-storage.com';
-const pattern = new RegExp(
-  `src="(https://(?:instagram\\.[^"]+|[^"]*cdninstagram\\.com[^"]+|[^"]*supabase\\.co[^"]+|${BLOB_STORE.replace(/\./g, '\\.')}[^"]+))"`,
-  'g'
-);
+const pattern = /src="(https:\/\/[^"]+\.(jpg|jpeg|png|webp|gif)[^"]*)"/gi;
 const matches = [...html.matchAll(pattern)];
 
-// 이미 깔끔한 경로(랜덤 접미사 없음)는 제외
+// 이미 깔끔한 Vercel Blob 경로(랜덤 접미사 없음)는 제외
 const toProcess = matches.filter(([, url]) => {
   if (!url.includes(BLOB_STORE)) return true;          // 비-Blob URL은 항상 처리
   const clean = `${BUCKET}/${storageSlug}/img`;
