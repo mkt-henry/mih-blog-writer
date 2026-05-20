@@ -1242,7 +1242,7 @@
   </div>
 </div>
 
-<script src="manifest.js?v=1779254370879"></script>
+<script src="manifest.js?v=1779272942881"></script>
 <script>
 (() => {
   /* ── 카테고리 설정 ── */
@@ -1393,12 +1393,19 @@
     // slug 는 공백을 뺀 형태(예: "타일러라쉬")로 저장되지만 네이버 제목은 공백을 포함("타일러 라쉬")할 수 있어
     // 양쪽 공백을 제거하고 비교한다.
     const slugLower = (ms.slug || '').toLowerCase().replace(/\s+/g, '');
-    if (!slugLower) return null;
+    // 제목의 대괄호 키워드([키노 섭외] → "키노섭외")도 추가 매칭 시도.
+    // "팬타곤키노" 처럼 복합 slug가 RSS 제목에서 찾히지 않는 문제 보완.
+    const bracketMatch = (ms.title || '').match(/^\[([^\]]+)\]/);
+    const bracketKey = bracketMatch ? bracketMatch[1].toLowerCase().replace(/\s+/g, '') : '';
+    if (!slugLower && !bracketKey) return null;
     for (const entry of Object.values(cache)) {
       if (!entry || entry.error || !Array.isArray(entry.items)) continue;
-      const match = entry.items.find(item =>
-        (item.title || '').toLowerCase().replace(/\s+/g, '').includes(slugLower)
-      );
+      const match = entry.items.find(item => {
+        const rssTitleLower = (item.title || '').toLowerCase().replace(/\s+/g, '');
+        if (slugLower && rssTitleLower.includes(slugLower)) return true;
+        if (bracketKey && rssTitleLower.includes(bracketKey)) return true;
+        return false;
+      });
       if (match) return match;
     }
     return null;
@@ -1507,7 +1514,8 @@
       const hasPublishedUrl = !!(kw.publishedUrl && kw.publishedUrl.trim());
       const pubCount = matches.filter(m => !!getPublishInfo(m)).length;
       const hasDot = (matches.length === 0 && !hasPublishedUrl) ? 'none'
-        : (hasPublishedUrl || !rssLoaded || pubCount > 0) ? 'has'
+        : matches.length === 0 ? 'has'
+        : (!rssLoaded || pubCount > 0) ? 'has'
         : 'partial';
       const countText = matches.length === 0
         ? (hasPublishedUrl ? '발행됨' : '원고 없음')
