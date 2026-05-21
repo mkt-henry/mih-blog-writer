@@ -2,7 +2,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-manifest.js",
+    "build": "node scripts/build-manifest.js && node scripts/upload-pending.mjs",
+    "upload": "node scripts/upload-pending.mjs",
+    "upload:dry": "node scripts/upload-pending.mjs --dry",
     "dev": "node scripts/dev-server.js"
   },
   "dependencies": {
