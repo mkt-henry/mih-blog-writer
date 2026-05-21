@@ -109,7 +109,8 @@ let html = readFileSync(htmlPath, 'utf8');
 
 // 모든 외부 이미지 src 매칭 (이미 깔끔한 Vercel Blob URL만 제외)
 const BLOB_STORE = 'un1nlrbeiyjhkrdj.public.blob.vercel-storage.com';
-const pattern = /src="(https:\/\/[^"]+\.(jpg|jpeg|png|webp|gif)[^"]*)"/gi;
+// .heic도 포함 (인스타그램 iOS 업로드 이미지). dst-jpg 파라미터로 실제는 JPEG 응답.
+const pattern = /src="(https:\/\/[^"]+\.(jpg|jpeg|png|webp|gif|heic)[^"]*)"/gi;
 const matches = [...html.matchAll(pattern)];
 
 // 이미 깔끔한 Vercel Blob 경로(랜덤 접미사 없음)는 제외

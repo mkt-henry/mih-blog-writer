@@ -3,8 +3,9 @@
 **메이드인헤븐 에이전시**의 네이버 블로그 연예인 섭외 원고를 자동 생성하는 프로젝트다.
 모든 결과물은 **네이버 스마트에디터(SE3) HTML 복붙용**으로 출력되며, 네이버 검색 **상위 노출(C-Rank · D.I.A.+)** 을 목표로 한다.
 
-이 저장소는 **로컬 도구**다. 외부 서비스(데이터베이스·API·배포 사이트)에 의존하지 않는다.
-원고는 `output/` 폴더에 HTML 파일로 저장되고, 모아보기(`output/index.html`)를 브라우저로 열면 발행 계정별로 정리된 원고를 미리보기·복사할 수 있다.
+이 저장소는 **Next.js + Supabase** 기반 비공개 동적 사이트다.
+원고는 `output/` 폴더에 HTML 파일로 저장한 뒤 `npm run publish "<html-path>"`로 Supabase DB에 업로드한다.
+모아보기는 배포된 사이트(로그인 필수)에서 어디서든 즉시 확인·복사할 수 있다. 다른 컴퓨터에서는 `git pull` 없이 사이트만 접속하면 된다.
 
 ---
 
@@ -12,17 +13,21 @@
 
 ```
 mih-blog-writer/
-├── output/
-│   ├── index.html              ← 모아보기 (브라우저로 열어서 사용)
-│   ├── manifest.js             ← 자동 생성: npm run build로 갱신
+├── output/                     ← 작성된 원고 HTML의 로컬 백업 (publish 후에도 보존)
 │   └── YYYY-MM-DD/{agency_slug}/[slug]_[제목].html
+├── app/                        ← Next.js App Router 페이지/route
+├── components/, lib/           ← React 컴포넌트, 서버 유틸 (Supabase 클라이언트·에이전시 상수)
 ├── docs/
 │   ├── 지침/                   ← 4개 분기 지침 (먼저 00_개요.md 참고)
 │   └── 네이버_블로그_상위_노출_전략.md
-├── scripts/build-manifest.js   ← output/ 스캔 → manifest.js 생성
+├── scripts/
+│   ├── publish-article.js      ← HTML → Supabase articles 업로드
+│   ├── upload-article-images.js← 이미지 Vercel Blob 업로드
+│   └── migrate-*.js            ← 일회성 마이그레이션
+├── supabase/migrations/        ← DB 스키마 (articles, keywords, app_users 등)
 ├── AGENTS.md                   ← 이 문서: 공통 규칙
 ├── SKILL.md                    ← SE3 HTML 컴포넌트 패턴
-└── package.json                ← npm run build / npm run dev
+└── package.json                ← npm run dev (Next.js), npm run publish, npm run migrate
 ```
 
 ---
@@ -49,8 +54,14 @@ mih-blog-writer/
    - 카테고리 원고(행사공연 등)에는 이미지가 없으므로 이 단계를 건너뛴다.
 
 7. `03_원고_검토_지침.md`로 검토하고 통과시킨다.
-8. **`npm run build`** 를 실행해 `output/manifest.js`를 갱신한다 — 이걸 안 돌리면 모아보기에 새 원고가 안 보인다.
-9. **키워드 DB 등록** — 인물 원고이면 `output/keywords.html`에서 해당 아티스트 키워드를 등록(또는 수정)하고, 공식 인스타그램 URL을 입력한다. 카테고리 원고는 건너뜀.
+8. **`npm run publish "<html-path>"`** 를 실행해 Supabase articles 테이블에 업로드한다 — 이걸 안 돌리면 배포 사이트에 새 원고가 안 보인다.
+
+   ```bash
+   npm run publish "output/2026-05-21/mih_agency/박혜신_[박혜신 섭외] ....html"
+   ```
+
+   같은 (publish_date, agency, slug) 키로 다시 실행하면 본문이 갱신된다(upsert).
+9. **키워드 DB 등록** — 인물 원고이면 배포 사이트의 `/keywords`에서 해당 아티스트 키워드를 등록(또는 수정)하고, 공식 인스타그램 URL을 입력한다. 카테고리 원고는 건너뜀.
 10. 글자수와 메인 키워드 등장 횟수를 사용자에게 리포트한다.
 
 ---
@@ -73,12 +84,13 @@ output/YYYY-MM-DD/{agency_slug}/[slug]_[원고제목].html
 
 # 모아보기 사용법 (사용자용)
 
-1. (새 원고를 추가했다면) 터미널에서 `npm run build`
-2. 파일 탐색기에서 `output/index.html` 더블클릭하거나, `npm run dev` 후 브라우저로 접속
-3. 좌측 상단 탭에서 **발행 계정** 선택 (스피커/캐스팅/에이전시/이전 발행)
+1. (새 원고를 추가했다면) 터미널에서 `npm run publish "<html-path>"` — Supabase에 업로드됨
+2. 배포 사이트 접속 → 로그인 → 모아보기 (`/`). 로컬에서 작업 중이면 `npm run dev` 후 `http://localhost:3000`.
+3. 좌측 상단 탭에서 **발행 계정** 선택 (전체/스피커/캐스팅/에이전시)
 4. 좌측 목록에서 원고 클릭 → 우측에 그 계정의 명함이 합성된 미리보기가 표시됨
 5. 우측 상단 **제목 복사** → 원고 제목이 클립보드에 복사됨. 네이버 블로그 글쓰기 페이지의 제목 입력란에 붙여넣는다.
 6. 미리보기 영역에서 본문을 직접 드래그·복사해 네이버 글쓰기에 붙여넣는다 (명함은 카카오 링크 직전에 자동 합성된 상태로 미리보기에 표시됨).
+7. 다른 컴퓨터에서도 동일 — 배포 URL에 로그인하면 git pull 없이 최신 원고가 보인다.
 
 ---
 
@@ -196,7 +208,7 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 
 - **명함 이미지(`<img src=...agency-card>`)는 원고 본문에 포함하지 않는다.** 모아보기가 발행 계정의 명함을 카카오 링크 직전에 자동 삽입한다. 본문에 직접 넣으면 중복된다.
 - **카카오톡 오픈채팅 URL은 모든 계정 공통 단일 값**: `https://open.kakao.com/o/snG6VXti`. 다른 카카오 URL 절대 사용 금지.
-- 명함 또는 카카오 URL을 변경해야 하면 `scripts/build-manifest.js` 상단의 `AGENCIES` / `KAKAO_URL` 상수를 수정 → `npm run build` 다시 실행.
+- 명함 또는 카카오 URL을 변경해야 하면 `lib/agencies.ts` 상단의 `AGENCIES` / `KAKAO_URL` 상수를 수정 → `npm run build` 다시 실행.
 - ⚠️ `data:image/...` 데이터 URI는 네이버 에디터 정책상 차단되므로 절대 사용 금지.
 
 ### 인물 원고 이미지 필수 규칙
@@ -344,7 +356,7 @@ console.log('sentence spacing applied');
 - [ ] `📷 사진 N 삽입 위치` placeholder 없음
 - [ ] 일반 `<p>` 태그 본문 없음
 - [ ] `output/YYYY-MM-DD/{agency_slug}/` 경로에 저장됨
-- [ ] `npm run build` 실행해 manifest.js 갱신함
+- [ ] `npm run publish "<html-path>"` 실행해 Supabase에 업로드함
 
 ---
 
@@ -358,5 +370,5 @@ console.log('sentence spacing applied');
   - `mih_casting`: `https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_casting/business-card.png`
   - `mih_agency`: `https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_agency/business-card.png`
 - **명함 클릭 링크 (모든 계정 공통):** `tel:01054881456`
-- 위 값들의 단일 출처는 `scripts/build-manifest.js` 상단 상수다. 변경 시 그 파일을 고치고 `npm run build` 실행.
+- 위 값들의 단일 출처는 `lib/agencies.ts` 상단 상수다. 변경 시 그 파일을 고치고 `npm run build` 실행.
 - **톤:** 정중한 존댓말, 행사 기획 담당자 대상, 과장 없음.
