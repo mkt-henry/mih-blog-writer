@@ -1,3 +1,20 @@
 .vercel
 node_modules/
 .env.local
+.env*.local
+
+# Next.js
+.next/
+next-env.d.ts
+out/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs / temp
+migration-failures.log
+temp_*.png
+temp_*.jpg
+
+# Supabase CLI cache
+supabase/.temp/

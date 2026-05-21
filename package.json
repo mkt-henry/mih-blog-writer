@@ -2,10 +2,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-manifest.js",
-    "dev": "node scripts/dev-server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "legacy:build-manifest": "node scripts/build-manifest.js",
+    "legacy:dev-server": "node scripts/dev-server.js",
+    "publish": "node scripts/publish-article.js",
+    "migrate": "node scripts/migrate-articles-to-db.js && node scripts/migrate-keywords-to-db.js",
+    "secrets:push": "node scripts/secrets-push.js",
+    "secrets:pull": "node scripts/secrets-pull.js",
+    "collect:images": "node scripts/collect-instagram-images.js"
   },
   "dependencies": {
-    "@vercel/blob": "^2.3.3"
+    "@supabase/supabase-js": "^2.45.4",
+    "@vercel/blob": "^2.3.3",
+    "next": "^15.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.3"
   }
 }
