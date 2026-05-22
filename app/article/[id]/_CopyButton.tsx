@@ -3,68 +3,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { copyPlain, copyRichHtml } from "@/lib/clipboard";
 
 type Props = {
   title: string;
   htmlBody: string;
 };
-
-async function copyPlain(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-  }
-}
-
-async function copyRichHtml(html: string): Promise<void> {
-  // Clipboard API의 ClipboardItem(text/html + text/plain)으로 복사 →
-  // 네이버 글쓰기에 Ctrl+V 시 서식 그대로 들어감.
-  const plain = html
-    .replace(/<br\s*\/?>(\n)?/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .trim();
-
-  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        "text/html": new Blob([html], { type: "text/html" }),
-        "text/plain": new Blob([plain], { type: "text/plain" }),
-      }),
-    ]);
-    return;
-  }
-
-  // fallback: contentEditable div를 만들어 selection → execCommand('copy')
-  const div = document.createElement("div");
-  div.contentEditable = "true";
-  div.innerHTML = html;
-  div.style.position = "fixed";
-  div.style.opacity = "0";
-  document.body.appendChild(div);
-  const range = document.createRange();
-  range.selectNodeContents(div);
-  const sel = window.getSelection();
-  sel?.removeAllRanges();
-  sel?.addRange(range);
-  document.execCommand("copy");
-  sel?.removeAllRanges();
-  document.body.removeChild(div);
-}
 
 export default function CopyButton({ title, htmlBody }: Props) {
   const [busy, setBusy] = useState<"title" | "body" | null>(null);
