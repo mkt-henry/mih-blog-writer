@@ -42,7 +42,7 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
             {article.published_at ? ` · ${article.published_at.slice(0, 16).replace('T', ' ')} 발행` : ' · 미발행'}
           </div>
         </div>
-        <CopyButton title={article.title} />
+        <CopyButton title={article.title} htmlBody={merged} />
       </header>
       <iframe
         srcDoc={srcDoc}
