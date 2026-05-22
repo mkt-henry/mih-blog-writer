@@ -66,7 +66,7 @@ export default function DashboardClient({ groups, kpis, generatedAt }: Props) {
   const closeModal = useCallback(() => {
     const sp = new URLSearchParams(params.toString());
     sp.delete("article");
-    router.push(sp.size > 0 ? `?${sp.toString()}` : "/dashboard-v2", { scroll: false });
+    router.push(sp.size > 0 ? `?${sp.toString()}` : "/", { scroll: false });
   }, [params, router]);
 
   const navigate = useCallback((direction: "prev" | "next") => {

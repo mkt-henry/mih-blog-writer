@@ -13,7 +13,7 @@ const AGENCY_COLOR: Record<AgencySlug, string> = {
   mih_agency: "bg-[color:var(--color-agency)]",
 };
 
-const LS_KEY = (a: string) => `dashboard-v2.sort.${a}`;
+const LS_KEY = (a: string) => `dashboard.sort.${a}`;
 
 type Props = {
   agency: AgencySlug;

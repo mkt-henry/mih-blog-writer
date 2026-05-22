@@ -19,7 +19,7 @@ export default async function ArticlePage({ params }: Props) {
     .maybeSingle();
 
   if (error) return <main className="p-6 text-red-700">DB 조회 실패: {error.message}</main>;
-  if (!data) return <main className="p-6">원고를 찾을 수 없습니다. <Link href="/dashboard-v2" className="text-blue-600 underline">← 목록으로</Link></main>;
+  if (!data) return <main className="p-6">원고를 찾을 수 없습니다. <Link href="/" className="text-blue-600 underline">← 목록으로</Link></main>;
 
   const article = data as ArticleRow & { html_content: string };
   const card = buildBusinessCardHtml(article.agency as AgencySlug);
@@ -34,7 +34,7 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
   return (
     <div className="min-h-screen bg-[color:var(--color-muted)]">
       <header className="bg-white border-b border-[color:var(--color-border)] px-4 py-2.5 flex items-center gap-3">
-        <Link href="/dashboard-v2" className="text-sm text-gray-600 hover:text-gray-900">← 목록</Link>
+        <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">← 목록</Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-sm font-bold truncate">{article.title}</h1>
           <div className="text-xs text-[color:var(--color-text-muted)]">

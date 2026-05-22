@@ -1,36 +1,32 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import HomeView, { type ManuscriptSummary } from "@/components/HomeView";
+import { groupArticlesForKanban, computeKpis, type ArticleRow } from "@/lib/articles";
 import { isAgencySlug } from "@/lib/agencies";
+import DashboardClient from "./_components/DashboardClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function DashboardV2Page() {
   const sb = supabaseAdmin();
-  const { data, error } = await sb
-    .from("articles")
-    .select("id, publish_date, agency, slug, person_name, title, source_path")
-    .order("publish_date", { ascending: false })
-    .order("slug", { ascending: true });
 
-  if (error) {
+  const [articlesRes, unmatchedRes] = await Promise.all([
+    sb.from("articles")
+      .select("id,publish_date,agency,slug,person_name,title,source_path,instagram_url,category,notes,created_at,updated_at,published_at,published_url,published_source")
+      .order("created_at", { ascending: false }),
+    sb.from("unmatched_rss_items")
+      .select("agency", { count: "exact", head: true }),
+  ]);
+
+  if (articlesRes.error) {
     return (
-      <main style={{ padding: 24, fontFamily: "system-ui", color: "#b00" }}>
-        DB 조회 실패: {error.message}
+      <main className="p-6 text-red-700">
+        DB 조회 실패: {articlesRes.error.message}
       </main>
     );
   }
 
-  const manuscripts: ManuscriptSummary[] = (data || [])
-    .filter((r) => isAgencySlug(r.agency))
-    .map((r) => ({
-      id: r.id,
-      publish_date: r.publish_date,
-      agency: r.agency,
-      slug: r.slug,
-      person_name: r.person_name,
-      title: r.title,
-      source_path: r.source_path,
-    }));
+  const articles = ((articlesRes.data || []) as ArticleRow[]).filter((a) => isAgencySlug(a.agency));
+  const groups = groupArticlesForKanban(articles);
+  const kpis = computeKpis(articles, unmatchedRes.count ?? 0);
 
-  return <HomeView manuscripts={manuscripts} generatedAt={new Date().toISOString()} />;
+  return <DashboardClient groups={groups} kpis={kpis} generatedAt={new Date().toISOString()} />;
 }
