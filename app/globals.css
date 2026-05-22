@@ -1,46 +1,21 @@
-:root {
-  color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #1a1a1a;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --accent: #2563eb;
-  --accent-fg: #ffffff;
-  --card-bg: #f9fafb;
-  --danger: #dc2626;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1565C0;
+  --color-speaker: #1565C0;
+  --color-casting: #7B1FA2;
+  --color-agency: #2E7D32;
+  --color-warning: #F9A825;
+  --color-danger: #C62828;
+  --color-muted: #F5F6F8;
+  --color-border: #E3E5EA;
+  --color-text: #222222;
+  --color-text-muted: #888888;
+  --radius: 0.5rem;
+  --font-feature-settings: "tnum";
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0b0c;
-    --fg: #f5f5f5;
-    --muted: #9ca3af;
-    --border: #2a2a2d;
-    --accent: #60a5fa;
-    --accent-fg: #0b0b0c;
-    --card-bg: #16161a;
-    --danger: #f87171;
-  }
-}
-
-* { box-sizing: border-box; }
-
-html, body {
-  margin: 0;
-  padding: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "맑은 고딕", sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-button {
-  font: inherit;
-  cursor: pointer;
+@layer base {
+  html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Arial, sans-serif; color: var(--color-text); }
+  body { background: var(--color-muted); margin: 0; }
 }
