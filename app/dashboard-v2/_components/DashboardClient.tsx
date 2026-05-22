@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { KanbanGroups, KanbanKpis, ArticleRow } from "@/lib/articles";
+import { findNeighbor } from "@/lib/articles";
 import TopBar from "./TopBar";
 import KpiStrip from "./KpiStrip";
 import FilterBar, { type FilterChip } from "./FilterBar";
 import KanbanBoard from "./KanbanBoard";
+import ArticleModal from "./ArticleModal";
 
 type Props = {
   groups: KanbanGroups;
@@ -21,6 +24,10 @@ function isToday(iso: string): boolean {
 }
 
 export default function DashboardClient({ groups, kpis, generatedAt }: Props) {
+  const router = useRouter();
+  const params = useSearchParams();
+  const openId = params.get("article");
+
   const [search, setSearch] = useState("");
   const [chip, setChip] = useState<FilterChip>("all");
 
@@ -50,12 +57,31 @@ export default function DashboardClient({ groups, kpis, generatedAt }: Props) {
     };
   }, [groups, search, chip]);
 
+  const openModal = useCallback((id: string) => {
+    const sp = new URLSearchParams(params.toString());
+    sp.set("article", id);
+    router.push(`?${sp.toString()}`, { scroll: false });
+  }, [params, router]);
+
+  const closeModal = useCallback(() => {
+    const sp = new URLSearchParams(params.toString());
+    sp.delete("article");
+    router.push(sp.size > 0 ? `?${sp.toString()}` : "/dashboard-v2", { scroll: false });
+  }, [params, router]);
+
+  const navigate = useCallback((direction: "prev" | "next") => {
+    if (!openId) return;
+    const next = findNeighbor(filteredGroups, openId, direction);
+    if (next) openModal(next);
+  }, [openId, filteredGroups, openModal]);
+
   return (
     <div className="min-h-screen bg-[color:var(--color-muted)] text-[color:var(--color-text)]">
       <TopBar generatedAt={generatedAt} />
       <KpiStrip kpis={kpis} />
       <FilterBar search={search} onSearch={setSearch} chip={chip} onChip={setChip} />
-      <KanbanBoard groups={filteredGroups} />
+      <KanbanBoard groups={filteredGroups} onOpen={openModal} />
+      <ArticleModal articleId={openId} onClose={closeModal} onNeighbor={navigate} />
     </div>
   );
 }

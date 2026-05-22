@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { ArticleRow } from "@/lib/articles";
@@ -8,7 +7,7 @@ import { copyPlain, copyRichHtml } from "@/lib/clipboard";
 import { buildBusinessCardHtml, mergeWithBusinessCard } from "@/lib/business-card";
 
 type Variant = "pool" | "published" | "recent";
-type Props = { article: ArticleRow; variant: Variant };
+type Props = { article: ArticleRow; variant: Variant; onOpen: (id: string) => void };
 
 function kstTime(iso: string): string {
   const d = new Date(iso);
@@ -23,13 +22,12 @@ async function fetchHtml(id: string): Promise<string> {
   return data.html_content;
 }
 
-export default function ArticleCard({ article, variant }: Props) {
+export default function ArticleCard({ article, variant, onOpen }: Props) {
   const [busy, setBusy] = useState<"title" | "body" | null>(null);
   const opacityCls = variant === "recent" ? "opacity-70" : variant === "published" ? "opacity-90 bg-gray-50" : "";
   const missingInsta = article.instagram_url == null;
 
-  async function onCopyTitle(e: React.MouseEvent) {
-    e.preventDefault();
+  async function onCopyTitle(e: React.MouseEvent | React.KeyboardEvent) {
     e.stopPropagation();
     setBusy("title");
     try {
@@ -42,16 +40,14 @@ export default function ArticleCard({ article, variant }: Props) {
     }
   }
 
-  async function onCopyBody(e: React.MouseEvent) {
-    e.preventDefault();
+  async function onCopyBody(e: React.MouseEvent | React.KeyboardEvent) {
     e.stopPropagation();
     setBusy("body");
     try {
       const raw = await fetchHtml(article.id);
-      const card = buildBusinessCardHtml(article.agency);
-      const merged = mergeWithBusinessCard(raw, card);
+      const merged = mergeWithBusinessCard(raw, buildBusinessCardHtml(article.agency));
       await copyRichHtml(merged);
-      toast.success(`원고 복사: ${article.person_name}. 네이버 글쓰기에 Ctrl+V`);
+      toast.success(`원고 복사: ${article.person_name}`);
     } catch (err) {
       toast.error("원고 복사 실패: " + (err as Error).message);
     } finally {
@@ -60,9 +56,10 @@ export default function ArticleCard({ article, variant }: Props) {
   }
 
   return (
-    <Link
-      href={`/article/${article.id}`}
-      className={`group relative block border border-[color:var(--color-border)] rounded mb-1 px-2 py-1.5 hover:border-[color:var(--color-primary)] hover:shadow-sm transition ${opacityCls}`}
+    <button
+      type="button"
+      onClick={() => onOpen(article.id)}
+      className={`group relative block w-full text-left border border-[color:var(--color-border)] rounded mb-1 px-2 py-1.5 hover:border-[color:var(--color-primary)] hover:shadow-sm transition ${opacityCls}`}
     >
       <div className="flex items-center gap-1.5">
         <div className="font-semibold text-[11px] text-gray-900 truncate flex-1">{article.person_name}</div>
@@ -80,26 +77,28 @@ export default function ArticleCard({ article, variant }: Props) {
           {variant === "recent" && article.published_at && `${article.published_at.slice(0, 10)} 발행`}
         </div>
         <div className="flex gap-1">
-          <button
-            type="button"
+          <span
             onClick={onCopyTitle}
-            disabled={busy !== null}
-            title="제목 복사"
-            className="text-[9px] px-1.5 py-0.5 rounded border border-[color:var(--color-border)] bg-white text-gray-700 hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)] disabled:opacity-50"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCopyTitle(e); } }}
+            aria-disabled={busy !== null}
+            className="text-[9px] px-1.5 py-0.5 rounded border border-[color:var(--color-border)] bg-white text-gray-700 hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)] cursor-pointer select-none"
           >
             {busy === "title" ? "…" : "📋 제목"}
-          </button>
-          <button
-            type="button"
+          </span>
+          <span
             onClick={onCopyBody}
-            disabled={busy !== null}
-            title="본문 복사 (명함 합성됨)"
-            className="text-[9px] px-1.5 py-0.5 rounded border border-[color:var(--color-primary)] bg-[color:var(--color-primary)] text-white hover:opacity-90 disabled:opacity-50"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCopyBody(e); } }}
+            aria-disabled={busy !== null}
+            className="text-[9px] px-1.5 py-0.5 rounded border border-[color:var(--color-primary)] bg-[color:var(--color-primary)] text-white cursor-pointer select-none"
           >
             {busy === "body" ? "…" : "📰 본문"}
-          </button>
+          </span>
         </div>
       </div>
-    </Link>
+    </button>
   );
 }

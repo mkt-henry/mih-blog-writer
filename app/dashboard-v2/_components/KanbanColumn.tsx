@@ -19,9 +19,10 @@ type Props = {
   agency: AgencySlug;
   agencyInfo: AgencyInfo;
   group: AgencyGroup;
+  onOpen: (id: string) => void;
 };
 
-export default function KanbanColumn({ agency, agencyInfo, group }: Props) {
+export default function KanbanColumn({ agency, agencyInfo, group, onOpen }: Props) {
   const [sort, setSort] = useState<Sort>("oldest");
 
   useEffect(() => {
@@ -70,14 +71,14 @@ export default function KanbanColumn({ agency, agencyInfo, group }: Props) {
       </div>
 
       <Section label="📥 발행 대기" count={sortedPool.length} color="text-[color:var(--color-primary)]">
-        {sortedPool.map((a) => <ArticleCard key={a.id} article={a} variant="pool" />)}
+        {sortedPool.map((a) => <ArticleCard key={a.id} article={a} variant="pool" onOpen={onOpen} />)}
       </Section>
 
       <Section label="✓ 오늘 발행" count={group.today.length} color="text-[color:var(--color-agency)]">
-        {group.today.map((a) => <ArticleCard key={a.id} article={a} variant="published" />)}
+        {group.today.map((a) => <ArticleCard key={a.id} article={a} variant="published" onOpen={onOpen} />)}
       </Section>
 
-      <RecentSection articles={group.recent} />
+      <RecentSection articles={group.recent} onOpen={onOpen} />
     </div>
   );
 }
@@ -94,7 +95,7 @@ function Section({ label, count, color, children }: { label: string; count: numb
   );
 }
 
-function RecentSection({ articles }: { articles: AgencyGroup["recent"] }) {
+function RecentSection({ articles, onOpen }: { articles: AgencyGroup["recent"]; onOpen: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   if (articles.length === 0) return null;
   return (
@@ -106,7 +107,7 @@ function RecentSection({ articles }: { articles: AgencyGroup["recent"] }) {
         <span>최근 발행</span>
         <span>{open ? "▾" : "▸"} {articles.length}</span>
       </button>
-      {open && articles.map((a) => <ArticleCard key={a.id} article={a} variant="recent" />)}
+      {open && articles.map((a) => <ArticleCard key={a.id} article={a} variant="recent" onOpen={onOpen} />)}
     </div>
   );
 }
