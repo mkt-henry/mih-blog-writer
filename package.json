@@ -10,7 +10,7 @@
     "legacy:build-manifest": "node scripts/build-manifest.js",
     "legacy:dev-server": "node scripts/dev-server.js",
     "publish": "node scripts/publish-article.js",
-    "migrate": "node scripts/migrate-articles-to-db.js && node scripts/migrate-keywords-to-db.js",
+    "migrate": "node scripts/migrate-articles-to-db.js",
     "secrets:push": "node scripts/secrets-push.js",
     "secrets:pull": "node scripts/secrets-pull.js",
     "collect:images": "node scripts/collect-instagram-images.js"
