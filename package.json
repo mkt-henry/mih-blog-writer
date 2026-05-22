@@ -7,13 +7,15 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
-    "legacy:build-manifest": "node scripts/build-manifest.js",
-    "legacy:dev-server": "node scripts/dev-server.js",
+    "upload": "node scripts/upload-pending.mjs",
+    "upload:dry": "node scripts/upload-pending.mjs --dry",
     "publish": "node scripts/publish-article.js",
     "migrate": "node scripts/migrate-articles-to-db.js",
     "secrets:push": "node scripts/secrets-push.js",
     "secrets:pull": "node scripts/secrets-pull.js",
-    "collect:images": "node scripts/collect-instagram-images.js"
+    "collect:images": "node scripts/collect-instagram-images.js",
+    "legacy:build-manifest": "node scripts/build-manifest.js",
+    "legacy:dev-server": "node scripts/dev-server.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
