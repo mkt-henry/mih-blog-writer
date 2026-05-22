@@ -1131,3 +1131,15 @@ node -e "import('@supabase/supabase-js').then(async({createClient})=>{const r=aw
 Plan 2 작성: 신규 UI(`/dashboard-v2`) — Tailwind+shadcn 셋업, 메인 칸반 페이지, 카드 모달, /rss 신규 화면, /articles/[id] 풀페이지.
 
 Plan 3 작성: 스위치 오버(/ ← /dashboard-v2 교체, /keywords 제거) + 정리 (`keywords` 테이블 drop).
+
+---
+
+## 부록: 구현 후 변경 사항
+
+### 2026-05-22 — cron 주기 매일 1회로 변경 (마이그레이션 0004)
+
+Task 10에서 `*/10 * * * *` (10분 간격)로 등록한 cron을 운영 패턴 피드백으로 `55 0 * * *` (UTC 00:55 = KST 09:55) 매일 1회로 축소.
+
+- **사유:** 발행이 매일 10:00 KST 이전에 끝나므로 10분 폴링은 과함. `discord-notify`(10:00 KST) 직전에 한 번 돌려 DB 매칭 → 디스코드 알림 정확도 확보.
+- **마이그레이션 파일:** `supabase/migrations/20260522000004_rss_sync_cron_daily.sql`
+- **검증:** 다음 날 09:55 KST에 자동 실행. 즉시 검증이 필요하면 Edge Function을 수동으로 POST.

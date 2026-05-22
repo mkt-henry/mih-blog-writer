@@ -35,7 +35,7 @@
 | 도메인 모델 | "원고 1건 = 단위". `keywords` 테이블 폐기, 메타는 `articles`에 통합 |
 | 개편 범위 | 메인 + /rss + (구) /keywords. /keywords 라우트 자체는 제거 |
 | 디자인 시스템 | Tailwind CSS + shadcn/ui |
-| RSS 동기화 빈도 | 현행 일 1회 → 10분 간격으로 상향 (대시보드 실시간성 확보) |
+| RSS 동기화 빈도 | 매일 09:55 KST 1회 (`rss-sync`). 기존 `discord-notify`(10:00 KST)는 그대로 유지. 운영 패턴상 매일 10시 이전에 발행이 끝나므로 1일 1회로 충분 |
 
 ---
 
@@ -102,8 +102,8 @@
 
 ```sql
 -- 기존 discord-notify는 매일 10:00 KST 유지
--- rss-sync는 10분마다
-select cron.schedule('rss-sync', '*/10 * * * *',
+-- rss-sync는 매일 09:55 KST (UTC 00:55) — discord-notify(10:00 KST) 직전
+select cron.schedule('rss-sync', '55 0 * * *',
   $$ select net.http_post(url := 'https://<project>.functions.supabase.co/rss-sync', ...) $$
 );
 ```
@@ -352,7 +352,7 @@ shadcn의 `chart` 컴포넌트(recharts wrapper)를 우선 사용. 그래도 무
 
 ### 11.3 RSS 동기화 주기
 
-기존 일 1회(`discord-notify`)는 유지. 신규 `rss-sync`는 10분 주기로 가설 검증 후 빈도 조정 가능.
+기존 `discord-notify`(매일 10:00 KST)는 유지. 신규 `rss-sync`는 그 직전 09:55 KST에 1회 실행해 DB 매칭을 완료한다. 운영 패턴상 발행이 매일 10시 이전에 끝나므로 1일 1회로 충분하며, 더 잦은 폴링은 불필요한 RSS 부하만 발생시킨다.
 
 ---
 
@@ -362,7 +362,7 @@ shadcn의 `chart` 컴포넌트(recharts wrapper)를 우선 사용. 그래도 무
 - **통합:** `rss-sync` Edge Function이 실제 RSS 응답 fixture에서 기대 매칭 수와 미매칭 수를 만족하는지
 - **수동:**
   - 신규 UI에서 카드 클릭 → 모달 오픈 → 제목 복사 → 네이버 글쓰기에 붙여넣기 흐름 처음부터 끝까지
-  - 발행 직후 10분 안에 카드가 "발행됨"으로 자동 이동하는지
+  - 다음 날 09:55 KST cron 실행 후 카드가 "발행됨"으로 자동 이동하는지 (즉시 확인이 필요하면 수동 동기화 트리거 사용)
   - 인스타 URL 편집 후 `node scripts/collect-instagram-images.js`가 정상 동작하는지
 - **회귀:**
   - `npm run publish "<html>"` 후 신규 UI에 즉시 반영되는지
