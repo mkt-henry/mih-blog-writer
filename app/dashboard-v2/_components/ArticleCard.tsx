@@ -17,7 +17,7 @@ export default function ArticleCard({ article, variant }: Props) {
 
   return (
     <Link
-      href={`/articles/${article.id}`}
+      href={`/article/${article.id}`}
       className={`block border border-[color:var(--color-border)] rounded mb-1 px-2 py-1.5 hover:border-[color:var(--color-primary)] hover:shadow-sm transition ${opacityCls}`}
     >
       <div className="flex items-center gap-1.5">
