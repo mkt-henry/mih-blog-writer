@@ -5,8 +5,8 @@ import {
   AGENCIES,
   AGENCY_SLUGS,
   type AgencySlug,
-  BUSINESS_CARD_LINK_URL,
 } from "@/lib/agencies";
+import { buildBusinessCardHtml, mergeWithBusinessCard } from "@/lib/business-card";
 
 export type ManuscriptSummary = {
   id: string;
@@ -29,32 +29,6 @@ function fmtDate(y: number, m: number, d: number) {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) =>
-    c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;"
-  );
-}
-
-function buildBusinessCardHtml(agency: AgencySlug) {
-  const a = AGENCIES[agency];
-  const img = `<img src="${a.businessCardImageUrl}" width="${a.businessCardWidth}">`;
-  const linkUrl = BUSINESS_CARD_LINK_URL;
-  const inner = linkUrl ? `<a href="${linkUrl}">${img}</a>` : img;
-  return `<p align="center">${inner}</p>`;
-}
-
-function mergeWithBusinessCard(originalHtml: string, cardHtml: string) {
-  if (!cardHtml) return originalHtml;
-  if (!originalHtml) return cardHtml;
-  const m = originalHtml.match(/<a\s[^>]*href=["']https:\/\/open\.kakao\.com\//i);
-  if (m && typeof m.index === "number") {
-    const pStart = originalHtml.lastIndexOf("<p ", m.index);
-    if (pStart !== -1) {
-      return originalHtml.slice(0, pStart) + cardHtml + "\n" + originalHtml.slice(pStart);
-    }
-  }
-  return `${originalHtml}\n${cardHtml}`;
-}
 
 async function copyToClipboard(text: string) {
   try {
