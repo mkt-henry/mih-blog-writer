@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { groupArticlesForKanban, computeKpis, type ArticleRow } from '@/lib/articles';
+import { groupArticlesForKanban, computeKpis, findNeighbor, type ArticleRow, type KanbanGroups } from '@/lib/articles';
+import type { AgencySlug } from '@/lib/agencies';
 
 function mk(over: Partial<ArticleRow>): ArticleRow {
   return {
@@ -96,5 +97,55 @@ describe('computeKpis', () => {
     expect(kpis.todayTotal).toBe(1);
     expect(kpis.weekTotal).toBe(2);
     expect(kpis.unmatchedNeedReview).toBe(3);
+  });
+});
+
+describe('findNeighbor (모달 순회)', () => {
+  function mkGroups(): KanbanGroups {
+    const mkA = (id: string, agency: AgencySlug, sec: 'pool' | 'today' | 'recent', extra: Partial<ArticleRow> = {}): ArticleRow => ({
+      id, publish_date: '2026-05-21', agency, slug: id, person_name: id,
+      title: id, source_path: null, instagram_url: null, category: null, notes: null,
+      created_at: '2026-05-20T00:00:00Z', updated_at: '2026-05-20T00:00:00Z',
+      published_at: sec === 'pool' ? null : '2026-05-22T00:00:00Z',
+      published_url: null, published_source: null,
+      ...extra,
+    });
+    return {
+      mih_speaker: {
+        pool: [mkA('s1', 'mih_speaker', 'pool'), mkA('s2', 'mih_speaker', 'pool'), mkA('s3', 'mih_speaker', 'pool')],
+        today: [mkA('s-t1', 'mih_speaker', 'today')],
+        recent: [mkA('s-r1', 'mih_speaker', 'recent')],
+      },
+      mih_casting: { pool: [mkA('c1', 'mih_casting', 'pool')], today: [], recent: [] },
+      mih_agency: { pool: [], today: [], recent: [] },
+    };
+  }
+
+  it('returns the next id within the same agency+section', () => {
+    const groups = mkGroups();
+    expect(findNeighbor(groups, 's1', 'next')).toBe('s2');
+    expect(findNeighbor(groups, 's2', 'next')).toBe('s3');
+  });
+
+  it('returns the prev id within the same agency+section', () => {
+    const groups = mkGroups();
+    expect(findNeighbor(groups, 's3', 'prev')).toBe('s2');
+  });
+
+  it('returns null when at the boundary (does not cross sections)', () => {
+    const groups = mkGroups();
+    expect(findNeighbor(groups, 's3', 'next')).toBe(null);
+    expect(findNeighbor(groups, 's1', 'prev')).toBe(null);
+  });
+
+  it('returns null when id not found', () => {
+    const groups = mkGroups();
+    expect(findNeighbor(groups, 'nonexistent', 'next')).toBe(null);
+  });
+
+  it('also handles today and recent sections', () => {
+    const groups = mkGroups();
+    expect(findNeighbor(groups, 's-t1', 'next')).toBe(null);
+    expect(findNeighbor(groups, 's-t1', 'prev')).toBe(null);
   });
 });

@@ -88,3 +88,23 @@ export function computeKpis(articles: ArticleRow[], unmatchedCount: number, now 
   }
   return { poolTotal: pool, todayTotal: today, weekTotal: week, unmatchedNeedReview: unmatchedCount };
 }
+
+const SECTIONS: ('pool' | 'today' | 'recent')[] = ['pool', 'today', 'recent'];
+
+export function findNeighbor(
+  groups: KanbanGroups,
+  currentId: string,
+  direction: 'prev' | 'next'
+): string | null {
+  for (const slug of Object.keys(groups) as AgencySlug[]) {
+    for (const sec of SECTIONS) {
+      const list = groups[slug][sec];
+      const idx = list.findIndex((a) => a.id === currentId);
+      if (idx === -1) continue;
+      const nextIdx = direction === 'next' ? idx + 1 : idx - 1;
+      if (nextIdx < 0 || nextIdx >= list.length) return null;
+      return list[nextIdx].id;
+    }
+  }
+  return null;
+}
