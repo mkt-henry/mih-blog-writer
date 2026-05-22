@@ -20,7 +20,7 @@ describe('normalizeTitle', () => {
   });
 
   it('replaces non-breaking spaces with normal space', () => {
-    expect(normalizeTitle('[홍길동 섭외] 강연')).toBe('[홍길동 섭외] 강연');
+    expect(normalizeTitle('[홍길동 섭외] 강연')).toBe('[홍길동 섭외] 강연');
   });
 
   it('collapses full-width spaces (U+3000) to normal space', () => {
@@ -46,7 +46,7 @@ describe('extractTitleKeyword', () => {
   });
 
   it('handles NBSP inside brackets', () => {
-    expect(extractTitleKeyword('[홍길동 섭외] 강연')).toBe('홍길동');
+    expect(extractTitleKeyword('[홍길동 섭외] 강연')).toBe('홍길동');
   });
 });
 
@@ -65,7 +65,7 @@ describe('matchRssItem', () => {
   });
 
   it('matches when DB title differs only in spacing/NBSP', () => {
-    const rss = { ...baseRss, title: '[홍길동 섭외]  기업 강연' };
+    const rss = { ...baseRss, title: '[홍길동 섭외]  기업 강연' };
     const result = matchRssItem(rss, [mkArticle({ title: '[홍길동 섭외] 기업 강연' })]);
     expect(result.matched?.id).toBe('a1');
     expect(result.reason).toBe('exact_title');
