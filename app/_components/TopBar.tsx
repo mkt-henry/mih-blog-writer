@@ -11,7 +11,6 @@ export default function TopBar({ generatedAt }: Props) {
       <div className="text-sm font-bold text-[color:var(--color-primary)]">MIH</div>
       <nav className="flex gap-1 ml-2">
         <Link href="/" className="px-3 py-1 text-sm rounded bg-blue-50 text-[color:var(--color-primary)] font-semibold">모아보기</Link>
-        <Link href="/keywords" className="px-3 py-1 text-sm rounded text-gray-600 hover:bg-gray-50">키워드</Link>
         <Link href="/rss" className="px-3 py-1 text-sm rounded text-gray-600 hover:bg-gray-50">발행 현황</Link>
       </nav>
       <div className="flex-1" />
