@@ -5,8 +5,9 @@
   "installCommand": "npm install",
   "functions": {
     "app/api/manuscripts/route.ts": { "maxDuration": 30 },
-    "app/api/manifest.js/route.ts": { "maxDuration": 30 },
-    "app/keywords/route.ts": { "maxDuration": 10 },
-    "app/api/rss/route.ts": { "maxDuration": 15 }
+    "app/api/manuscripts/[id]/route.ts": { "maxDuration": 15 },
+    "app/api/articles/[id]/route.ts": { "maxDuration": 15 },
+    "app/api/rss/route.ts": { "maxDuration": 15 },
+    "app/api/rss-sync/route.ts": { "maxDuration": 30 }
   }
 }
