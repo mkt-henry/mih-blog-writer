@@ -11,7 +11,7 @@ export default function RangePicker({ days }: { days: number }) {
   function set(d: number) {
     const next = new URLSearchParams(sp.toString());
     next.set("days", String(d));
-    router.push(`/rss-v2?${next.toString()}`);
+    router.push(`/rss?${next.toString()}`);
   }
 
   return (
