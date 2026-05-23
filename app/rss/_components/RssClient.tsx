@@ -8,16 +8,19 @@ import AgencyChart from "./AgencyChart";
 import DiagnosticList from "./DiagnosticList";
 import PublishHeatmap from "./PublishHeatmap";
 import ActionsBar from "./ActionsBar";
+import PublishedArticleList from "./PublishedArticleList";
 
 type UnmatchedItem = { agency: AgencySlug; title: string; link: string; pub_ts: number; last_seen_at: string };
+type PublishedArticle = { person_name: string; agency: AgencySlug; published_at: string; title: string; published_url: string };
 
 type Props = {
   days: number;
   stats: RssStats;
   unmatchedSample: UnmatchedItem[];
+  publishedArticles: PublishedArticle[];
 };
 
-export default function RssClient({ days, stats, unmatchedSample }: Props) {
+export default function RssClient({ days, stats, unmatchedSample, publishedArticles }: Props) {
   return (
     <div className="min-h-screen bg-[color:var(--color-muted)]">
       <header className="bg-white border-b border-[color:var(--color-border)] px-4 py-2.5 flex items-center gap-3">
@@ -44,10 +47,20 @@ export default function RssClient({ days, stats, unmatchedSample }: Props) {
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-4 pt-0">
         <div className="bg-white border border-[color:var(--color-border)] rounded-lg p-4">
           <h2 className="text-sm font-bold mb-2">{days}일 히트맵</h2>
           <PublishHeatmap daily={stats.daily} />
+        </div>
+      </div>
+
+      <div className="px-4 pb-8">
+        <div className="bg-white border border-[color:var(--color-border)] rounded-lg overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+            <h2 className="text-sm font-bold flex-1">발행 원고 목록</h2>
+            <span className="text-xs text-gray-400">{publishedArticles.length}건</span>
+          </div>
+          <PublishedArticleList articles={publishedArticles} />
         </div>
       </div>
     </div>

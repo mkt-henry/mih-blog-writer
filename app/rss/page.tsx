@@ -22,7 +22,7 @@ export default async function RssV2Page({ searchParams }: { searchParams: Promis
   const endMs = tomorrowStart;
 
   const sb = supabaseAdmin();
-  const [aRes, uRes, recentUnmatched] = await Promise.all([
+  const [aRes, uRes, recentUnmatched, pubRes] = await Promise.all([
     sb.from("articles")
       .select("id,agency,created_at,published_at")
       .not("published_at", "is", null)
@@ -33,6 +33,14 @@ export default async function RssV2Page({ searchParams }: { searchParams: Promis
       .select("agency,title,link,pub_ts,last_seen_at")
       .order("pub_ts", { ascending: false })
       .limit(20),
+    sb.from("articles")
+      .select("person_name,agency,published_at,title,published_url")
+      .not("published_at", "is", null)
+      .not("published_url", "is", null)
+      .gte("published_at", new Date(startMs).toISOString())
+      .lt("published_at", new Date(endMs).toISOString())
+      .order("published_at", { ascending: false })
+      .limit(500),
   ]);
 
   if (aRes.error) return <main className="p-6 text-red-700">DB: {aRes.error.message}</main>;
@@ -47,11 +55,16 @@ export default async function RssV2Page({ searchParams }: { searchParams: Promis
     unmatchedCount: uRes.count ?? 0,
   });
 
+  const publishedArticles = (pubRes.data ?? []).filter(
+    (a) => isAgencySlug(a.agency)
+  ) as Array<{ person_name: string; agency: AgencySlug; published_at: string; title: string; published_url: string }>;
+
   return (
     <RssClient
       days={days}
       stats={stats}
       unmatchedSample={(recentUnmatched.data ?? []) as { agency: AgencySlug; title: string; link: string; pub_ts: number; last_seen_at: string }[]}
+      publishedArticles={publishedArticles}
     />
   );
 }
