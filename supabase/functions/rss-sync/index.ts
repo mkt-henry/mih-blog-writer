@@ -99,6 +99,13 @@ Deno.serve(async () => {
   }
   const candidates = (unpub || []) as Candidate[];
 
+  // 이미 published_url이 설정된 원고의 링크 목록 — 재매칭 방지용
+  const { data: pubLinks } = await sb
+    .from('articles')
+    .select('published_url')
+    .not('published_url', 'is', null);
+  const publishedUrls = new Set((pubLinks || []).map((r: { published_url: string }) => r.published_url));
+
   const results = await Promise.all(SLUGS.map(async (slug) => {
     try {
       const items = await fetchRss(slug);
@@ -130,10 +137,15 @@ Deno.serve(async () => {
         if (upErr) errors.push(`update ${matched.id}: ${upErr.message}`);
         else {
           matchedCount++;
+          publishedUrls.add(item.link);
           const idx = candidates.findIndex((c) => c.id === matched.id);
           if (idx >= 0) candidates.splice(idx, 1);
+          // 이전 sync에서 미매칭으로 기록됐던 항목 삭제
+          await sb.from('unmatched_rss_items').delete()
+            .eq('agency', slug).eq('link', item.link);
         }
-      } else {
+      } else if (!publishedUrls.has(item.link)) {
+        // 이미 발행된 원고의 RSS 링크는 미매칭으로 집계하지 않음
         unmatchedCount++;
         await sb.from('unmatched_rss_items').upsert({
           agency: slug,
@@ -148,6 +160,11 @@ Deno.serve(async () => {
 
   const sixtyDaysAgo = Date.now() - 60 * 24 * 3600_000;
   await sb.from('unmatched_rss_items').delete().lt('pub_ts', sixtyDaysAgo);
+
+  // 이미 published_url이 매칭된 링크는 unmatched에서 일괄 제거
+  if (publishedUrls.size > 0) {
+    await sb.from('unmatched_rss_items').delete().in('link', [...publishedUrls]);
+  }
 
   return new Response(
     JSON.stringify({

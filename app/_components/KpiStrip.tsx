@@ -11,7 +11,7 @@ const ITEMS: { key: keyof KanbanKpis; label: string; suffix?: string; tone: stri
 
 export default function KpiStrip({ kpis }: Props) {
   return (
-    <div className="grid grid-cols-4 gap-3 px-4 py-3 bg-white border-b border-[color:var(--color-border)]">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-b border-[color:var(--color-border)]">
       {ITEMS.map(({ key, label, suffix, tone }) => (
         <div key={key} className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-3 py-2">
           <div className="text-[10px] uppercase tracking-wide text-[color:var(--color-text-muted)]">{label}</div>

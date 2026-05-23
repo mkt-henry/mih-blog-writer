@@ -25,7 +25,6 @@ async function fetchHtml(id: string): Promise<string> {
 export default function ArticleCard({ article, variant, onOpen }: Props) {
   const [busy, setBusy] = useState<"title" | "body" | null>(null);
   const opacityCls = variant === "recent" ? "opacity-70" : variant === "published" ? "opacity-90 bg-gray-50" : "";
-  const missingInsta = article.instagram_url == null;
 
   async function onCopyTitle(e: React.MouseEvent | React.KeyboardEvent) {
     e.stopPropagation();
@@ -63,9 +62,7 @@ export default function ArticleCard({ article, variant, onOpen }: Props) {
     >
       <div className="flex items-center gap-1.5">
         <div className="font-semibold text-[11px] text-gray-900 truncate flex-1">{article.person_name}</div>
-        {missingInsta && variant === "pool" && (
-          <span className="text-[8px] bg-[color:var(--color-danger)] text-white px-1 rounded">인스타 ✕</span>
-        )}
+
         {variant === "published" && article.published_at && (
           <span className="text-[8px] text-[color:var(--color-agency)] font-semibold">{kstTime(article.published_at)}</span>
         )}
