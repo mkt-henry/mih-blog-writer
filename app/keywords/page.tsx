@@ -6,19 +6,36 @@ export const dynamic = "force-dynamic";
 export default async function KeywordsPage() {
   const sb = supabaseAdmin();
 
-  const { data, error } = await sb
-    .from("keywords")
-    .select("id,keyword,category,notes,instagram,agency,published_url,created_at")
-    .order("category")
-    .order("keyword");
+  const [kwRes, artRes] = await Promise.all([
+    sb
+      .from("keywords")
+      .select("id,keyword,category,notes,instagram,agency,published_url,created_at")
+      .order("category")
+      .order("keyword"),
+    sb
+      .from("articles")
+      .select("person_name,published_url")
+      .not("published_at", "is", null),
+  ]);
 
-  if (error) {
-    return <main className="p-6 text-red-700">DB 조회 실패: {error.message}</main>;
+  if (kwRes.error) {
+    return <main className="p-6 text-red-700">DB 조회 실패: {kwRes.error.message}</main>;
   }
 
-  const keywords = (data ?? []) as Keyword[];
-  const categories = [...new Set(keywords.map((k) => k.category))].sort();
+  // articles에서 발행된 person_name → published_url 맵
+  const publishedMap = new Map<string, string>(
+    (artRes.data ?? [])
+      .filter((a) => a.published_url)
+      .map((a) => [a.person_name, a.published_url as string])
+  );
 
+  // keywords에 articles 발행 URL 병합 (keywords.published_url 우선, 없으면 articles 기준)
+  const keywords: Keyword[] = (kwRes.data ?? []).map((k) => ({
+    ...k,
+    published_url: k.published_url ?? publishedMap.get(k.keyword) ?? null,
+  }));
+
+  const categories = [...new Set(keywords.map((k) => k.category))].sort();
   const publishedCount = keywords.filter((k) => k.published_url).length;
 
   return (
