@@ -12,6 +12,8 @@ import { buildBusinessCardHtml, mergeWithBusinessCard } from "@/lib/business-car
 import ArticleModalMeta from "./ArticleModalMeta";
 import ArticleModalPreview from "./ArticleModalPreview";
 
+type MobileTab = "meta" | "preview";
+
 type Props = {
   articleId: string | null;
   onClose: () => void;
@@ -23,10 +25,12 @@ export default function ArticleModal({ articleId, onClose, onNeighbor, positionL
   const [article, setArticle] = useState<ArticleRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<"title" | "body" | null>(null);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("preview");
 
   useEffect(() => {
     if (!articleId) {
       setArticle(null);
+      setMobileTab("preview");
       return;
     }
     let cancelled = false;
@@ -97,36 +101,73 @@ export default function ArticleModal({ articleId, onClose, onNeighbor, positionL
     <Dialog open={articleId !== null} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[90vw] w-[1200px] h-[85vh] p-0 overflow-hidden flex flex-col gap-0"
+        className="max-w-[96vw] sm:max-w-[90vw] w-[1200px] h-[90vh] sm:h-[85vh] p-0 overflow-hidden flex flex-col gap-0"
       >
         {loading || !article ? (
           <div className="flex-1 flex items-center justify-center text-gray-400">불러오는 중…</div>
         ) : (
           <>
-            <header className="flex items-start gap-3 px-4 py-3 border-b">
+            {/* ── 헤더 ── */}
+            <header className="flex items-center gap-2 px-3 py-2 border-b flex-shrink-0">
               <div className="flex-1 min-w-0">
-                <div className="text-xs text-gray-400 mb-0.5">
+                <div className="text-[10px] text-gray-400 leading-none mb-0.5">
                   {AGENCIES[article.agency].blogSlug} · {article.publish_date}
                   {positionLabel && <> · {positionLabel}</>}
                 </div>
-                <h2 className="text-sm font-bold truncate">{article.title}</h2>
+                <h2 className="text-xs sm:text-sm font-bold truncate leading-snug">{article.title}</h2>
               </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <Button onClick={onCopyTitle} disabled={busy !== null} size="sm" variant="outline">📋 제목</Button>
-                <Button onClick={onCopyBody} disabled={busy !== null} size="sm">📰 본문</Button>
+              <div className="flex gap-1 flex-shrink-0">
+                <Button onClick={onCopyTitle} disabled={busy !== null} size="sm" variant="outline" className="text-xs px-2 h-7">
+                  <span className="hidden sm:inline">📋 </span>제목
+                </Button>
+                <Button onClick={onCopyBody} disabled={busy !== null} size="sm" className="text-xs px-2 h-7">
+                  <span className="hidden sm:inline">📰 </span>본문
+                </Button>
                 <Link href={`/article/${article.id}`} target="_blank" rel="noopener">
-                  <Button size="sm" variant="outline">↗ 열기</Button>
+                  <Button size="sm" variant="outline" className="text-xs px-2 h-7">↗</Button>
                 </Link>
-                <Button onClick={onClose} size="sm" variant="ghost">✕</Button>
+                <Button onClick={onClose} size="sm" variant="ghost" className="text-xs px-2 h-7">✕</Button>
               </div>
             </header>
-            <div className="flex-1 grid grid-cols-[280px_1fr] overflow-hidden">
-              <aside className="border-r overflow-y-auto bg-gray-50/50">
-                <ArticleModalMeta article={article} onUpdated={(next) => setArticle(next)} />
-              </aside>
-              <main className="overflow-hidden">
-                <ArticleModalPreview articleId={article.id} agency={article.agency} />
-              </main>
+
+            {/* ── 모바일 탭 바 ── */}
+            <div className="sm:hidden flex border-b flex-shrink-0 bg-white">
+              {(["meta", "preview"] as MobileTab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setMobileTab(tab)}
+                  className={`flex-1 py-2 text-xs font-semibold border-b-2 transition ${
+                    mobileTab === tab
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-500"
+                  }`}
+                >
+                  {tab === "meta" ? "메타 정보" : "미리보기"}
+                </button>
+              ))}
+            </div>
+
+            {/* ── 바디 ── */}
+            <div className="flex-1 overflow-hidden">
+              {/* 데스크톱: 2열 */}
+              <div className="hidden sm:grid grid-cols-[280px_1fr] h-full overflow-hidden">
+                <aside className="border-r overflow-y-auto bg-gray-50/50">
+                  <ArticleModalMeta article={article} onUpdated={(next) => setArticle(next)} />
+                </aside>
+                <main className="overflow-hidden">
+                  <ArticleModalPreview articleId={article.id} agency={article.agency} />
+                </main>
+              </div>
+              {/* 모바일: 탭 단일 패널 */}
+              <div className="sm:hidden h-full overflow-hidden">
+                {mobileTab === "meta" ? (
+                  <div className="h-full overflow-y-auto bg-gray-50/50">
+                    <ArticleModalMeta article={article} onUpdated={(next) => setArticle(next)} />
+                  </div>
+                ) : (
+                  <ArticleModalPreview articleId={article.id} agency={article.agency} />
+                )}
+              </div>
             </div>
           </>
         )}

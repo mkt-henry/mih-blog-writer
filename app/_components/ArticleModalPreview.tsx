@@ -41,9 +41,14 @@ export default function ArticleModalPreview({ articleId, agency }: Props) {
   }
 
   const srcDoc = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>
-body { margin:0; padding:24px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif; color:#222; background:#fff; line-height:1.6; }
+body { margin:0; padding:16px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif; color:#222; background:#fff; line-height:1.6; font-size:13px; }
 img { max-width:100%; height:auto; }
-hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
+hr { border:none; border-top:1px solid #e0e0e0; margin:16px 0; }
+/* SE3 대형 헤딩 축소 */
+span[style*="font-size:30px"] { font-size:18px !important; }
+span[style*="font-size:24px"] { font-size:16px !important; }
+table { font-size:12px; }
+blockquote { margin:12px 0; }
 </style></head><body>${html}</body></html>`;
 
   return (

@@ -58,17 +58,17 @@ export default function ArticleCard({ article, variant, onOpen }: Props) {
     <button
       type="button"
       onClick={() => onOpen(article.id)}
-      className={`group relative block w-full text-left border border-[color:var(--color-border)] rounded mb-1 px-2 py-1.5 hover:border-[color:var(--color-primary)] hover:shadow-sm transition ${opacityCls}`}
+      className={`group relative block w-full text-left border border-[color:var(--color-border)] rounded mb-1.5 px-3 py-2 hover:border-[color:var(--color-primary)] hover:shadow-sm transition ${opacityCls}`}
     >
-      <div className="flex items-center gap-1.5">
-        <div className="font-semibold text-[11px] text-gray-900 truncate flex-1">{article.person_name}</div>
+      <div className="flex items-center gap-2">
+        <div className="font-semibold text-sm text-gray-900 truncate flex-1">{article.person_name}</div>
 
         {variant === "published" && article.published_at && (
-          <span className="text-[8px] text-[color:var(--color-agency)] font-semibold">{kstTime(article.published_at)}</span>
+          <span className="text-[10px] text-[color:var(--color-agency)] font-semibold">{kstTime(article.published_at)}</span>
         )}
       </div>
-      <div className="flex items-center justify-between mt-0.5">
-        <div className="text-[9px] text-[color:var(--color-text-muted)]">
+      <div className="flex items-center justify-between mt-1">
+        <div className="text-[10px] text-[color:var(--color-text-muted)]">
           {variant === "pool" && `${article.created_at.slice(0, 10)} 추가`}
           {variant === "published" && `${article.agency} RSS 매칭`}
           {variant === "recent" && article.published_at && `${article.published_at.slice(0, 10)} 발행`}
@@ -80,7 +80,7 @@ export default function ArticleCard({ article, variant, onOpen }: Props) {
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCopyTitle(e); } }}
             aria-disabled={busy !== null}
-            className="text-[9px] px-1.5 py-0.5 rounded border border-[color:var(--color-border)] bg-white text-gray-700 hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)] cursor-pointer select-none"
+            className="text-xs px-2.5 py-1 rounded border border-[color:var(--color-border)] bg-white text-gray-700 hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)] cursor-pointer select-none"
           >
             {busy === "title" ? "…" : "📋 제목"}
           </span>
@@ -90,7 +90,7 @@ export default function ArticleCard({ article, variant, onOpen }: Props) {
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCopyBody(e); } }}
             aria-disabled={busy !== null}
-            className="text-[9px] px-1.5 py-0.5 rounded border border-[color:var(--color-primary)] bg-[color:var(--color-primary)] text-white cursor-pointer select-none"
+            className="text-xs px-2.5 py-1 rounded border border-[color:var(--color-primary)] bg-[color:var(--color-primary)] text-white cursor-pointer select-none"
           >
             {busy === "body" ? "…" : "📰 본문"}
           </span>
