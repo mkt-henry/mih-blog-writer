@@ -14,15 +14,16 @@ export default async function KeywordsPage() {
       .order("keyword"),
     sb
       .from("articles")
-      .select("person_name,published_url")
-      .not("published_at", "is", null),
+      .select("person_name,published_url"),
   ]);
 
   if (kwRes.error) {
     return <main className="p-6 text-red-700">DB 조회 실패: {kwRes.error.message}</main>;
   }
 
-  // articles에서 발행된 person_name → published_url 맵
+  const articleExistsSet = new Set((artRes.data ?? []).map((a) => a.person_name));
+
+  // articles에서 published_url이 있는 person_name → url 맵
   const publishedMap = new Map<string, string>(
     (artRes.data ?? [])
       .filter((a) => a.published_url)
@@ -33,10 +34,12 @@ export default async function KeywordsPage() {
   const keywords: Keyword[] = (kwRes.data ?? []).map((k) => ({
     ...k,
     published_url: k.published_url ?? publishedMap.get(k.keyword) ?? null,
+    has_article: articleExistsSet.has(k.keyword),
   }));
 
   const categories = [...new Set(keywords.map((k) => k.category))].sort();
   const publishedCount = keywords.filter((k) => k.published_url).length;
+  const articleCount = keywords.filter((k) => k.has_article).length;
 
   return (
     <div className="min-h-screen bg-[color:var(--color-bg)]">
@@ -57,12 +60,20 @@ export default async function KeywordsPage() {
           <span className="ml-1.5 font-bold text-gray-800">{keywords.length.toLocaleString()}</span>
         </div>
         <div>
+          <span className="text-gray-400 text-xs">원고 작성</span>
+          <span className="ml-1.5 font-bold text-blue-600">{articleCount}</span>
+        </div>
+        <div>
           <span className="text-gray-400 text-xs">발행 완료</span>
           <span className="ml-1.5 font-bold text-emerald-600">{publishedCount}</span>
         </div>
         <div>
-          <span className="text-gray-400 text-xs">미발행</span>
-          <span className="ml-1.5 font-bold text-gray-600">{keywords.length - publishedCount}</span>
+          <span className="text-gray-400 text-xs">원고만 (미발행)</span>
+          <span className="ml-1.5 font-bold text-amber-600">{keywords.filter((k) => k.has_article && !k.published_url).length}</span>
+        </div>
+        <div>
+          <span className="text-gray-400 text-xs">미작성</span>
+          <span className="ml-1.5 font-bold text-gray-400">{keywords.filter((k) => !k.has_article && !k.published_url).length}</span>
         </div>
         {categories.map((c) => {
           const cnt = keywords.filter((k) => k.category === c).length;
