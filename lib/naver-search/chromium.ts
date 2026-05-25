@@ -3,9 +3,33 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { spawnSync } from 'node:child_process';
 import * as tar from 'tar';
 import puppeteer, { type Browser } from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+
+export async function debugChromiumSpawn() {
+  const r = await extractSparticuzLibsToTmp();
+  if (!r.found) return { libExtract: r };
+  const libDir = path.dirname(r.found);
+  const ldPath = [libDir, '/tmp', process.env.LD_LIBRARY_PATH].filter(Boolean).join(':');
+  const execPath = await chromium.executablePath();
+  const out = spawnSync(execPath, ['--version'], {
+    env: { ...process.env, LD_LIBRARY_PATH: ldPath },
+    timeout: 10_000,
+  });
+  return {
+    libExtract: r,
+    libDirContents: fs.readdirSync(libDir),
+    execPath,
+    ldPath,
+    status: out.status,
+    signal: out.signal,
+    stdout: out.stdout?.toString().slice(0, 500),
+    stderr: out.stderr?.toString().slice(0, 2000),
+    error: out.error?.message,
+  };
+}
 
 let libsExtracted = false;
 

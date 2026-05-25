@@ -28,6 +28,10 @@ export async function GET(req: Request) {
     const { debugExtractLibs } = await import('@/lib/naver-search/chromium');
     return NextResponse.json(await debugExtractLibs());
   }
+  if (url.searchParams.get('debug') === 'spawn') {
+    const { debugChromiumSpawn } = await import('@/lib/naver-search/chromium');
+    return NextResponse.json(await debugChromiumSpawn());
+  }
 
   try {
     const summary = await runDailyNaverScreenshotJob({ webhookUrl, date });
