@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { AGENCIES } from "@/lib/agencies";
 import type { ArticleRow } from "@/lib/articles";
+import { canEdit, type UserPermissions } from "@/lib/permissions";
 import { copyPlain, copyRichHtml } from "@/lib/clipboard";
 import { buildBusinessCardHtml, mergeWithBusinessCard } from "@/lib/business-card";
 import ArticleModalMeta from "./ArticleModalMeta";
@@ -19,9 +20,10 @@ type Props = {
   onClose: () => void;
   onNeighbor: (direction: "prev" | "next") => void;
   positionLabel?: string;
+  perms: UserPermissions;
 };
 
-export default function ArticleModal({ articleId, onClose, onNeighbor, positionLabel }: Props) {
+export default function ArticleModal({ articleId, onClose, onNeighbor, positionLabel, perms }: Props) {
   const [article, setArticle] = useState<ArticleRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<"title" | "body" | null>(null);
@@ -152,7 +154,7 @@ export default function ArticleModal({ articleId, onClose, onNeighbor, positionL
               {/* 데스크톱: 2열 */}
               <div className="hidden sm:grid grid-cols-[280px_1fr] h-full overflow-hidden">
                 <aside className="border-r overflow-y-auto bg-gray-50/50">
-                  <ArticleModalMeta article={article} onUpdated={(next) => setArticle(next)} />
+                  <ArticleModalMeta article={article} onUpdated={(next) => setArticle(next)} editable={canEdit(perms, article.agency)} />
                 </aside>
                 <main className="overflow-hidden">
                   <ArticleModalPreview articleId={article.id} agency={article.agency} />
@@ -162,7 +164,7 @@ export default function ArticleModal({ articleId, onClose, onNeighbor, positionL
               <div className="sm:hidden h-full overflow-hidden">
                 {mobileTab === "meta" ? (
                   <div className="h-full overflow-y-auto bg-gray-50/50">
-                    <ArticleModalMeta article={article} onUpdated={(next) => setArticle(next)} />
+                    <ArticleModalMeta article={article} onUpdated={(next) => setArticle(next)} editable={canEdit(perms, article.agency)} />
                   </div>
                 ) : (
                   <ArticleModalPreview articleId={article.id} agency={article.agency} />

@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import type { KanbanGroups } from "@/lib/articles";
-import { AGENCIES, AGENCY_SLUGS } from "@/lib/agencies";
+import { AGENCIES } from "@/lib/agencies";
+import { visibleAgencies, type UserPermissions } from "@/lib/permissions";
 import KanbanColumn from "./KanbanColumn";
 
-type Props = { groups: KanbanGroups; onOpen: (id: string) => void };
+type Props = { groups: KanbanGroups; onOpen: (id: string) => void; perms: UserPermissions };
 
 const TAB_LABELS: Record<string, string> = {
   mih_speaker: "스피커",
@@ -19,15 +20,16 @@ const TAB_COLORS: Record<string, string> = {
   mih_agency:  "var(--color-agency)",
 };
 
-export default function KanbanBoard({ groups, onOpen }: Props) {
+export default function KanbanBoard({ groups, onOpen, perms }: Props) {
   const [activeTab, setActiveTab] = useState(0);
+  const slugs = visibleAgencies(perms);
 
   return (
     <>
       {/* ── 모바일: 탭 전환 ── */}
       <div className="md:hidden flex flex-col">
         <div className="flex border-b border-[color:var(--color-border)] bg-white sticky top-0 z-10">
-          {AGENCY_SLUGS.map((slug, i) => {
+          {slugs.map((slug, i) => {
             const count = groups[slug]?.pool.length ?? 0;
             const active = i === activeTab;
             return (
@@ -51,7 +53,7 @@ export default function KanbanBoard({ groups, onOpen }: Props) {
           })}
         </div>
         <div className="p-3">
-          {AGENCY_SLUGS.map((slug, i) =>
+          {slugs.map((slug, i) =>
             i === activeTab ? (
               <KanbanColumn
                 key={slug}
@@ -67,7 +69,7 @@ export default function KanbanBoard({ groups, onOpen }: Props) {
 
       {/* ── 데스크톱: 3열 그리드 ── */}
       <div className="hidden md:grid grid-cols-3 gap-3 p-4">
-        {AGENCY_SLUGS.map((slug) => (
+        {slugs.map((slug) => (
           <KanbanColumn key={slug} agency={slug} agencyInfo={AGENCIES[slug]} group={groups[slug]} onOpen={onOpen} />
         ))}
       </div>
