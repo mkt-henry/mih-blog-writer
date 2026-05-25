@@ -78,7 +78,8 @@ export async function launchChromium(): Promise<Browser> {
     throw new Error('lib extract failed: ' + JSON.stringify(r.logs));
   }
   const libDir = path.dirname(r.found);
-  process.env.LD_LIBRARY_PATH = [libDir, '/tmp', process.env.LD_LIBRARY_PATH].filter(Boolean).join(':');
+  const ldPath = [libDir, '/tmp', process.env.LD_LIBRARY_PATH].filter(Boolean).join(':');
+  process.env.LD_LIBRARY_PATH = ldPath;
 
   chromium.setGraphicsMode = false;
 
@@ -87,5 +88,6 @@ export async function launchChromium(): Promise<Browser> {
     defaultViewport: { width: 1280, height: 800 },
     executablePath: await chromium.executablePath(),
     headless: 'shell',
+    env: { ...process.env, LD_LIBRARY_PATH: ldPath } as Record<string, string>,
   });
 }
