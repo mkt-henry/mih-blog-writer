@@ -4,6 +4,11 @@ import { fetchRssKeywordsForDate } from './rss';
 import { fetchNaverSearchHtml, buildNaverSearchUrl } from './search';
 import { fetchNaverSearchScreenshotPng } from './screenshot';
 
+export function toSearchQuery(baseKeyword: string): string {
+  const trimmed = baseKeyword.trim();
+  return /섭외$/.test(trimmed) ? trimmed : `${trimmed} 섭외`;
+}
+
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 export function getKstYesterday(now: Date = new Date()): string {
@@ -36,10 +41,11 @@ export async function runDailyNaverScreenshotJob(args: {
   let posted = 0;
   let skipped = 0;
 
-  for (const keyword of keywords) {
-    const searchUrl = buildNaverSearchUrl(keyword);
+  for (const baseKeyword of keywords) {
+    const searchKeyword = toSearchQuery(baseKeyword);
+    const searchUrl = buildNaverSearchUrl(searchKeyword);
     try {
-      const html = await fetchNaverSearchHtml(keyword);
+      const html = await fetchNaverSearchHtml(searchKeyword);
       if (!isMihExposed(html)) {
         skipped += 1;
         continue;
@@ -47,13 +53,13 @@ export async function runDailyNaverScreenshotJob(args: {
       const png = await fetchNaverSearchScreenshotPng(searchUrl);
       await postScreenshotToDiscord({
         webhookUrl: args.webhookUrl,
-        keyword,
+        keyword: searchKeyword,
         searchUrl,
         pngBuffer: png,
       });
       posted += 1;
     } catch (e) {
-      errors.push(`${keyword}: ${(e as Error).message}`.slice(0, 200));
+      errors.push(`${searchKeyword}: ${(e as Error).message}`.slice(0, 200));
     }
   }
 

@@ -4,7 +4,7 @@ export async function fetchNaverSearchScreenshotPng(searchUrl: string, timeoutMs
   api.searchParams.set('screenshot', 'true');
   api.searchParams.set('meta', 'false');
   api.searchParams.set('viewport.width', '1280');
-  api.searchParams.set('viewport.height', '800');
+  api.searchParams.set('viewport.height', '1600');
   api.searchParams.set('waitFor', '1500');
   api.searchParams.set('embed', 'screenshot.url');
 
