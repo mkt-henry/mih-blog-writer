@@ -24,15 +24,6 @@ export async function GET(req: Request) {
   const dateParam = url.searchParams.get('date');
   const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
 
-  if (url.searchParams.get('debug') === 'libs') {
-    const { debugExtractLibs } = await import('@/lib/naver-search/chromium');
-    return NextResponse.json(await debugExtractLibs());
-  }
-  if (url.searchParams.get('debug') === 'spawn') {
-    const { debugChromiumSpawn } = await import('@/lib/naver-search/chromium');
-    return NextResponse.json(await debugChromiumSpawn());
-  }
-
   try {
     const summary = await runDailyNaverScreenshotJob({ webhookUrl, date });
     return NextResponse.json(summary);

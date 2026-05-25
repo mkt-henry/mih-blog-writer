@@ -1,7 +1,8 @@
 import { isMihExposed } from './exposure';
 import { postScreenshotToDiscord } from './discord';
-import { launchChromium } from './chromium';
 import { fetchRssKeywordsForDate } from './rss';
+import { fetchNaverSearchHtml, buildNaverSearchUrl } from './search';
+import { fetchNaverSearchScreenshotPng } from './screenshot';
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -35,34 +36,25 @@ export async function runDailyNaverScreenshotJob(args: {
   let posted = 0;
   let skipped = 0;
 
-  const browser = await launchChromium();
-  try {
-    for (const keyword of keywords) {
-      const searchUrl = `https://search.naver.com/search.naver?query=${encodeURIComponent(keyword)}`;
-      const page = await browser.newPage();
-      try {
-        await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 15_000 });
-        const html = await page.content();
-        if (!isMihExposed(html)) {
-          skipped += 1;
-          continue;
-        }
-        const png = await page.screenshot({ type: 'png', fullPage: false });
-        await postScreenshotToDiscord({
-          webhookUrl: args.webhookUrl,
-          keyword,
-          searchUrl,
-          pngBuffer: png,
-        });
-        posted += 1;
-      } catch (e) {
-        errors.push(`${keyword}: ${(e as Error).message}`.slice(0, 200));
-      } finally {
-        await page.close().catch(() => {});
+  for (const keyword of keywords) {
+    const searchUrl = buildNaverSearchUrl(keyword);
+    try {
+      const html = await fetchNaverSearchHtml(keyword);
+      if (!isMihExposed(html)) {
+        skipped += 1;
+        continue;
       }
+      const png = await fetchNaverSearchScreenshotPng(searchUrl);
+      await postScreenshotToDiscord({
+        webhookUrl: args.webhookUrl,
+        keyword,
+        searchUrl,
+        pngBuffer: png,
+      });
+      posted += 1;
+    } catch (e) {
+      errors.push(`${keyword}: ${(e as Error).message}`.slice(0, 200));
     }
-  } finally {
-    await browser.close().catch(() => {});
   }
 
   return { ok: true, date, total: keywords.length, posted, skipped, errors };
