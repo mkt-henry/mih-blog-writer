@@ -1,15 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { NextResponse } from 'next/server';
 import { runDailyNaverScreenshotJob } from '@/lib/naver-search';
-
-function safeList(dir: string): string[] | string {
-  try {
-    return fs.readdirSync(dir);
-  } catch (e) {
-    return `ERR: ${(e as Error).message}`;
-  }
-}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,30 +23,6 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const dateParam = url.searchParams.get('date');
   const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
-  const debug = url.searchParams.get('debug') === '1';
-
-  if (debug) {
-    const before = safeList('/tmp');
-    let execPath: string | null = null;
-    let execErr: string | null = null;
-    try {
-      const chromium = (await import('@sparticuz/chromium')).default;
-      execPath = await chromium.executablePath();
-    } catch (e) {
-      execErr = (e as Error).message;
-    }
-    const after = safeList('/tmp');
-    return NextResponse.json({
-      debug: true,
-      cwd: process.cwd(),
-      bin: safeList('/var/task/node_modules/@sparticuz/chromium/bin'),
-      tmpBefore: before,
-      tmpAfter: after,
-      execPath,
-      execErr,
-      ldLibraryPath: process.env.LD_LIBRARY_PATH ?? null,
-    });
-  }
 
   try {
     const summary = await runDailyNaverScreenshotJob({ webhookUrl, date });
