@@ -104,6 +104,7 @@ export async function launchChromium(): Promise<Browser> {
   const libDir = path.dirname(r.found);
   const ldPath = [libDir, '/tmp', process.env.LD_LIBRARY_PATH].filter(Boolean).join(':');
   process.env.LD_LIBRARY_PATH = ldPath;
+  const fontconfigPath = fs.existsSync('/tmp/fonts') ? '/tmp/fonts' : '/tmp';
 
   chromium.setGraphicsMode = false;
 
@@ -113,6 +114,11 @@ export async function launchChromium(): Promise<Browser> {
     executablePath: await chromium.executablePath(),
     headless: chromium.headless,
     dumpio: true,
-    env: { ...process.env, LD_LIBRARY_PATH: ldPath } as Record<string, string>,
+    env: {
+      ...process.env,
+      LD_LIBRARY_PATH: ldPath,
+      FONTCONFIG_PATH: fontconfigPath,
+      HOME: '/tmp',
+    } as Record<string, string>,
   });
 }
