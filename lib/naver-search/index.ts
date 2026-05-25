@@ -35,7 +35,7 @@ export async function runDailyNaverScreenshotJob(args: {
 
   const articles = data ?? [];
   const keywords = extractUniqueKeywords(
-    articles.map((a) => ({ title: a.title as string, person_name: (a.person_name as string) ?? '' })),
+    articles.map((a) => ({ title: a.title as string, person_name: (a.person_name as string | null) ?? '' })),
   );
 
   if (keywords.length === 0) {
@@ -58,7 +58,7 @@ export async function runDailyNaverScreenshotJob(args: {
           skipped += 1;
           continue;
         }
-        const png = (await page.screenshot({ type: 'png', fullPage: false })) as Uint8Array;
+        const png = await page.screenshot({ type: 'png', fullPage: false });
         await postScreenshotToDiscord({
           webhookUrl: args.webhookUrl,
           keyword,
