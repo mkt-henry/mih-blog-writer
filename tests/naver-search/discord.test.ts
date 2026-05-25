@@ -1,15 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { postScreenshotToDiscord } from '@/lib/naver-search/discord';
 
 const ORIGINAL_FETCH = globalThis.fetch;
 
 describe('postScreenshotToDiscord', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
   afterEach(() => {
     globalThis.fetch = ORIGINAL_FETCH;
-    vi.useRealTimers();
   });
 
   it('posts multipart with payload_json containing keyword + URL and PNG file', async () => {
