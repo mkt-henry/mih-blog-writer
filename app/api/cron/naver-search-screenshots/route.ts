@@ -20,8 +20,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'NAVER_SEARCH_DISCORD_WEBHOOK_URL not set' }, { status: 500 });
   }
 
+  const url = new URL(req.url);
+  const dateParam = url.searchParams.get('date');
+  const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
+
   try {
-    const summary = await runDailyNaverScreenshotJob({ webhookUrl });
+    const summary = await runDailyNaverScreenshotJob({ webhookUrl, date });
     return NextResponse.json(summary);
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

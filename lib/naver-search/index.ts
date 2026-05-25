@@ -1,8 +1,7 @@
-import { supabaseAdmin } from '@/lib/supabase';
-import { extractUniqueKeywords } from './keywords';
 import { isMihExposed } from './exposure';
 import { postScreenshotToDiscord } from './discord';
 import { launchChromium } from './chromium';
+import { fetchRssKeywordsForDate } from './rss';
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -22,27 +21,17 @@ export type JobSummary = {
 
 export async function runDailyNaverScreenshotJob(args: {
   webhookUrl: string;
+  date?: string;
 }): Promise<JobSummary> {
-  const date = getKstYesterday();
+  const date = args.date ?? getKstYesterday();
 
-  const sb = supabaseAdmin();
-  const { data, error } = await sb
-    .from('articles')
-    .select('title, agency, person_name, published_url')
-    .eq('publish_date', date)
-    .order('created_at', { ascending: true });
-  if (error) throw new Error(`articles select failed: ${error.message}`);
-
-  const articles = data ?? [];
-  const keywords = extractUniqueKeywords(
-    articles.map((a) => ({ title: a.title as string, person_name: (a.person_name as string | null) ?? '' })),
-  );
+  const { keywords, errors: rssErrors } = await fetchRssKeywordsForDate(date);
+  const errors: string[] = [...rssErrors];
 
   if (keywords.length === 0) {
-    return { ok: true, date, total: 0, posted: 0, skipped: 0, errors: [] };
+    return { ok: true, date, total: 0, posted: 0, skipped: 0, errors };
   }
 
-  const errors: string[] = [];
   let posted = 0;
   let skipped = 0;
 
