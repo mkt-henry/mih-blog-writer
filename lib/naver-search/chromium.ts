@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { spawnSync } from 'node:child_process';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import * as tar from 'tar';
 import puppeteer, { type Browser } from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 
@@ -32,7 +34,7 @@ function findLibInTree(root: string): string | null {
   return null;
 }
 
-function extractSparticuzLibsToTmp(): { found: string | null; logs: string[] } {
+async function extractSparticuzLibsToTmp(): Promise<{ found: string | null; logs: string[] }> {
   const logs: string[] = [];
   if (libsExtracted) return { found: '/tmp (cached)', logs: ['cached'] };
   const existing = findLibInTree('/tmp');
@@ -48,29 +50,30 @@ function extractSparticuzLibsToTmp(): { found: string | null; logs: string[] } {
       logs.push(`${name}: missing`);
       continue;
     }
-    const compressed = fs.readFileSync(file);
-    const tarBuf = zlib.brotliDecompressSync(compressed);
-    const tarPath = path.join('/tmp', `_sparticuz_${name}.tar`);
-    fs.writeFileSync(tarPath, tarBuf);
-    const r = spawnSync('tar', ['-xf', tarPath, '-C', '/tmp'], { stdio: 'pipe' });
-    logs.push(`${name}: tar status=${r.status} stderr=${r.stderr?.toString().slice(0, 200) ?? ''}`);
-    fs.rmSync(tarPath, { force: true });
-    const found = findLibInTree('/tmp');
-    if (found) {
-      libsExtracted = true;
-      return { found, logs };
+    try {
+      const compressed = fs.readFileSync(file);
+      const tarBuf = zlib.brotliDecompressSync(compressed);
+      await pipeline(Readable.from(tarBuf), tar.x({ cwd: '/tmp' }));
+      const found = findLibInTree('/tmp');
+      if (found) {
+        libsExtracted = true;
+        return { found, logs };
+      }
+      logs.push(`${name}: untar done but libnss3.so not found`);
+    } catch (e) {
+      logs.push(`${name}: ${(e as Error).message.slice(0, 200)}`);
     }
   }
   return { found: null, logs };
 }
 
 export async function debugExtractLibs() {
-  const result = extractSparticuzLibsToTmp();
+  const result = await extractSparticuzLibsToTmp();
   return { ...result, tmpListing: fs.readdirSync('/tmp') };
 }
 
 export async function launchChromium(): Promise<Browser> {
-  const r = extractSparticuzLibsToTmp();
+  const r = await extractSparticuzLibsToTmp();
   if (!r.found) {
     throw new Error('lib extract failed: ' + JSON.stringify(r.logs));
   }
