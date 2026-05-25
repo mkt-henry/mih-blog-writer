@@ -36,15 +36,27 @@ export async function GET(req: Request) {
   const debug = url.searchParams.get('debug') === '1';
 
   if (debug) {
-    const candidates = [
-      'node_modules/@sparticuz/chromium/bin',
-      path.join(process.cwd(), 'node_modules/@sparticuz/chromium/bin'),
-      '/var/task/node_modules/@sparticuz/chromium/bin',
-      '/tmp',
-    ];
-    const inspection: Record<string, string[] | string> = {};
-    for (const c of candidates) inspection[c] = safeList(c);
-    return NextResponse.json({ debug: true, cwd: process.cwd(), inspection });
+    const before = safeList('/tmp');
+    let execPath: string | null = null;
+    let execErr: string | null = null;
+    try {
+      const chromium = (await import('@sparticuz/chromium')).default;
+      chromium.setGraphicsMode = false;
+      execPath = await chromium.executablePath();
+    } catch (e) {
+      execErr = (e as Error).message;
+    }
+    const after = safeList('/tmp');
+    return NextResponse.json({
+      debug: true,
+      cwd: process.cwd(),
+      bin: safeList('/var/task/node_modules/@sparticuz/chromium/bin'),
+      tmpBefore: before,
+      tmpAfter: after,
+      execPath,
+      execErr,
+      ldLibraryPath: process.env.LD_LIBRARY_PATH ?? null,
+    });
   }
 
   try {
