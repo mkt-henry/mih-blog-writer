@@ -33,8 +33,8 @@ const todayKstIso = () => {
 describe('groupArticlesForKanban', () => {
   it('separates pool (unpublished) from published, by agency', () => {
     const articles = [
-      mk({ id: 'p1', agency: 'mih_speaker', published_at: null }),
-      mk({ id: 'p2', agency: 'mih_speaker', published_at: new Date(Date.now() - 86400_000).toISOString() }),
+      mk({ id: 'p1', agency: 'mih_speaker', person_name: 'A', published_at: null }),
+      mk({ id: 'p2', agency: 'mih_speaker', person_name: 'B', published_at: new Date(Date.now() - 86400_000).toISOString() }),
     ];
     const grouped = groupArticlesForKanban(articles);
     expect(grouped.mih_speaker.pool.map((a) => a.id)).toEqual(['p1']);
@@ -80,23 +80,70 @@ describe('groupArticlesForKanban', () => {
     const grouped = groupArticlesForKanban(articles);
     expect(grouped.mih_agency.recent.map((a) => a.id)).toEqual(['newer', 'old']);
   });
+
+  it('projects sibling publication: same person_name published in any agency marks all as published', () => {
+    const articles = [
+      mk({
+        id: 'casting',
+        agency: 'mih_casting',
+        person_name: '임영웅',
+        published_at: '2026-05-19T00:00:00Z',
+        published_url: 'https://blog.naver.com/mih_casting/123',
+        published_source: 'rss',
+      }),
+      mk({
+        id: 'agency',
+        agency: 'mih_agency',
+        person_name: '임영웅',
+        published_at: null,
+        published_url: null,
+        published_source: null,
+      }),
+    ];
+    const grouped = groupArticlesForKanban(articles);
+    expect(grouped.mih_agency.pool.length).toBe(0);
+    expect(grouped.mih_agency.recent.map((a) => a.id)).toEqual(['agency']);
+    const projected = grouped.mih_agency.recent[0];
+    expect(projected.published_at).toBe('2026-05-19T00:00:00Z');
+    expect(projected.published_url).toBe('https://blog.naver.com/mih_casting/123');
+    expect(projected.published_source).toBe('rss');
+  });
+
+  it('sibling projection does not affect articles whose person_name has no published sibling', () => {
+    const articles = [
+      mk({ id: 'lonely', agency: 'mih_agency', person_name: '홍길동', published_at: null }),
+    ];
+    const grouped = groupArticlesForKanban(articles);
+    expect(grouped.mih_agency.pool.map((a) => a.id)).toEqual(['lonely']);
+  });
 });
 
 describe('computeKpis', () => {
   it('counts pool size, today count, this-week count, unmatched flag', () => {
     const todayMid = todayKstIso();
     const articles = [
-      mk({ id: 'pool1', agency: 'mih_speaker', published_at: null }),
-      mk({ id: 'pool2', agency: 'mih_casting', published_at: null }),
-      mk({ id: 'today1', agency: 'mih_speaker', published_at: new Date(Date.parse(todayMid) + 1000).toISOString() }),
-      mk({ id: 'week1', agency: 'mih_speaker', published_at: new Date(Date.parse(todayMid) - 2 * 86400_000).toISOString() }),
-      mk({ id: 'old', agency: 'mih_speaker', published_at: new Date(Date.parse(todayMid) - 30 * 86400_000).toISOString() }),
+      mk({ id: 'pool1', agency: 'mih_speaker', person_name: 'A', published_at: null }),
+      mk({ id: 'pool2', agency: 'mih_casting', person_name: 'B', published_at: null }),
+      mk({ id: 'today1', agency: 'mih_speaker', person_name: 'C', published_at: new Date(Date.parse(todayMid) + 1000).toISOString() }),
+      mk({ id: 'week1', agency: 'mih_speaker', person_name: 'D', published_at: new Date(Date.parse(todayMid) - 2 * 86400_000).toISOString() }),
+      mk({ id: 'old', agency: 'mih_speaker', person_name: 'E', published_at: new Date(Date.parse(todayMid) - 30 * 86400_000).toISOString() }),
     ];
     const kpis = computeKpis(articles, 3);
     expect(kpis.poolTotal).toBe(2);
     expect(kpis.todayTotal).toBe(1);
     expect(kpis.weekTotal).toBe(2);
     expect(kpis.unmatchedNeedReview).toBe(3);
+  });
+
+  it('pool count excludes articles whose person_name has a published sibling', () => {
+    const todayMid = todayKstIso();
+    const articles = [
+      mk({ id: 'casting', agency: 'mih_casting', person_name: '임영웅', published_at: new Date(Date.parse(todayMid) - 86400_000).toISOString() }),
+      mk({ id: 'agency', agency: 'mih_agency', person_name: '임영웅', published_at: null }),
+      mk({ id: 'lonely', agency: 'mih_speaker', person_name: '홍길동', published_at: null }),
+    ];
+    const kpis = computeKpis(articles, 0);
+    expect(kpis.poolTotal).toBe(1);
   });
 });
 

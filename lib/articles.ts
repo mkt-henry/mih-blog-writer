@@ -32,8 +32,46 @@ function kstMidnightMs(now = Date.now()): number {
   return Math.floor((now + KST_OFFSET_MS) / 86400_000) * 86400_000 - KST_OFFSET_MS;
 }
 
+type PersonPublished = {
+  published_at: string;
+  published_url: string | null;
+  published_source: 'rss' | 'manual' | null;
+};
+
+function buildPersonPublishedMap(articles: ArticleRow[]): Map<string, PersonPublished> {
+  const map = new Map<string, PersonPublished>();
+  for (const a of articles) {
+    if (!a.published_at || !a.person_name) continue;
+    const cur = map.get(a.person_name);
+    if (!cur || a.published_at < cur.published_at) {
+      map.set(a.person_name, {
+        published_at: a.published_at,
+        published_url: a.published_url,
+        published_source: a.published_source,
+      });
+    }
+  }
+  return map;
+}
+
+function projectSiblingPublication(articles: ArticleRow[]): ArticleRow[] {
+  const personPublished = buildPersonPublishedMap(articles);
+  return articles.map((a) => {
+    if (a.published_at) return a;
+    const sib = personPublished.get(a.person_name);
+    if (!sib) return a;
+    return {
+      ...a,
+      published_at: sib.published_at,
+      published_url: a.published_url ?? sib.published_url,
+      published_source: sib.published_source,
+    };
+  });
+}
+
 export function groupArticlesForKanban(articles: ArticleRow[], now = Date.now()): KanbanGroups {
   const todayStart = kstMidnightMs(now);
+  const projected = projectSiblingPublication(articles);
 
   const empty = (): AgencyGroup => ({ pool: [], today: [], recent: [] });
   const groups: KanbanGroups = {
@@ -42,7 +80,7 @@ export function groupArticlesForKanban(articles: ArticleRow[], now = Date.now())
     mih_agency: empty(),
   };
 
-  for (const a of articles) {
+  for (const a of projected) {
     const g = groups[a.agency];
     if (!g) continue;
     if (a.published_at === null) {
@@ -73,11 +111,12 @@ export type KanbanKpis = {
 export function computeKpis(articles: ArticleRow[], unmatchedCount: number, now = Date.now()): KanbanKpis {
   const todayStart = kstMidnightMs(now);
   const weekStart = todayStart - 6 * 86400_000;
+  const projected = projectSiblingPublication(articles);
 
   let pool = 0;
   let today = 0;
   let week = 0;
-  for (const a of articles) {
+  for (const a of projected) {
     if (a.published_at === null) {
       pool++;
       continue;
