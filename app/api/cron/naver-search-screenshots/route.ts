@@ -41,7 +41,6 @@ export async function GET(req: Request) {
     let execErr: string | null = null;
     try {
       const chromium = (await import('@sparticuz/chromium')).default;
-      chromium.setGraphicsMode = false;
       execPath = await chromium.executablePath();
     } catch (e) {
       execErr = (e as Error).message;
