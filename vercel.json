@@ -9,11 +9,7 @@
     "app/api/articles/[id]/route.ts": { "maxDuration": 15 },
     "app/api/rss/route.ts": { "maxDuration": 15 },
     "app/api/rss-sync/route.ts": { "maxDuration": 30 },
-    "app/api/cron/naver-search-screenshots/route.ts": {
-      "maxDuration": 300,
-      "memory": 1024,
-      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
-    }
+    "app/api/cron/naver-search-screenshots/route.ts": { "maxDuration": 300 }
   },
   "crons": [
     { "path": "/api/cron/naver-search-screenshots", "schedule": "0 1 * * *" }
