@@ -1,3 +1,4 @@
+import { supabaseAdmin } from "./supabase";
 import { AGENCY_SLUGS, type AgencySlug } from "./agencies";
 
 export type AgencyRole = "view" | "editor";
@@ -36,7 +37,6 @@ export async function loadPermissions(
     };
   }
 
-  const { supabaseAdmin } = await import("./supabase");
   const sb = supabaseAdmin();
   const { data } = await sb
     .from("user_agency_permissions")
