@@ -108,10 +108,11 @@ export async function launchChromium(): Promise<Browser> {
   chromium.setGraphicsMode = false;
 
   return puppeteer.launch({
-    args: puppeteer.defaultArgs({ args: chromium.args, headless: 'shell' }),
+    args: chromium.args,
     defaultViewport: { width: 1280, height: 800 },
     executablePath: await chromium.executablePath(),
-    headless: 'shell',
+    headless: chromium.headless,
+    dumpio: true,
     env: { ...process.env, LD_LIBRARY_PATH: ldPath } as Record<string, string>,
   });
 }
