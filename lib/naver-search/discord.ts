@@ -2,7 +2,7 @@ export type PostScreenshotArgs = {
   webhookUrl: string;
   keyword: string;
   searchUrl: string;
-  pngBuffer: Buffer;
+  pngBuffer: Uint8Array;
 };
 
 export async function postScreenshotToDiscord(args: PostScreenshotArgs): Promise<void> {
@@ -11,7 +11,7 @@ export async function postScreenshotToDiscord(args: PostScreenshotArgs): Promise
   const fd = new FormData();
   fd.append('payload_json', JSON.stringify({ content: `🔎 ${keyword}\n${searchUrl}` }));
 
-  const blob = new Blob([pngBuffer], { type: 'image/png' });
+  const blob = new Blob([new Uint8Array(pngBuffer)], { type: 'image/png' });
   const safeName = keyword.replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 64) || 'screenshot';
   fd.append('files[0]', new File([blob], `${safeName}.png`, { type: 'image/png' }));
 
