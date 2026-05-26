@@ -23,13 +23,8 @@ type Props = {
 export default function RssClient({ days, stats, unmatchedSample, publishedArticles }: Props) {
   return (
     <div className="min-h-screen bg-[color:var(--color-muted)]">
-      <header className="bg-white border-b border-[color:var(--color-border)] px-4 py-2.5 flex items-center gap-3">
-        <a href="/" className="text-sm text-gray-600 hover:text-gray-900">← 모아보기</a>
-        <h1 className="text-sm font-bold flex-1">발행 현황</h1>
-        <ActionsBar />
-      </header>
-
       <div className="px-4 py-3 bg-white border-b border-[color:var(--color-border)] flex items-center gap-3">
+        <ActionsBar />
         <RangePicker days={days} />
         <span className="text-xs text-gray-500">최근 {days}일</span>
       </div>

@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { KanbanGroups, KanbanKpis, ArticleRow } from "@/lib/articles";
 import { findNeighbor } from "@/lib/articles";
 import type { UserPermissions } from "@/lib/permissions";
-import TopBar from "./TopBar";
 import KpiStrip from "./KpiStrip";
 import FilterBar, { type FilterChip } from "./FilterBar";
 import KanbanBoard from "./KanbanBoard";
@@ -79,7 +78,6 @@ export default function DashboardClient({ groups, kpis, generatedAt, perms }: Pr
 
   return (
     <div className="min-h-screen bg-[color:var(--color-muted)] text-[color:var(--color-text)]">
-      <TopBar generatedAt={generatedAt} isAdmin={perms.isAdmin} />
       <KpiStrip kpis={kpis} />
       <FilterBar search={search} onSearch={setSearch} chip={chip} onChip={setChip} />
       <KanbanBoard groups={filteredGroups} onOpen={openModal} perms={perms} />

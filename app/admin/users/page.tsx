@@ -3,7 +3,6 @@ import { verifySession } from "@/lib/auth";
 import { loadPermissions, isAdminUsername, type AgencyRole } from "@/lib/permissions";
 import type { AgencySlug } from "@/lib/agencies";
 import { supabaseAdmin } from "@/lib/supabase";
-import TopBar from "@/app/_components/TopBar";
 import UsersTable from "./_components/UsersTable";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +53,6 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="min-h-screen bg-[color:var(--color-muted)]">
-      <TopBar generatedAt={new Date().toISOString()} isAdmin={true} />
       <main className="max-w-4xl mx-auto p-6">
         <h1 className="text-lg font-bold mb-4">사용자 관리</h1>
         <UsersTable initialUsers={rows} currentUserId={user.id} />
