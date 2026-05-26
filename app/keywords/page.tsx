@@ -25,26 +25,33 @@ export default async function KeywordsPage() {
       .order("keyword"),
     sb
       .from("articles")
-      .select("person_name,published_url"),
+      .select("id,person_name,title,published_url,agency"),
   ]);
 
   if (kwRes.error) {
     return <main className="p-6 text-red-700">DB 조회 실패: {kwRes.error.message}</main>;
   }
 
-  const articleExistsSet = new Set((artRes.data ?? []).map((a) => a.person_name));
-
-  const publishedMap = new Map<string, string>(
-    (artRes.data ?? [])
-      .filter((a) => a.published_url)
-      .map((a) => [a.person_name, a.published_url as string])
+  const articleMap = new Map(
+    (artRes.data ?? []).map((a) => [a.person_name, {
+      id: a.id as string,
+      title: a.title as string,
+      published_url: a.published_url as string | null,
+      agency: a.agency as string | null,
+    }])
   );
 
-  const keywords: Keyword[] = (kwRes.data ?? []).map((k) => ({
-    ...k,
-    published_url: k.published_url ?? publishedMap.get(k.keyword) ?? null,
-    has_article: articleExistsSet.has(k.keyword),
-  }));
+  const keywords: Keyword[] = (kwRes.data ?? []).map((k) => {
+    const art = articleMap.get(k.keyword);
+    return {
+      ...k,
+      agency: k.agency ?? art?.agency ?? null,
+      published_url: k.published_url ?? art?.published_url ?? null,
+      has_article: !!art,
+      article_id: art?.id ?? null,
+      article_title: art?.title ?? null,
+    };
+  });
 
   const categories = [...new Set(keywords.map((k) => k.category))].sort();
   const publishedCount = keywords.filter((k) => k.published_url).length;
