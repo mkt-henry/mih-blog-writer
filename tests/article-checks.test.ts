@@ -16,6 +16,15 @@ describe('countBodyImages', () => {
       IMG('https://x/agency-card-speaker.png');
     expect(countBodyImages(html)).toBe(2);
   });
+  it('excludes images whose src contains "kakao"', () => {
+    const html =
+      IMG('https://x/article-images/iu/img1.jpg') +
+      IMG('https://x/kakao-open-chat-qr.png');
+    expect(countBodyImages(html)).toBe(1);
+  });
+  it('returns 0 for HTML with no images', () => {
+    expect(countBodyImages('<p>본문만 있음</p>')).toBe(0);
+  });
 });
 
 describe('countSourceCaptions', () => {

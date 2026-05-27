@@ -9,7 +9,8 @@ export function countBodyImages(html) {
   return imgs.filter((t) => !/agency-card|business-card|kakao/i.test(t)).length;
 }
 
-// 이미지 출처 표기 개수 ("출처 - ... 공식 SNS|자료")
+// 이미지 출처 표기 개수 ("출처 - ... 공식 SNS|자료").
+// SE3 캡션은 <span> 안의 평문이므로 출처~공식 사이에 태그가 없다고 가정한다([^<]).
 export function countSourceCaptions(html) {
   return (html.match(/출처\s*-\s*[^<]*?공식\s*(?:SNS|자료)/g) || []).length;
 }
