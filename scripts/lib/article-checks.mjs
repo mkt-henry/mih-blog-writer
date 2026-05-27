@@ -62,13 +62,14 @@ export function hasBusinessCardImg(html) {
 // 카카오 URL 점검 — { count, bad[] }
 export function kakaoUrlIssues(html) {
   const all = html.match(/https:\/\/open\.kakao\.com\/o\/[A-Za-z0-9]+/g) || [];
-  const bad = all.filter((u) => u !== KAKAO_URL);
+  const bad = [...new Set(all.filter((u) => u !== KAKAO_URL))];
   return { count: all.length, bad };
 }
 
-// 해시태그 개수
+// 해시태그 개수 — 태그(style 속성의 hex 색상 포함)를 먼저 제거하고 본문 텍스트의 #토큰만 센다
 export function countHashtags(html) {
-  return (html.match(/#[^\s#<]+/g) || []).length;
+  const text = html.replace(/<[^>]+>/g, ' ');
+  return (text.match(/#[^\s#<]+/g) || []).length;
 }
 
 // 제목 점검 — [이름 섭외] 대괄호 + 30~60자

@@ -111,11 +111,22 @@ describe('kakaoUrlIssues', () => {
     expect(r.count).toBe(2);
     expect(r.bad).toEqual(['https://open.kakao.com/o/WRONG']);
   });
+  it('de-duplicates repeated bad URLs in bad[] but counts all occurrences', () => {
+    const r = kakaoUrlIssues('https://open.kakao.com/o/WRONG and https://open.kakao.com/o/WRONG');
+    expect(r.count).toBe(2);
+    expect(r.bad).toEqual(['https://open.kakao.com/o/WRONG']);
+  });
 });
 
 describe('countHashtags', () => {
   it('counts # tokens', () => {
     expect(countHashtags('#가수 #섭외 #공연')).toBe(3);
+  });
+  it('does not count CSS hex colors in style attributes', () => {
+    const html =
+      '<p class="se-text-paragraph" style="color:#111111; background:#444444;"><span>본문</span></p>' +
+      '<p class="se-text-paragraph"><span style="color:#999999;">#아이유 #섭외 #대학축제</span></p>';
+    expect(countHashtags(html)).toBe(3);
   });
 });
 
