@@ -5,6 +5,15 @@ import {
   countYoutubeIframes,
   countRawYoutubeUrls,
 } from '@/scripts/lib/article-checks.mjs';
+import {
+  findBareParagraphs,
+  tablesMissingFixedLayout,
+  hasBrokenImageSrc,
+  hasPhotoPlaceholder,
+  hasBusinessCardImg,
+  kakaoUrlIssues,
+  countHashtags,
+} from '@/scripts/lib/article-checks.mjs';
 
 const IMG = (src: string) => `<p align="center"><img src="${src}" width="544"></p>`;
 
@@ -50,5 +59,62 @@ describe('countRawYoutubeUrls', () => {
   });
   it('returns 0 when only embeds present', () => {
     expect(countRawYoutubeUrls('<iframe src="https://www.youtube.com/embed/AAA"></iframe>')).toBe(0);
+  });
+});
+
+const SE_P = '<p class="se-text-paragraph se-text-paragraph-align- " id="SE-1"><span>본문</span></p>';
+
+describe('findBareParagraphs', () => {
+  it('flags <p> with text but no se-text-paragraph class', () => {
+    const html = SE_P + '<p>그냥 단락</p>';
+    expect(findBareParagraphs(html)).toBe(1);
+  });
+  it('ignores spacers, images, 대제목', () => {
+    const html = SE_P + '<p><br></p>' + '<p align="center"><img src="x"></p>' +
+      '<p id="SE-h1"><span><b>제목</b></span></p>';
+    expect(findBareParagraphs(html)).toBe(0);
+  });
+});
+
+describe('tablesMissingFixedLayout', () => {
+  it('flags tables without table-layout:fixed', () => {
+    const html = '<table style="width:100%;"></table><table style="table-layout:fixed;"></table>';
+    expect(tablesMissingFixedLayout(html)).toBe(1);
+  });
+});
+
+describe('hasBrokenImageSrc', () => {
+  it('detects data URI and image.png placeholder src', () => {
+    expect(hasBrokenImageSrc('<img src="data:image/png;base64,xx">')).toBe(true);
+    expect(hasBrokenImageSrc('<img src="image.png">')).toBe(true);
+    expect(hasBrokenImageSrc('<img src="https://x/article-images/iu/img1.jpg">')).toBe(false);
+  });
+});
+
+describe('hasPhotoPlaceholder', () => {
+  it('detects 📷 사진 N 삽입 위치 placeholder', () => {
+    expect(hasPhotoPlaceholder('📷 사진 1 삽입 위치')).toBe(true);
+    expect(hasPhotoPlaceholder('정상 본문')).toBe(false);
+  });
+});
+
+describe('hasBusinessCardImg', () => {
+  it('detects business-card / agency-card img in body', () => {
+    expect(hasBusinessCardImg('<img src="https://x/agency-card-speaker.png">')).toBe(true);
+    expect(hasBusinessCardImg('<img src="https://x/article-images/iu/img1.jpg">')).toBe(false);
+  });
+});
+
+describe('kakaoUrlIssues', () => {
+  it('flags non-canonical kakao URLs', () => {
+    const r = kakaoUrlIssues('https://open.kakao.com/o/snG6VXti https://open.kakao.com/o/WRONG');
+    expect(r.count).toBe(2);
+    expect(r.bad).toEqual(['https://open.kakao.com/o/WRONG']);
+  });
+});
+
+describe('countHashtags', () => {
+  it('counts # tokens', () => {
+    expect(countHashtags('#가수 #섭외 #공연')).toBe(3);
   });
 });

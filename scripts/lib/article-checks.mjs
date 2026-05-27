@@ -24,3 +24,49 @@ export function countYoutubeIframes(html) {
 export function countRawYoutubeUrls(html) {
   return (html.match(/youtube\.com\/watch\?v=|youtu\.be\//g) || []).length;
 }
+
+// se-text-paragraph 없이 텍스트가 든 bare <p> 개수
+export function findBareParagraphs(html) {
+  const blocks = html.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) || [];
+  return blocks.filter((b) => {
+    if (/se-text-paragraph/.test(b)) return false;        // 정상 SE 단락
+    if (/<img\b/i.test(b)) return false;                   // 이미지 래퍼
+    if (/^<p\b[^>]*>\s*(?:<br\s*\/?>)?\s*<\/p>$/i.test(b)) return false; // 빈 줄
+    if (/id="SE-h/i.test(b)) return false;                 // 대제목
+    const text = b.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+    return text.length > 0;
+  }).length;
+}
+
+// table-layout:fixed 없는 <table> 개수
+export function tablesMissingFixedLayout(html) {
+  const tables = html.match(/<table\b[^>]*>/gi) || [];
+  return tables.filter((t) => !/table-layout\s*:\s*fixed/i.test(t)).length;
+}
+
+// data: URI 또는 image.png 류 깨지는 src 존재 여부
+export function hasBrokenImageSrc(html) {
+  return /<img\b[^>]*\bsrc\s*=\s*["'](?:data:image\/|[^"']*\bimage\.png\b)/i.test(html);
+}
+
+// 사진 placeholder 존재 여부
+export function hasPhotoPlaceholder(html) {
+  return /📷\s*사진\s*\d+\s*삽입\s*위치/.test(html);
+}
+
+// 본문 명함 이미지 존재 여부
+export function hasBusinessCardImg(html) {
+  return /<img\b[^>]*(?:agency-card|business-card)[^>]*>/i.test(html);
+}
+
+// 카카오 URL 점검 — { count, bad[] }
+export function kakaoUrlIssues(html) {
+  const all = html.match(/https:\/\/open\.kakao\.com\/o\/[A-Za-z0-9]+/g) || [];
+  const bad = all.filter((u) => u !== KAKAO_URL);
+  return { count: all.length, bad };
+}
+
+// 해시태그 개수
+export function countHashtags(html) {
+  return (html.match(/#[^\s#<]+/g) || []).length;
+}
