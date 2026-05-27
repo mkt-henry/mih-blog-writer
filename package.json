@@ -18,7 +18,8 @@
     "secrets:pull": "node scripts/secrets-pull.js",
     "collect:images": "node scripts/collect-instagram-images.js",
     "legacy:build-manifest": "node scripts/build-manifest.js",
-    "legacy:dev-server": "node scripts/dev-server.js"
+    "legacy:dev-server": "node scripts/dev-server.js",
+    "check:article": "node scripts/check-article.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
