@@ -87,16 +87,16 @@ description: 네이버 스마트에디터(SE3) HTML 복붙용 원고 작성 스�
 ## 6. 유튜브 영상 삽입
 
 모든 원고의 유튜브 영상 URL은 **항상 정확히 2개**를 넣는다.
-네이버 복붙 안정성을 위해 iframe/embed 태그는 쓰지 않고, 실제 존재를 확인한 `watch?v=` 형식의 raw URL만 단독 줄로 배치한다.
+실제 존재를 확인한 영상을 iframe 임베드(`youtube.com/embed/<VIDEO_ID>`)로 정확히 2개 배치한다. raw `watch?v=` URL은 쓰지 않는다.
 단, 블로그 본문에는 `iframe`, `raw URL`, `스마트에디터 호환`, `원본 URL만 남깁니다` 같은 발행자용 기술 설명을 쓰지 않는다.
 0개, 1개, 3개 이상은 검수 실패로 본다.
 
 ```html
-https://www.youtube.com/watch?v=VIDEO_ID_1
+<iframe width="544" height="306" src="https://www.youtube.com/embed/VIDEO_ID_1" frameborder="0" allowfullscreen></iframe>
 
 <p><br></p>
 
-https://www.youtube.com/watch?v=VIDEO_ID_2
+<iframe width="544" height="306" src="https://www.youtube.com/embed/VIDEO_ID_2" frameborder="0" allowfullscreen></iframe>
 ```
 
 ---

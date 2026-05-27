@@ -153,7 +153,7 @@ output/YYYY-MM-DD/{agency_slug}/[slug]_[원고제목].html
 5. **섭외 프로세스 단계별 안내** — 3~4단계 (초기 문의 → 조건·출연료 협의 → 계약 및 공연 준비 → 당일 진행). "출연료·계약·일정 조율" 어휘를 이 섹션에서 자연스럽게 포함해 절차적 의도 쿼리를 커버한다.
 6. **섭외 전 확인 포인트 3가지** — 왼쪽 세로선 박스 ①②③
 7. **FAQ 3개** — Q&A 형식. Q1 비용(출연료), Q2 적합 행사 유형, Q3 신청 절차. AI 검색 인용률을 높이는 핵심 섹션.
-8. **무대 영상** — 유튜브 URL 항상 정확히 2개 (raw URL, iframe 아님)
+8. **무대 영상** — 유튜브 iframe 임베드 항상 정확히 2개
 9. **마무리 CTA** — 카카오톡 오픈채팅 링크 (명함은 모아보기가 자동 합성하므로 본문에 넣지 않는다)
 10. **해시태그 단락** — 20개 이상
 11. **이미지 삽입 및 출처 표기** — 본문 이미지 `<img>` 4개 + 이미지 출처 표기 4개 고정
@@ -199,12 +199,12 @@ output/YYYY-MM-DD/{agency_slug}/[slug]_[원고제목].html
 <p align="center"><img src="[공식 SNS/소속사/공식 프로필 이미지 URL 또는 업로드 후 Vercel Blob URL]" width="544"></p>
 <p class="se-text-paragraph se-text-paragraph-align-center" style="" id="SE-srcN"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">출처 - [아티스트명] 공식 SNS</span></p>
 
-<!-- 유튜브 — raw URL만 붙이기 (iframe 사용 시 504 케이스 많음) -->
-https://www.youtube.com/watch?v=VIDEO_ID_1
+<!-- 유튜브 — iframe 임베드 (정확히 2개). raw URL 금지. -->
+<iframe width="544" height="306" src="https://www.youtube.com/embed/VIDEO_ID_1" frameborder="0" allowfullscreen></iframe>
 
 <p><br></p>
 
-https://www.youtube.com/watch?v=VIDEO_ID_2
+<iframe width="544" height="306" src="https://www.youtube.com/embed/VIDEO_ID_2" frameborder="0" allowfullscreen></iframe>
 
 <!-- 해시태그 단락 (좌측 정렬, 회색, 13px) -->
 <p class="se-text-paragraph se-text-paragraph-align- " style="" id="SE-hashtag"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">#태그1 #태그2 ...</span></p>
@@ -354,7 +354,7 @@ console.log('sentence spacing applied');
 - [ ] 보도자료·기사·방송 캡처·팬 계정 이미지가 없음
 - [ ] 이미지 4개가 모두 CTA 이전 본문 안에 배치됨
 - [ ] 이미지 업로드 스크립트 실행 후 본문 이미지 src가 Vercel Blob URL로 교체됨
-- [ ] 유튜브 URL 정확히 2개 (raw URL)
+- [ ] 유튜브 iframe 임베드 정확히 2개 (raw URL 금지)
 - [ ] 따옴표 인용구 1~2회 (도입부/핵심 메시지/마무리)
 - [ ] 명함 `<img>` 태그 본문에 없음
 - [ ] 카카오 URL이 `https://open.kakao.com/o/snG6VXti`
