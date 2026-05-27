@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { KanbanGroups, KanbanKpis, ArticleRow } from "@/lib/articles";
 import { findNeighbor } from "@/lib/articles";
-import TopBar from "./TopBar";
+import type { UserPermissions } from "@/lib/permissions";
 import KpiStrip from "./KpiStrip";
 import FilterBar, { type FilterChip } from "./FilterBar";
 import KanbanBoard from "./KanbanBoard";
@@ -14,6 +14,7 @@ type Props = {
   groups: KanbanGroups;
   kpis: KanbanKpis;
   generatedAt: string;
+  perms: UserPermissions;
 };
 
 const KST_OFFSET_MS = 9 * 3600_000;
@@ -23,7 +24,7 @@ function isToday(iso: string): boolean {
   return t >= midnight;
 }
 
-export default function DashboardClient({ groups, kpis, generatedAt }: Props) {
+export default function DashboardClient({ groups, kpis, generatedAt, perms }: Props) {
   const router = useRouter();
   const params = useSearchParams();
   const openId = params.get("article");
@@ -77,11 +78,10 @@ export default function DashboardClient({ groups, kpis, generatedAt }: Props) {
 
   return (
     <div className="min-h-screen bg-[color:var(--color-muted)] text-[color:var(--color-text)]">
-      <TopBar generatedAt={generatedAt} />
       <KpiStrip kpis={kpis} />
       <FilterBar search={search} onSearch={setSearch} chip={chip} onChip={setChip} />
-      <KanbanBoard groups={filteredGroups} onOpen={openModal} />
-      <ArticleModal articleId={openId} onClose={closeModal} onNeighbor={navigate} />
+      <KanbanBoard groups={filteredGroups} onOpen={openModal} perms={perms} />
+      <ArticleModal articleId={openId} onClose={closeModal} onNeighbor={navigate} perms={perms} />
     </div>
   );
 }

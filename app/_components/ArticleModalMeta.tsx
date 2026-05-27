@@ -12,9 +12,10 @@ import type { ArticleRow } from "@/lib/articles";
 type Props = {
   article: ArticleRow;
   onUpdated: (next: ArticleRow) => void;
+  editable: boolean;
 };
 
-export default function ArticleModalMeta({ article, onUpdated }: Props) {
+export default function ArticleModalMeta({ article, onUpdated, editable }: Props) {
   const [instagram, setInstagram] = useState(article.instagram_url ?? "");
   const [category, setCategory] = useState(article.category ?? "");
   const [notes, setNotes] = useState(article.notes ?? "");
@@ -93,7 +94,7 @@ export default function ArticleModalMeta({ article, onUpdated }: Props) {
           {article.published_source === "manual" && <span className="text-[9px] text-orange-700">수동</span>}
         </Label>
         <div className="flex items-center gap-2">
-          <Switch checked={isPublished} disabled={pending} onCheckedChange={togglePublished} />
+          <Switch checked={isPublished} disabled={pending || !editable} onCheckedChange={togglePublished} />
           <span className="text-xs">{isPublished ? "발행됨" : "미발행"}</span>
         </div>
         {isPublished && (
@@ -102,6 +103,7 @@ export default function ArticleModalMeta({ article, onUpdated }: Props) {
             onChange={(e) => setPublishedUrl(e.target.value)}
             placeholder="발행 URL (선택)"
             className="text-xs"
+            disabled={!editable}
           />
         )}
       </section>
@@ -113,6 +115,7 @@ export default function ArticleModalMeta({ article, onUpdated }: Props) {
           onChange={(e) => setInstagram(e.target.value)}
           placeholder="https://www.instagram.com/..."
           className={`text-xs ${(article.instagram_url ?? "") !== instagram ? "border-blue-500 bg-blue-50/30" : ""}`}
+          disabled={!editable}
         />
       </section>
 
@@ -123,6 +126,7 @@ export default function ArticleModalMeta({ article, onUpdated }: Props) {
           onChange={(e) => setCategory(e.target.value)}
           placeholder="인물 · 강연 등"
           className={`text-xs ${(article.category ?? "") !== category ? "border-blue-500 bg-blue-50/30" : ""}`}
+          disabled={!editable}
         />
       </section>
 
@@ -133,12 +137,15 @@ export default function ArticleModalMeta({ article, onUpdated }: Props) {
           onChange={(e) => setNotes(e.target.value)}
           rows={4}
           className={`text-xs ${(article.notes ?? "") !== notes ? "border-blue-500 bg-blue-50/30" : ""}`}
+          disabled={!editable}
         />
       </section>
 
-      <Button onClick={saveMeta} disabled={!dirty || pending} className="w-full" size="sm">
-        {pending ? "저장 중…" : dirty ? "저장" : "변경 없음"}
-      </Button>
+      {editable && (
+        <Button onClick={saveMeta} disabled={!dirty || pending} className="w-full" size="sm">
+          {pending ? "저장 중…" : dirty ? "저장" : "변경 없음"}
+        </Button>
+      )}
     </div>
   );
 }
