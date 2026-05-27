@@ -70,3 +70,82 @@ export function kakaoUrlIssues(html) {
 export function countHashtags(html) {
   return (html.match(/#[^\s#<]+/g) || []).length;
 }
+
+// 제목 점검 — [이름 섭외] 대괄호 + 30~60자
+export function checkTitle(title) {
+  const t = (title || '').trim();
+  const hasBracket = /^\[[^\]]*섭외\]/.test(t);
+  const len = [...t].length;
+  return { ok: hasBracket && len >= 30 && len <= 60, hasBracket, len };
+}
+
+// 본문 텍스트 글자수 (태그/공백 제거)
+export function bodyTextLength(html) {
+  const text = html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&[a-z]+;/g, ' ');
+  return text.replace(/\s/g, '').length;
+}
+
+// 키워드 등장 횟수
+export function countKeyword(html, keyword) {
+  if (!keyword) return 0;
+  const text = html.replace(/<[^>]+>/g, ' ');
+  const esc = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return (text.match(new RegExp(esc, 'g')) || []).length;
+}
+
+// 인물 원고 종합 검증 → findings[] ({ level:'fail'|'warn', id, message })
+export function runPersonChecks(html, { title } = {}) {
+  const findings = [];
+  const fail = (id, message) => findings.push({ level: 'fail', id, message });
+  const warn = (id, message) => findings.push({ level: 'warn', id, message });
+
+  const imgs = countBodyImages(html);
+  if (imgs !== 4) fail('body_images', `본문 이미지 ${imgs}개 (정확히 4개 필요)`);
+
+  const srcs = countSourceCaptions(html);
+  if (srcs !== 4) fail('source_captions', `출처 표기 ${srcs}개 (정확히 4개 필요)`);
+
+  const yt = countYoutubeIframes(html);
+  if (yt !== 2) fail('youtube_iframe', `유튜브 iframe ${yt}개 (정확히 2개 필요)`);
+  const rawYt = countRawYoutubeUrls(html);
+  if (rawYt > 0) fail('youtube_raw', `raw 유튜브 URL ${rawYt}개 발견 (iframe만 허용)`);
+
+  const bareP = findBareParagraphs(html);
+  if (bareP > 0) fail('bare_paragraph', `se-text-paragraph 없는 본문 <p> ${bareP}개`);
+
+  const badTables = tablesMissingFixedLayout(html);
+  if (badTables > 0) fail('table_layout', `table-layout:fixed 없는 <table> ${badTables}개`);
+
+  if (hasBrokenImageSrc(html)) fail('broken_src', 'data: 또는 image.png 류 깨지는 img src 발견');
+  if (hasPhotoPlaceholder(html)) fail('placeholder', '📷 사진 삽입 위치 placeholder 발견');
+  if (hasBusinessCardImg(html)) fail('business_card', '본문에 명함 이미지(agency-card) 발견');
+
+  const kakao = kakaoUrlIssues(html);
+  if (kakao.bad.length > 0) fail('kakao_url', `허용되지 않은 카카오 URL: ${kakao.bad.join(', ')}`);
+
+  const tags = countHashtags(html);
+  if (tags < 20) fail('hashtags', `해시태그 ${tags}개 (20개 이상 필요)`);
+
+  if (title !== undefined) {
+    const tc = checkTitle(title);
+    if (!tc.ok) fail('title', `제목 형식/길이 위반 ([이름 섭외] + 30~60자, 현재 ${tc.len}자)`);
+  }
+
+  // 경고 (비차단)
+  const len = bodyTextLength(html);
+  if (len < 2000 || len > 3000) warn('length', `본문 ${len}자 (권장 2,000~3,000)`);
+
+  if (title) {
+    const m = title.match(/^\[([^\]]*?)\s*섭외\]/);
+    const keyword = m ? `${m[1].trim()} 섭외` : null;
+    if (keyword) {
+      const n = countKeyword(html, keyword);
+      if (n < 10 || n > 20) warn('keyword_density', `메인 키워드 "${keyword}" ${n}회 (권장 10~20)`);
+    }
+  }
+
+  return findings;
+}

@@ -118,3 +118,44 @@ describe('countHashtags', () => {
     expect(countHashtags('#가수 #섭외 #공연')).toBe(3);
   });
 });
+
+import {
+  checkTitle,
+  bodyTextLength,
+  countKeyword,
+  runPersonChecks,
+} from '@/scripts/lib/article-checks.mjs';
+
+describe('checkTitle', () => {
+  it('accepts [이름 섭외] 30~60자 title', () => {
+    const t = '[아이유 섭외] 청량 보이스의 국민 가수, 대학 축제 및 브랜드 행사 섭외';
+    expect(checkTitle(t).ok).toBe(true);
+  });
+  it('rejects title without bracket', () => {
+    expect(checkTitle('아이유 섭외 대학 축제').ok).toBe(false);
+  });
+  it('rejects too-short title', () => {
+    expect(checkTitle('[아이유 섭외]').ok).toBe(false);
+  });
+});
+
+describe('bodyTextLength', () => {
+  it('counts non-space chars of stripped text', () => {
+    expect(bodyTextLength('<p>가나다 라마</p>')).toBe(5);
+  });
+});
+
+describe('countKeyword', () => {
+  it('counts keyword occurrences', () => {
+    expect(countKeyword('아이유 섭외는 좋다. 아이유 섭외 또.', '아이유 섭외')).toBe(2);
+  });
+});
+
+describe('runPersonChecks', () => {
+  it('returns a fail finding when images != 4', () => {
+    const html = '<p class="se-text-paragraph"><span>본문</span></p>';
+    const findings = runPersonChecks(html, { title: '[아이유 섭외] 청량 보이스의 국민 가수, 대학 축제 섭외 행사' });
+    const imgFinding = findings.find((f) => f.id === 'body_images');
+    expect(imgFinding.level).toBe('fail');
+  });
+});
