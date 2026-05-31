@@ -1,7 +1,7 @@
 // 브라우저 clipboard 헬퍼.
 //
 // - copyPlain(text): 일반 텍스트 복사. Clipboard API 실패 시 execCommand fallback.
-// - copyRichHtml(html): text/html + text/plain 동시 쓰기 → 네이버 글쓰기 등에 Ctrl+V 시 서식 보존.
+// - copyRichHtml(html): contentEditable DOM 노드에 렌더링 후 execCommand("copy") → 네이버 글쓰기 Ctrl+V 시 서식·이미지 보존.
 
 export async function copyPlain(text: string): Promise<void> {
   try {
@@ -34,30 +34,24 @@ function stripHtml(html: string): string {
 }
 
 export async function copyRichHtml(html: string): Promise<void> {
-  const plain = stripHtml(html);
-
-  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        "text/html": new Blob([html], { type: "text/html" }),
-        "text/plain": new Blob([plain], { type: "text/plain" }),
-      }),
-    ]);
-    return;
-  }
-
+  // Chrome 127+ sanitizes text/html written via ClipboardItem (strips styles, images).
+  // execCommand("copy") on a contentEditable DOM node bypasses sanitization and
+  // preserves full rich-text structure when pasted into Naver Smart Editor.
   const div = document.createElement("div");
   div.contentEditable = "true";
   div.innerHTML = html;
-  div.style.position = "fixed";
-  div.style.opacity = "0";
+  div.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;";
   document.body.appendChild(div);
-  const range = document.createRange();
-  range.selectNodeContents(div);
-  const sel = window.getSelection();
-  sel?.removeAllRanges();
-  sel?.addRange(range);
-  document.execCommand("copy");
-  sel?.removeAllRanges();
-  document.body.removeChild(div);
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(div);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    const ok = document.execCommand("copy");
+    sel?.removeAllRanges();
+    if (!ok) throw new Error("execCommand copy 실패");
+  } finally {
+    document.body.removeChild(div);
+  }
 }
