@@ -40,7 +40,8 @@ export async function copyRichHtml(html: string): Promise<void> {
   const div = document.createElement("div");
   div.contentEditable = "true";
   div.innerHTML = html;
-  div.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;";
+  // off-screen이지만 overflow 제한 없이 정상 렌더링 → 이미지·표 포함 rich copy 가능
+  div.style.cssText = "position:fixed;left:-9999px;top:0;width:800px;pointer-events:none;";
   document.body.appendChild(div);
   try {
     const range = document.createRange();
