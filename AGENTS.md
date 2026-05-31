@@ -62,11 +62,17 @@ mih-blog-writer/
      ```bash
      npm run publish "output/2026-05-21/mih_agency/박혜신_[박혜신 섭외] ....html"
      ```
+   - **인물 원고는 공식 인스타그램 URL을 함께 올린다** — `--instagram <url>`(또는 `--ig <url>`) 플래그를 붙이면 본문과 메타를 한 번에 등록한다. 이 단계에서 처리하면 9번 수동 등록을 건너뛸 수 있다.
+     ```bash
+     npm run publish "output/2026-05-30/mih_casting/폴킴_....html" -- --instagram https://www.instagram.com/paulkim.official/
+     ```
+     - npm 경유 시 플래그 앞에 `--` 를 한 번 넣어야 스크립트로 전달된다.
+     - `--instagram` 을 생략하면 기존 `instagram_url` 값은 그대로 보존된다(merge-duplicates upsert는 전달한 컬럼만 갱신).
    - 미업로드분 일괄: `npm run upload`
-     - `output/` 안의 새 원고를 자동 감지해 upsert. `--dry` 옵션으로 사전 확인 가능 (`npm run upload:dry`).
+     - `output/` 안의 새 원고를 자동 감지해 upsert. `--dry` 옵션으로 사전 확인 가능 (`npm run upload:dry`). 단, 일괄 업로드는 인스타그램 URL을 등록하지 않으므로 인물 원고는 단건 `--instagram` 방식을 권장한다.
 
    같은 (publish_date, agency, slug) 키로 다시 실행하면 본문이 갱신된다(upsert). 이걸 안 돌리면 배포 사이트에 새 원고가 안 보인다.
-9. **메타 등록** — 인물 원고이면 배포 사이트(`/`)에서 해당 원고 카드를 클릭해 모달을 열고, 좌측 메타 패널에서 공식 인스타그램 URL을 입력한다. 카테고리/노트는 선택. 카테고리 원고는 건너뜀.
+9. **메타 등록(인스타그램 URL)** — 인물 원고는 8번에서 `--instagram` 플래그로 함께 등록하는 것이 기본이다. 누락했거나 카테고리·노트를 추가로 넣으려면 배포 사이트(`/`)에서 해당 원고 카드를 클릭해 모달을 열고 좌측 메타 패널에서 입력한다. 카테고리 원고는 건너뜀.
 10. 글자수와 메인 키워드 등장 횟수를 사용자에게 리포트한다.
 
 ---
@@ -364,7 +370,8 @@ console.log('sentence spacing applied');
 - [ ] `📷 사진 N 삽입 위치` placeholder 없음
 - [ ] 일반 `<p>` 태그 본문 없음
 - [ ] `output/YYYY-MM-DD/{agency_slug}/` 경로에 저장됨
-- [ ] `npm run publish "<html-path>"` 또는 `npm run upload` 실행해 Supabase에 업로드함
+- [ ] `npm run publish "<html-path>" -- --instagram <공식 인스타 URL>` 실행해 본문 + 인스타그램 URL을 Supabase에 함께 업로드함 (인물 원고)
+- [ ] 공식 인스타그램 URL이 `articles.instagram_url`에 저장됐는지 확인함
 
 ---
 

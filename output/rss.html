@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>발행 현황 · MIH</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Arial, sans-serif;
+    color: #222;
+    background: #f5f6f8;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: 100vh;
+  }
+
+  /* ---- 사이드바 ---- */
+  aside {
+    background: #fff;
+    border-right: 1px solid #e3e5ea;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .sidebar-top {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px 10px;
+    gap: 8px;
+  }
+  aside h1 { font-size: 16px; margin: 0; flex: 1; }
+  .back-link {
+    font-size: 11px;
+    color: #888;
+    text-decoration: none;
+    padding: 3px 8px;
+    border: 1px solid #d8dbe1;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .back-link:hover { background: #f4f6f9; }
+
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 16px 12px;
+    border-bottom: 1px solid #eef0f3;
+  }
+  .tabs button {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid #d8dbe1;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #444;
+  }
+  .tabs button.active {
+    background: #1565C0;
+    color: #fff;
+    border-color: #1565C0;
+  }
+  .tab-ct { color: #999; font-weight: 500; }
+  .tabs button.active .tab-ct { color: #fff; opacity: 0.85; }
+
+  .sidebar-stats {
+    padding: 10px 20px;
+    border-bottom: 1px solid #eef0f3;
+    font-size: 11px;
+    color: #888;
+    line-height: 1.8;
+  }
+  .sidebar-stats strong { color: #333; }
+
+  .date-group-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0 16px;
+  }
+  .date-group-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 20px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.1s;
+  }
+  .date-group-item:hover { background: #f4f6f9; }
+  .date-group-item.active { background: #e8f0fe; border-left-color: #1565C0; }
+  .date-group-item .dg-date { font-size: 12px; font-weight: 600; color: #222; flex: 1; }
+  .date-group-item .dg-ct {
+    font-size: 11px;
+    color: #999;
+    background: #f0f2f5;
+    border-radius: 10px;
+    padding: 1px 7px;
+  }
+  .date-group-item.active .dg-ct { background: #c5d5ef; color: #1565C0; }
+
+  /* ---- 메인 ---- */
+  main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .topbar {
+    padding: 12px 24px;
+    border-bottom: 1px solid #e3e5ea;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .topbar h2 { font-size: 14px; margin: 0; flex: 1; }
+  .topbar .summary { font-size: 12px; color: #888; }
+
+  .article-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0 32px;
+  }
+
+  .date-section { }
+  .date-header {
+    position: sticky;
+    top: 0;
+    background: #f5f6f8;
+    padding: 10px 24px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #555;
+    border-bottom: 1px solid #e8eaee;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .date-header .dh-ct {
+    font-size: 11px;
+    font-weight: 400;
+    color: #999;
+  }
+
+  .article-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 24px;
+    border-bottom: 1px solid #f0f2f5;
+    transition: background 0.1s;
+  }
+  .article-row:hover { background: #f7f9fd; }
+  .agency-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .agency-badge.mih_speaker { background: #e3f2fd; color: #0d47a1; }
+  .agency-badge.mih_casting { background: #f3e5f5; color: #6a1b9a; }
+  .agency-badge.mih_agency  { background: #e8f5e9; color: #1b5e20; }
+
+  .article-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 52px;
+  }
+  .article-title-link {
+    font-size: 12px;
+    color: #1565C0;
+    text-decoration: none;
+    line-height: 1.5;
+    flex: 1;
+    min-width: 0;
+  }
+  .article-title-link:hover { text-decoration: underline; }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: #999;
+    font-size: 14px;
+  }
+  .error-msg {
+    padding: 32px 24px;
+    color: #c62828;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="sidebar-top">
+    <h1>발행 현황</h1>
+    <a class="back-link" href="index.html">모아보기</a>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="sidebar-stats" id="sidebar-stats">로딩 중…</div>
+  <div class="date-group-list" id="date-group-list"></div>
+</aside>
+<main>
+  <div class="topbar">
+    <h2 id="topbar-title">전체 발행 원고</h2>
+    <span class="summary" id="topbar-summary"></span>
+  </div>
+  <div class="article-list" id="article-list">
+    <div class="loading">Supabase에서 데이터를 가져오는 중…</div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const SUPABASE_URL = 'https://djtmniygzdbavxwrppxb.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqdG1uaXlnemRiYXZ4d3JwcHhiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODE0NzA1NCwiZXhwIjoyMDkzNzIzMDU0fQ.rWYTdBv-bZCoB0zACiLYb7iVdrxW1yUEU0eUvqpuAPY';
+
+  const AGENCIES = {
+    mih_speaker: 'speaker',
+    mih_casting: 'casting',
+    mih_agency:  'agency',
+  };
+
+  const tabsEl       = document.getElementById('tabs');
+  const statsEl      = document.getElementById('sidebar-stats');
+  const dateListEl   = document.getElementById('date-group-list');
+  const articleListEl= document.getElementById('article-list');
+  const topbarTitle  = document.getElementById('topbar-title');
+  const topbarSummary= document.getElementById('topbar-summary');
+
+  let allArticles = [];
+  let currentAgency = 'all';
+  let currentDate   = null;   // "YYYY-MM-DD" or null
+
+  // ---- fetch ----
+  async function fetchArticles() {
+    const url = new URL(`${SUPABASE_URL}/rest/v1/articles`);
+    url.searchParams.set('select', 'person_name,published_at,title,published_url,agency');
+    url.searchParams.set('published_at', 'not.is.null');
+    url.searchParams.set('published_url', 'not.is.null');
+    url.searchParams.set('order', 'published_at.desc');
+    url.searchParams.set('limit', '500');
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+      },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  function toKSTDate(isoStr) {
+    // published_at is stored in UTC; convert to KST date string
+    const d = new Date(isoStr);
+    const kst = new Date(d.getTime() + 9 * 3600000);
+    const y = kst.getUTCFullYear();
+    const m = String(kst.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(kst.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function shortDate(isoDate) {
+    // "2026-05-23" → "05.23"
+    return isoDate.slice(5).replace('-', '.');
+  }
+
+  // ---- filter ----
+  function filtered() {
+    return allArticles.filter(a => {
+      if (currentAgency !== 'all' && a.agency !== currentAgency) return false;
+      if (currentDate && a._date !== currentDate) return false;
+      return true;
+    });
+  }
+
+  // ---- render sidebar date list ----
+  function renderDateList() {
+    const src = currentAgency === 'all'
+      ? allArticles
+      : allArticles.filter(a => a.agency === currentAgency);
+
+    // group by date
+    const map = {};
+    for (const a of src) {
+      map[a._date] = (map[a._date] || 0) + 1;
+    }
+    const dates = Object.keys(map).sort((a, b) => b.localeCompare(a));
+
+    dateListEl.innerHTML = '';
+    dates.forEach(date => {
+      const el = document.createElement('div');
+      el.className = 'date-group-item' + (currentDate === date ? ' active' : '');
+      el.innerHTML = `<span class="dg-date">${shortDate(date)}</span><span class="dg-ct">${map[date]}</span>`;
+      el.addEventListener('click', () => {
+        currentDate = currentDate === date ? null : date;
+        renderAll();
+      });
+      dateListEl.appendChild(el);
+    });
+  }
+
+  // ---- render tabs ----
+  function renderTabs() {
+    tabsEl.innerHTML = '';
+    const agencies = [['all', '전체'], ...Object.keys(AGENCIES).map(k => [k, k])];
+    agencies.forEach(([slug, label]) => {
+      const ct = slug === 'all'
+        ? allArticles.length
+        : allArticles.filter(a => a.agency === slug).length;
+      const btn = document.createElement('button');
+      btn.className = currentAgency === slug ? 'active' : '';
+      btn.innerHTML = `${label} <span class="tab-ct">(${ct})</span>`;
+      btn.addEventListener('click', () => {
+        currentAgency = slug;
+        currentDate = null;
+        renderAll();
+      });
+      tabsEl.appendChild(btn);
+    });
+  }
+
+  // ---- render main list ----
+  function renderList() {
+    const items = filtered();
+
+    if (items.length === 0) {
+      articleListEl.innerHTML = '<div class="loading" style="color:#bbb">해당하는 발행 원고가 없습니다.</div>';
+      topbarSummary.textContent = '';
+      return;
+    }
+
+    // group by date
+    const byDate = {};
+    for (const a of items) {
+      if (!byDate[a._date]) byDate[a._date] = [];
+      byDate[a._date].push(a);
+    }
+    const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+    // topbar
+    const agencyLabel = currentAgency === 'all' ? '전체' : currentAgency;
+    const dateLabel   = currentDate ? ` · ${shortDate(currentDate)}` : '';
+    topbarTitle.textContent = `${agencyLabel} 발행 원고${dateLabel}`;
+    topbarSummary.textContent = `총 ${items.length}건`;
+
+    articleListEl.innerHTML = '';
+    dates.forEach(date => {
+      const section = document.createElement('div');
+      section.className = 'date-section';
+
+      const header = document.createElement('div');
+      header.className = 'date-header';
+      header.innerHTML = `${date.slice(2).replace(/-/g, '.')} <span class="dh-ct">${byDate[date].length}건</span>`;
+      section.appendChild(header);
+
+      byDate[date].forEach(a => {
+        const row = document.createElement('div');
+        row.className = 'article-row';
+
+        const badge = document.createElement('span');
+        badge.className = `agency-badge ${a.agency}`;
+        badge.textContent = AGENCIES[a.agency] || a.agency;
+
+        const name = document.createElement('span');
+        name.className = 'article-name';
+        name.textContent = a.person_name;
+
+        const link = document.createElement('a');
+        link.className = 'article-title-link';
+        link.href = a.published_url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.textContent = a.title;
+
+        row.appendChild(badge);
+        row.appendChild(name);
+        row.appendChild(link);
+        section.appendChild(row);
+      });
+
+      articleListEl.appendChild(section);
+    });
+  }
+
+  // ---- render stats ----
+  function renderStats() {
+    const src = currentAgency === 'all'
+      ? allArticles
+      : allArticles.filter(a => a.agency === currentAgency);
+    if (src.length === 0) { statsEl.textContent = ''; return; }
+
+    const dates = src.map(a => a._date).sort();
+    const first = shortDate(dates[0]);
+    const last  = shortDate(dates[dates.length - 1]);
+
+    const byAgency = {};
+    for (const a of allArticles) {
+      byAgency[a.agency] = (byAgency[a.agency] || 0) + 1;
+    }
+
+    statsEl.innerHTML =
+      `<strong>총 ${src.length}건</strong> &nbsp;·&nbsp; ${first} ~ ${last}<br>` +
+      Object.entries(byAgency)
+        .map(([slug, n]) => `${slug.replace('mih_', '')}: ${n}`)
+        .join(' &nbsp;·&nbsp; ');
+  }
+
+  function renderAll() {
+    renderTabs();
+    renderStats();
+    renderDateList();
+    renderList();
+  }
+
+  // ---- init ----
+  fetchArticles().then(rows => {
+    allArticles = rows.map(r => ({
+      ...r,
+      _date: toKSTDate(r.published_at),
+    }));
+    renderAll();
+  }).catch(err => {
+    articleListEl.innerHTML = `<div class="error-msg">데이터 로드 실패: ${err.message}</div>`;
+    statsEl.textContent = '오류';
+  });
+})();
+</script>
+</body>
+</html>
