@@ -34,16 +34,18 @@ function stripHtml(html: string): string {
 }
 
 export async function copyRichHtml(html: string): Promise<void> {
-  // Chrome 127+ sanitizes text/html written via ClipboardItem (strips styles, images).
-  // execCommand("copy") on a contentEditable DOM node bypasses sanitization and
-  // preserves full rich-text structure when pasted into Naver Smart Editor.
+  const plain = stripHtml(html);
+
+  // 1) execCommand approach: bypasses Chrome 127+ ClipboardItem sanitization.
+  //    Must call document.body.focus() first — if the preview <iframe> has focus,
+  //    execCommand("copy") on the parent document writes nothing to the clipboard.
   const div = document.createElement("div");
   div.contentEditable = "true";
   div.innerHTML = html;
-  // off-screen이지만 overflow 제한 없이 정상 렌더링 → 이미지·표 포함 rich copy 가능
   div.style.cssText = "position:fixed;left:-9999px;top:0;width:800px;pointer-events:none;";
   document.body.appendChild(div);
   try {
+    document.body.focus();
     const range = document.createRange();
     range.selectNodeContents(div);
     const sel = window.getSelection();
@@ -51,8 +53,21 @@ export async function copyRichHtml(html: string): Promise<void> {
     sel?.addRange(range);
     const ok = document.execCommand("copy");
     sel?.removeAllRanges();
-    if (!ok) throw new Error("execCommand copy 실패");
+    if (ok) return;
   } finally {
     document.body.removeChild(div);
   }
+
+  // 2) ClipboardItem fallback (focus-independent; may be sanitized but beats plain text)
+  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([plain], { type: "text/plain" }),
+      }),
+    ]);
+    return;
+  }
+
+  throw new Error("클립보드 복사를 지원하지 않는 환경입니다.");
 }
