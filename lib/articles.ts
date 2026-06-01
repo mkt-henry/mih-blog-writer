@@ -78,7 +78,7 @@ export function groupArticlesForKanban(articles: ArticleRow[], now = Date.now())
     mih_speaker: empty(),
     mih_casting: empty(),
     mih_agency: empty(),
-    kyh620303: empty(),
+    other: empty(),
   };
 
   for (const a of projected) {

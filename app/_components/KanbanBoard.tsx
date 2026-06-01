@@ -12,14 +12,14 @@ const TAB_LABELS: Record<string, string> = {
   mih_speaker: "스피커",
   mih_casting: "캐스팅",
   mih_agency:  "에이전시",
-  kyh620303:   "kyh620303",
+  other:       "other",
 };
 
 const TAB_COLORS: Record<string, string> = {
   mih_speaker: "var(--color-speaker)",
   mih_casting: "var(--color-casting)",
   mih_agency:  "var(--color-agency)",
-  kyh620303:   "var(--color-kyh620303)",
+  other:       "var(--color-other)",
 };
 
 export default function KanbanBoard({ groups, onOpen, perms }: Props) {

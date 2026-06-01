@@ -28,7 +28,7 @@ export default function NewUserModal({ onClose, onCreated }: Props) {
     mih_speaker: "none",
     mih_casting: "none",
     mih_agency: "none",
-    kyh620303: "none",
+    other: "none",
   });
   const [busy, setBusy] = useState(false);
 

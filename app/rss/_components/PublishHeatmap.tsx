@@ -15,12 +15,12 @@ export default function PublishHeatmap({ daily }: Props) {
   return (
     <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
       {daily.map((d) => {
-        const total = d.mih_speaker + d.mih_casting + d.mih_agency + d.kyh620303;
+        const total = d.mih_speaker + d.mih_casting + d.mih_agency + d.other;
         const cls = intensity(total);
         return (
           <div
             key={d.date}
-            title={`${d.date} · ${total}건 (S:${d.mih_speaker} / C:${d.mih_casting} / A:${d.mih_agency} / K:${d.kyh620303})`}
+            title={`${d.date} · ${total}건 (S:${d.mih_speaker} / C:${d.mih_casting} / A:${d.mih_agency} / O:${d.other})`}
             className={`aspect-square rounded text-[9px] flex items-center justify-center ${cls} ${total >= 5 ? "text-white" : "text-gray-600"}`}
           >
             {total}

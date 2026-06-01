@@ -55,7 +55,7 @@ export default function DashboardClient({ groups, kpis, generatedAt, perms }: Pr
       mih_speaker: filter(groups.mih_speaker),
       mih_casting: filter(groups.mih_casting),
       mih_agency: filter(groups.mih_agency),
-      kyh620303: filter(groups.kyh620303),
+      other: filter(groups.other),
     };
   }, [groups, search, chip]);
 

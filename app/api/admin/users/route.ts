@@ -11,7 +11,7 @@ type Permissions = Partial<Record<AgencySlug, AgencyRole | null>>;
 type PostBody = { username?: string; password?: string; permissions?: Permissions };
 
 function emptyPerms(): Record<AgencySlug, AgencyRole | null> {
-  return { mih_speaker: null, mih_casting: null, mih_agency: null, kyh620303: null };
+  return { mih_speaker: null, mih_casting: null, mih_agency: null, other: null };
 }
 
 export async function GET() {

@@ -43,9 +43,9 @@ const AGENCIES = {
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_agency/business-card.png",
     businessCardWidth: 544,
   },
-  kyh620303: {
-    name: "kyh620303",
-    short: "kyh620303",
+  other: {
+    name: "other",
+    short: "other",
     blogSlug: "kyh620303",
     businessCardImageUrl:
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/kyh620303/business-card.jpg",

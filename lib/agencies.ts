@@ -6,7 +6,7 @@ export type AgencyInfo = {
   businessCardWidth: number;
 };
 
-export type AgencySlug = "mih_speaker" | "mih_casting" | "mih_agency" | "kyh620303";
+export type AgencySlug = "mih_speaker" | "mih_casting" | "mih_agency" | "other";
 
 export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
   mih_speaker: {
@@ -33,9 +33,9 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_agency/business-card.png",
     businessCardWidth: 544,
   },
-  kyh620303: {
-    name: "kyh620303",
-    short: "kyh620303",
+  other: {
+    name: "other",
+    short: "other",
     blogSlug: "kyh620303",
     businessCardImageUrl:
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/kyh620303/business-card.jpg",

@@ -8,13 +8,13 @@ const COLORS = {
   mih_speaker: "#1565C0",
   mih_casting: "#7B1FA2",
   mih_agency: "#2E7D32",
-  kyh620303: "#E65100",
+  other: "#E65100",
 };
 
 export default function AgencyChart({ daily }: Props) {
   if (daily.length === 0) return <div className="text-xs text-gray-400">데이터 없음</div>;
 
-  const max = Math.max(10, ...daily.map((d) => d.mih_speaker + d.mih_casting + d.mih_agency + d.kyh620303));
+  const max = Math.max(10, ...daily.map((d) => d.mih_speaker + d.mih_casting + d.mih_agency + d.other));
   const W = 800;
   const H = 200;
   const PAD = { top: 10, right: 10, bottom: 24, left: 30 };
@@ -37,19 +37,19 @@ export default function AgencyChart({ daily }: Props) {
         {daily.map((d, i) => {
           const x = PAD.left + i * bw + bw * 0.15;
           const w = bw * 0.7;
-          const total = d.mih_speaker + d.mih_casting + d.mih_agency + d.kyh620303;
+          const total = d.mih_speaker + d.mih_casting + d.mih_agency + d.other;
           if (total === 0) return null;
           const speakerH = (d.mih_speaker / max) * innerH;
           const castingH = (d.mih_casting / max) * innerH;
           const agencyH = (d.mih_agency / max) * innerH;
-          const kyhH = (d.kyh620303 / max) * innerH;
+          const otherH = (d.other / max) * innerH;
           const speakerY = PAD.top + innerH - speakerH;
           const castingY = speakerY - castingH;
           const agencyY = castingY - agencyH;
-          const kyhY = agencyY - kyhH;
+          const otherY = agencyY - otherH;
           return (
             <g key={d.date}>
-              <rect x={x} y={kyhY} width={w} height={kyhH} fill={COLORS.kyh620303} />
+              <rect x={x} y={otherY} width={w} height={otherH} fill={COLORS.other} />
               <rect x={x} y={agencyY} width={w} height={agencyH} fill={COLORS.mih_agency} />
               <rect x={x} y={castingY} width={w} height={castingH} fill={COLORS.mih_casting} />
               <rect x={x} y={speakerY} width={w} height={speakerH} fill={COLORS.mih_speaker} />
@@ -64,7 +64,7 @@ export default function AgencyChart({ daily }: Props) {
         })}
       </svg>
       <div className="flex gap-3 text-[10px] text-gray-600 justify-center mt-1">
-        {(["mih_speaker", "mih_casting", "mih_agency", "kyh620303"] as const).map((k) => (
+        {(["mih_speaker", "mih_casting", "mih_agency", "other"] as const).map((k) => (
           <span key={k} className="inline-flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full" style={{ background: COLORS[k] }} />
             {k}
