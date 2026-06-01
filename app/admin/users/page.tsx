@@ -15,7 +15,7 @@ export type AdminUserRow = {
 };
 
 function emptyPerms(): Record<AgencySlug, AgencyRole | null> {
-  return { mih_speaker: null, mih_casting: null, mih_agency: null };
+  return { mih_speaker: null, mih_casting: null, mih_agency: null, kyh620303: null };
 }
 
 export default async function AdminUsersPage() {

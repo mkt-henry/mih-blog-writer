@@ -1,6 +1,6 @@
 import { extractTitleKeyword } from '@/lib/rss-matcher';
 
-export const AGENCY_SLUGS = ['mih_speaker', 'mih_casting', 'mih_agency'] as const;
+export const AGENCY_SLUGS = ['mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303'] as const;
 export type AgencySlug = (typeof AGENCY_SLUGS)[number];
 
 export type RssItem = {

@@ -12,6 +12,7 @@ export type DailyBucket = {
   mih_speaker: number;
   mih_casting: number;
   mih_agency: number;
+  kyh620303: number;
 };
 
 export type AgencyAggregate = {
@@ -50,13 +51,14 @@ export function computeRssStats(input: RssStatsInput): RssStats {
   for (let d = 0; d < dayCount; d++) {
     const ms = range.startMs + d * 86400_000;
     const date = kstDateString(ms);
-    byDate.set(date, { date, mih_speaker: 0, mih_casting: 0, mih_agency: 0 });
+    byDate.set(date, { date, mih_speaker: 0, mih_casting: 0, mih_agency: 0, kyh620303: 0 });
   }
 
   const byAgency: Record<AgencySlug, AgencyAggregate> = {
     mih_speaker: { periodTotal: 0, avgPerDay: 0 },
     mih_casting: { periodTotal: 0, avgPerDay: 0 },
     mih_agency: { periodTotal: 0, avgPerDay: 0 },
+    kyh620303: { periodTotal: 0, avgPerDay: 0 },
   };
 
   let totalPublished = 0;
@@ -77,7 +79,7 @@ export function computeRssStats(input: RssStatsInput): RssStats {
   }
 
   const daily = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
-  const zeroDaysCount = daily.filter((d) => d.mih_speaker + d.mih_casting + d.mih_agency === 0).length;
+  const zeroDaysCount = daily.filter((d) => d.mih_speaker + d.mih_casting + d.mih_agency + d.kyh620303 === 0).length;
   const goalPercent = target > 0 ? Math.round((totalPublished / target) * 100) : 0;
 
   return { totalPublished, goalPercent, zeroDaysCount, unmatchedCount, daily, byAgency };

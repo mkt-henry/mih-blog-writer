@@ -17,7 +17,7 @@ export function isAdminUsername(username: string): boolean {
 }
 
 function emptyAgencies(): UserPermissions["agencies"] {
-  return { mih_speaker: null, mih_casting: null, mih_agency: null };
+  return { mih_speaker: null, mih_casting: null, mih_agency: null, kyh620303: null };
 }
 
 export async function loadPermissions(
@@ -33,6 +33,7 @@ export async function loadPermissions(
         mih_speaker: "editor",
         mih_casting: "editor",
         mih_agency: "editor",
+        kyh620303: "editor",
       },
     };
   }

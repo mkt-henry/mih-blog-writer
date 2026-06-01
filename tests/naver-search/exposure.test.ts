@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { isMihExposed, MIH_BLOG_SLUGS } from '@/lib/naver-search/exposure';
 
 describe('MIH_BLOG_SLUGS', () => {
-  it('contains the three agency slugs', () => {
-    expect(MIH_BLOG_SLUGS).toEqual(['mih_speaker', 'mih_casting', 'mih_agency']);
+  it('contains the four agency slugs', () => {
+    expect(MIH_BLOG_SLUGS).toEqual(['mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303']);
   });
 });
 

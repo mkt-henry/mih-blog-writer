@@ -43,6 +43,14 @@ const AGENCIES = {
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_agency/business-card.png",
     businessCardWidth: 544,
   },
+  kyh620303: {
+    name: "kyh620303",
+    short: "kyh620303",
+    blogSlug: "kyh620303",
+    businessCardImageUrl:
+      "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/kyh620303/business-card.jpg",
+    businessCardWidth: 544,
+  },
 };
 
 const KAKAO_URL = "https://open.kakao.com/o/snG6VXti";

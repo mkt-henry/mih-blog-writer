@@ -165,6 +165,7 @@ describe('findNeighbor (모달 순회)', () => {
       },
       mih_casting: { pool: [mkA('c1', 'mih_casting', 'pool')], today: [], recent: [] },
       mih_agency: { pool: [], today: [], recent: [] },
+      kyh620303: { pool: [], today: [], recent: [] },
     };
   }
 

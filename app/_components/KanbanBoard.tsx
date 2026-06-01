@@ -12,12 +12,14 @@ const TAB_LABELS: Record<string, string> = {
   mih_speaker: "스피커",
   mih_casting: "캐스팅",
   mih_agency:  "에이전시",
+  kyh620303:   "kyh620303",
 };
 
 const TAB_COLORS: Record<string, string> = {
   mih_speaker: "var(--color-speaker)",
   mih_casting: "var(--color-casting)",
   mih_agency:  "var(--color-agency)",
+  kyh620303:   "var(--color-kyh620303)",
 };
 
 export default function KanbanBoard({ groups, onOpen, perms }: Props) {
@@ -67,8 +69,11 @@ export default function KanbanBoard({ groups, onOpen, perms }: Props) {
         </div>
       </div>
 
-      {/* ── 데스크톱: 3열 그리드 ── */}
-      <div className="hidden md:grid grid-cols-3 gap-3 p-4">
+      {/* ── 데스크톱: agency 수에 맞춘 N열 그리드 ── */}
+      <div
+        className="hidden md:grid gap-3 p-4"
+        style={{ gridTemplateColumns: `repeat(${slugs.length}, minmax(0, 1fr))` }}
+      >
         {slugs.map((slug) => (
           <KanbanColumn key={slug} agency={slug} agencyInfo={AGENCIES[slug]} group={groups[slug]} onOpen={onOpen} />
         ))}

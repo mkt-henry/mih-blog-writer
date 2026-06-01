@@ -17,6 +17,7 @@ const AGENCIES = {
   mih_speaker: { label: "스피커", color: 0x1565c0 },
   mih_casting: { label: "캐스팅", color: 0x7b1fa2 },
   mih_agency:  { label: "에이전시", color: 0x2e7d32 },
+  kyh620303:   { label: "kyh620303", color: 0xe65100 },
 } as const;
 
 type AgencySlug = keyof typeof AGENCIES;

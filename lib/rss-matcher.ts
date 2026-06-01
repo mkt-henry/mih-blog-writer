@@ -11,7 +11,7 @@ export function extractTitleKeyword(rawTitle: string): string | null {
   return m ? m[1].trim() : null;
 }
 
-export type AgencySlug = 'mih_speaker' | 'mih_casting' | 'mih_agency';
+export type AgencySlug = 'mih_speaker' | 'mih_casting' | 'mih_agency' | 'kyh620303';
 
 export type ArticleCandidate = {
   id: string;

@@ -12,7 +12,7 @@ function mkPerms(over: Partial<UserPermissions> = {}): UserPermissions {
     userId: 'u1',
     username: 'someone',
     isAdmin: false,
-    agencies: { mih_speaker: null, mih_casting: null, mih_agency: null },
+    agencies: { mih_speaker: null, mih_casting: null, mih_agency: null, kyh620303: null },
     ...over,
   };
 }
@@ -41,12 +41,12 @@ describe('isAdminUsername', () => {
 
 describe('canView', () => {
   it('returns true when agency role is view', () => {
-    const p = mkPerms({ agencies: { mih_speaker: 'view', mih_casting: null, mih_agency: null } });
+    const p = mkPerms({ agencies: { mih_speaker: 'view', mih_casting: null, mih_agency: null, kyh620303: null } });
     expect(canView(p, 'mih_speaker')).toBe(true);
   });
 
   it('returns true when agency role is editor', () => {
-    const p = mkPerms({ agencies: { mih_speaker: 'editor', mih_casting: null, mih_agency: null } });
+    const p = mkPerms({ agencies: { mih_speaker: 'editor', mih_casting: null, mih_agency: null, kyh620303: null } });
     expect(canView(p, 'mih_speaker')).toBe(true);
   });
 
@@ -58,7 +58,7 @@ describe('canView', () => {
 
 describe('canEdit', () => {
   it('returns true only for editor', () => {
-    const p = mkPerms({ agencies: { mih_speaker: 'editor', mih_casting: 'view', mih_agency: null } });
+    const p = mkPerms({ agencies: { mih_speaker: 'editor', mih_casting: 'view', mih_agency: null, kyh620303: null } });
     expect(canEdit(p, 'mih_speaker')).toBe(true);
     expect(canEdit(p, 'mih_casting')).toBe(false);
     expect(canEdit(p, 'mih_agency')).toBe(false);
@@ -67,7 +67,7 @@ describe('canEdit', () => {
 
 describe('visibleAgencies', () => {
   it('returns only agencies with non-null role', () => {
-    const p = mkPerms({ agencies: { mih_speaker: 'view', mih_casting: null, mih_agency: 'editor' } });
+    const p = mkPerms({ agencies: { mih_speaker: 'view', mih_casting: null, mih_agency: 'editor', kyh620303: null } });
     expect(visibleAgencies(p)).toEqual(['mih_speaker', 'mih_agency']);
   });
 
@@ -76,7 +76,7 @@ describe('visibleAgencies', () => {
   });
 
   it('preserves AGENCY_SLUGS order', () => {
-    const p = mkPerms({ agencies: { mih_speaker: 'view', mih_casting: 'view', mih_agency: 'view' } });
-    expect(visibleAgencies(p)).toEqual(['mih_speaker', 'mih_casting', 'mih_agency']);
+    const p = mkPerms({ agencies: { mih_speaker: 'view', mih_casting: 'view', mih_agency: 'view', kyh620303: 'view' } });
+    expect(visibleAgencies(p)).toEqual(['mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303']);
   });
 });

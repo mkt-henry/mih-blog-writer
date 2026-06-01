@@ -12,12 +12,14 @@ const BADGE: Record<AgencySlug, string> = {
   mih_speaker: "bg-blue-50 text-blue-800",
   mih_casting: "bg-purple-50 text-purple-800",
   mih_agency:  "bg-green-50 text-green-800",
+  kyh620303:   "bg-orange-50 text-orange-800",
 };
 
 const LABEL: Record<AgencySlug, string> = {
   mih_speaker: "speaker",
   mih_casting: "casting",
   mih_agency:  "agency",
+  kyh620303:   "kyh620303",
 };
 
 function toKSTDate(iso: string): string {

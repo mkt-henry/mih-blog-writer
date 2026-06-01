@@ -6,7 +6,7 @@
 
 import { sep, normalize } from 'path';
 
-export const AGENCIES = new Set(['mih_speaker', 'mih_casting', 'mih_agency']);
+export const AGENCIES = new Set(['mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303']);
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

@@ -11,6 +11,7 @@ const AGENCY_COLOR: Record<AgencySlug, string> = {
   mih_speaker: "bg-[color:var(--color-speaker)]",
   mih_casting: "bg-[color:var(--color-casting)]",
   mih_agency: "bg-[color:var(--color-agency)]",
+  kyh620303: "bg-[color:var(--color-kyh620303)]",
 };
 
 const LS_KEY = (a: string) => `dashboard.sort.${a}`;

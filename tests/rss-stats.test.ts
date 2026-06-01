@@ -38,6 +38,7 @@ describe('computeRssStats', () => {
     expect(may10!.mih_speaker).toBe(2);
     expect(may10!.mih_casting).toBe(1);
     expect(may10!.mih_agency).toBe(0);
+    expect(may10!.kyh620303).toBe(0);
   });
 
   it('flags days with zero publish as suspect', () => {
@@ -69,5 +70,6 @@ describe('computeRssStats', () => {
     expect(stats.byAgency.mih_speaker.periodTotal).toBe(2);
     expect(stats.byAgency.mih_casting.periodTotal).toBe(1);
     expect(stats.byAgency.mih_agency.periodTotal).toBe(0);
+    expect(stats.byAgency.kyh620303.periodTotal).toBe(0);
   });
 });
