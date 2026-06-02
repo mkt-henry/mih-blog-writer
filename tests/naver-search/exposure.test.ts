@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { isMihExposed, MIH_BLOG_SLUGS } from '@/lib/naver-search/exposure';
 
 describe('MIH_BLOG_SLUGS', () => {
-  it('contains the four agency slugs', () => {
+  it('contains the agency blog slugs', () => {
     expect(MIH_BLOG_SLUGS).toEqual(['mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303']);
   });
 });
@@ -19,6 +19,10 @@ describe('isMihExposed', () => {
 
   it('returns true when HTML contains blog.naver.com/mih_agency', () => {
     expect(isMihExposed('blog.naver.com/mih_agency/1 ')).toBe(true);
+  });
+
+  it('returns true when HTML contains blog.naver.com/kyh620303', () => {
+    expect(isMihExposed('blog.naver.com/kyh620303/1 ')).toBe(true);
   });
 
   it('returns false when HTML has only unrelated naver blog URLs', () => {

@@ -2,24 +2,24 @@
 
 import { useState } from "react";
 import type { KanbanGroups } from "@/lib/articles";
-import { AGENCIES } from "@/lib/agencies";
+import { AGENCIES, type AgencySlug } from "@/lib/agencies";
 import { visibleAgencies, type UserPermissions } from "@/lib/permissions";
 import KanbanColumn from "./KanbanColumn";
 
 type Props = { groups: KanbanGroups; onOpen: (id: string) => void; perms: UserPermissions };
 
-const TAB_LABELS: Record<string, string> = {
-  mih_speaker: "스피커",
-  mih_casting: "캐스팅",
-  mih_agency:  "에이전시",
-  other:       "other",
+const TAB_LABELS: Record<AgencySlug, string> = {
+  mih_speaker: "speaker",
+  mih_casting: "casting",
+  mih_agency: "agency",
+  other: "kyh620303",
 };
 
-const TAB_COLORS: Record<string, string> = {
+const TAB_COLORS: Record<AgencySlug, string> = {
   mih_speaker: "var(--color-speaker)",
   mih_casting: "var(--color-casting)",
-  mih_agency:  "var(--color-agency)",
-  other:       "var(--color-other)",
+  mih_agency: "var(--color-agency)",
+  other: "var(--color-other)",
 };
 
 export default function KanbanBoard({ groups, onOpen, perms }: Props) {
@@ -28,7 +28,6 @@ export default function KanbanBoard({ groups, onOpen, perms }: Props) {
 
   return (
     <>
-      {/* ── 모바일: 탭 전환 ── */}
       <div className="md:hidden flex flex-col">
         <div className="flex border-b border-[color:var(--color-border)] bg-white sticky top-0 z-10">
           {slugs.map((slug, i) => {
@@ -48,7 +47,7 @@ export default function KanbanBoard({ groups, onOpen, perms }: Props) {
                   className="inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle"
                   style={{ backgroundColor: TAB_COLORS[slug] }}
                 />
-                {TAB_LABELS[slug]}
+                {TAB_LABELS[slug] ?? AGENCIES[slug].blogSlug}
                 <span className="ml-1 text-[10px] text-gray-400">{count}</span>
               </button>
             );
@@ -69,7 +68,6 @@ export default function KanbanBoard({ groups, onOpen, perms }: Props) {
         </div>
       </div>
 
-      {/* ── 데스크톱: agency 수에 맞춘 N열 그리드 ── */}
       <div
         className="hidden md:grid gap-3 p-4"
         style={{ gridTemplateColumns: `repeat(${slugs.length}, minmax(0, 1fr))` }}

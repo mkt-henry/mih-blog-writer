@@ -152,7 +152,7 @@ async function main() {
         const t = r.title.length > 30 ? r.title.slice(0, 30) + '…' : r.title;
         return `  \`${kstTimeStr(r.ts)}\` ${t}`;
       }).join('\n');
-      return `**[${AGENCY_LABEL[slug]}]**\n${lines}`;
+      return `**[${AGENCY_LABEL[slug] ?? agency.blogSlug ?? slug}]**\n${lines}`;
     })
     .filter(Boolean)
     .join('\n\n');

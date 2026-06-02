@@ -1,3 +1,4 @@
+import { AGENCY_SLUGS } from "@/lib/agencies";
 import type { DailyBucket } from "@/lib/rss-stats";
 
 type Props = { daily: DailyBucket[] };
@@ -15,12 +16,12 @@ export default function PublishHeatmap({ daily }: Props) {
   return (
     <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
       {daily.map((d) => {
-        const total = d.mih_speaker + d.mih_casting + d.mih_agency + d.other;
+        const total = AGENCY_SLUGS.reduce((sum, k) => sum + d[k], 0);
         const cls = intensity(total);
         return (
           <div
             key={d.date}
-            title={`${d.date} · ${total}건 (S:${d.mih_speaker} / C:${d.mih_casting} / A:${d.mih_agency} / O:${d.other})`}
+            title={`${d.date} - ${total} posts (S:${d.mih_speaker} / C:${d.mih_casting} / A:${d.mih_agency} / K:${d.other})`}
             className={`aspect-square rounded text-[9px] flex items-center justify-center ${cls} ${total >= 5 ? "text-white" : "text-gray-600"}`}
           >
             {total}

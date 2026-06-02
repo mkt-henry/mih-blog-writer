@@ -44,7 +44,7 @@ const AGENCIES = {
     businessCardWidth: 544,
   },
   other: {
-    name: "other",
+    name: "kyh620303",
     short: "other",
     blogSlug: "kyh620303",
     businessCardImageUrl:

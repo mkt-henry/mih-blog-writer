@@ -47,7 +47,7 @@ if (!existsSync(fullPath)) {
 const parsed = parseArticlePath(argPath);
 if (!parsed) {
   console.error(
-    `경로를 파싱할 수 없습니다. 형식: output/{YYYY-MM-DD}/{mih_speaker|mih_casting|mih_agency}/{slug}_{제목}.html\n` +
+    `경로를 파싱할 수 없습니다. 형식: output/{YYYY-MM-DD}/{mih_speaker|mih_casting|mih_agency|other}/{slug}_{제목}.html\n` +
     `입력: ${argPath}`
   );
   process.exit(1);

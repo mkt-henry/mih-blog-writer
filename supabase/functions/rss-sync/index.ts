@@ -9,8 +9,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-type AgencySlug = 'mih_speaker' | 'mih_casting' | 'mih_agency';
-const SLUGS: AgencySlug[] = ['mih_speaker', 'mih_casting', 'mih_agency'];
+type AgencySlug = 'mih_speaker' | 'mih_casting' | 'mih_agency' | 'other';
+const SLUGS: AgencySlug[] = ['mih_speaker', 'mih_casting', 'mih_agency', 'other'];
+const BLOG_SLUGS: Record<AgencySlug, string> = {
+  mih_speaker: 'mih_speaker',
+  mih_casting: 'mih_casting',
+  mih_agency: 'mih_agency',
+  other: 'kyh620303',
+};
 
 type RssItem = { agency: AgencySlug; title: string; link: string; pub_ts: number };
 type Candidate = {
@@ -78,7 +84,8 @@ function parseRss(xml: string): { title: string; link: string; pub_ts: number }[
 }
 
 async function fetchRss(slug: AgencySlug): Promise<{ title: string; link: string; pub_ts: number }[]> {
-  const res = await fetch(`https://rss.blog.naver.com/${slug}`, {
+  const blogSlug = BLOG_SLUGS[slug];
+  const res = await fetch(`https://rss.blog.naver.com/${blogSlug}`, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MIH-RSS-Sync/1.0)' },
     signal: AbortSignal.timeout(12_000),
   });

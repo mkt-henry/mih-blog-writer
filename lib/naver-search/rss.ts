@@ -3,6 +3,13 @@ import { extractTitleKeyword } from '@/lib/rss-matcher';
 export const AGENCY_SLUGS = ['mih_speaker', 'mih_casting', 'mih_agency', 'other'] as const;
 export type AgencySlug = (typeof AGENCY_SLUGS)[number];
 
+const BLOG_SLUGS: Record<AgencySlug, string> = {
+  mih_speaker: 'mih_speaker',
+  mih_casting: 'mih_casting',
+  mih_agency: 'mih_agency',
+  other: 'kyh620303',
+};
+
 export type RssItem = {
   title: string;
   link: string;
@@ -36,7 +43,8 @@ export function extractKeywordFromRssTitle(title: string): string {
 }
 
 export async function fetchAgencyRss(slug: AgencySlug): Promise<RssItem[]> {
-  const res = await fetch(`https://rss.blog.naver.com/${slug}`, {
+  const blogSlug = BLOG_SLUGS[slug];
+  const res = await fetch(`https://rss.blog.naver.com/${blogSlug}`, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MIH-Notifier/1.0)' },
     signal: AbortSignal.timeout(12_000),
   });

@@ -17,11 +17,17 @@ const AGENCIES = {
   mih_speaker: { label: "스피커", color: 0x1565c0 },
   mih_casting: { label: "캐스팅", color: 0x7b1fa2 },
   mih_agency:  { label: "에이전시", color: 0x2e7d32 },
-  other:       { label: "other", color: 0xe65100 },
+  other: { label: "kyh620303", color: 0xe65100 },
 } as const;
 
 type AgencySlug = keyof typeof AGENCIES;
 const SLUGS = Object.keys(AGENCIES) as AgencySlug[];
+const BLOG_SLUGS: Record<AgencySlug, string> = {
+  mih_speaker: "mih_speaker",
+  mih_casting: "mih_casting",
+  mih_agency: "mih_agency",
+  other: "kyh620303",
+};
 
 interface RssItem {
   title:   string;
@@ -44,7 +50,8 @@ function parseRss(xml: string): RssItem[] {
 }
 
 async function fetchRss(slug: AgencySlug): Promise<RssItem[]> {
-  const res = await fetch(`https://rss.blog.naver.com/${slug}`, {
+  const blogSlug = BLOG_SLUGS[slug];
+  const res = await fetch(`https://rss.blog.naver.com/${blogSlug}`, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; MIH-Notifier/1.0)" },
     signal:  AbortSignal.timeout(12_000),
   });

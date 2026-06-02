@@ -10,7 +10,7 @@ export type AgencySlug = "mih_speaker" | "mih_casting" | "mih_agency" | "other";
 
 export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
   mih_speaker: {
-    name: "메이드인헤븐 스피커",
+    name: "MIH Speaker",
     short: "mih_speaker",
     blogSlug: "mih_speaker",
     businessCardImageUrl:
@@ -18,7 +18,7 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
     businessCardWidth: 544,
   },
   mih_casting: {
-    name: "메이드인헤븐 캐스팅",
+    name: "MIH Casting",
     short: "mih_casting",
     blogSlug: "mih_casting",
     businessCardImageUrl:
@@ -26,7 +26,7 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
     businessCardWidth: 544,
   },
   mih_agency: {
-    name: "메이드인헤븐 에이전시",
+    name: "MIH Agency",
     short: "mih_agency",
     blogSlug: "mih_agency",
     businessCardImageUrl:
@@ -34,7 +34,7 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
     businessCardWidth: 544,
   },
   other: {
-    name: "other",
+    name: "kyh620303",
     short: "other",
     blogSlug: "kyh620303",
     businessCardImageUrl:

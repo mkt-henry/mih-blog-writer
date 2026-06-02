@@ -22,9 +22,15 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 SELECT cron.schedule(
   'mih-daily-discord',
   '0 1 * * *',
-  $$SELECT net.http_post(
-      url     := 'https://djtmniygzdbavxwrppxb.supabase.co/functions/v1/discord-notify',
-      headers := '{"Content-Type":"application/json"}'::jsonb,
-      body    := '{}'::jsonb
-  )$$
+  $job$
+    SELECT net.http_post(
+      url := (select value from app_settings where key = 'EDGE_BASE_URL') || '/discord-notify',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || (select value from app_settings where key = 'SUPABASE_SERVICE_ROLE_KEY')
+      ),
+      body := '{}'::jsonb,
+      timeout_milliseconds := 30000
+    )
+  $job$
 );

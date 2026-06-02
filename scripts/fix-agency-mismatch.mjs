@@ -7,7 +7,13 @@ import { requireEnv } from './lib/env.js';
 
 loadEnv();
 
-const SLUGS = ['mih_speaker', 'mih_casting', 'mih_agency'];
+const SLUGS = ['mih_speaker', 'mih_casting', 'mih_agency', 'other'];
+const BLOG_SLUGS = {
+  mih_speaker: 'mih_speaker',
+  mih_casting: 'mih_casting',
+  mih_agency: 'mih_agency',
+  other: 'kyh620303',
+};
 
 function normalizeTitle(s) {
   return s.replace(/[ 　]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -35,7 +41,8 @@ function parseRss(xml, agency) {
 }
 
 async function fetchRss(slug) {
-  const res = await fetch(`https://rss.blog.naver.com/${slug}`, {
+  const blogSlug = BLOG_SLUGS[slug] ?? slug;
+  const res = await fetch(`https://rss.blog.naver.com/${blogSlug}`, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MIH-RSS-Sync/1.0)' },
     signal: AbortSignal.timeout(15_000),
   });

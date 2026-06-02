@@ -11,15 +11,15 @@ type Article = {
 const BADGE: Record<AgencySlug, string> = {
   mih_speaker: "bg-blue-50 text-blue-800",
   mih_casting: "bg-purple-50 text-purple-800",
-  mih_agency:  "bg-green-50 text-green-800",
-  other:       "bg-orange-50 text-orange-800",
+  mih_agency: "bg-green-50 text-green-800",
+  other: "bg-orange-50 text-orange-800",
 };
 
 const LABEL: Record<AgencySlug, string> = {
   mih_speaker: "speaker",
   mih_casting: "casting",
-  mih_agency:  "agency",
-  other:       "other",
+  mih_agency: "agency",
+  other: "kyh620303",
 };
 
 function toKSTDate(iso: string): string {
@@ -42,7 +42,7 @@ function groupByDate(articles: Article[]): [string, Article[]][] {
 
 export default function PublishedArticleList({ articles }: { articles: Article[] }) {
   if (articles.length === 0) {
-    return <p className="text-xs text-gray-400 py-4 text-center">이 기간에 발행된 원고가 없습니다.</p>;
+    return <p className="text-xs text-gray-400 py-4 text-center">No published articles in this period.</p>;
   }
 
   const groups = groupByDate(articles);
@@ -53,7 +53,7 @@ export default function PublishedArticleList({ articles }: { articles: Article[]
         <div key={date}>
           <div className="sticky top-0 bg-gray-50 px-4 py-1.5 flex items-center gap-2 border-b border-gray-100 z-10">
             <span className="text-xs font-bold text-gray-600">{date}</span>
-            <span className="text-[10px] text-gray-400">{rows.length}건</span>
+            <span className="text-[10px] text-gray-400">{rows.length}</span>
           </div>
           {rows.map((a, i) => (
             <a
