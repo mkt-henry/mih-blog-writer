@@ -87,15 +87,6 @@ async function sendContent(content) {
   if (!res.ok) throw new Error(`Discord 전송 실패: ${res.status} ${await res.text()}`);
 }
 
-// ── RSS 항목 → 원고 슬러그 매칭 ─────────────────────────────────────────────
-function findSlug(rssTitle, manuscripts) {
-  const m = manuscripts.find(ms =>
-    rssTitle.includes(ms.slug) ||
-    rssTitle.includes(ms.title.replace(/^\[.*?\]\s*/, '').slice(0, 15))
-  );
-  return m ? m.slug : null;
-}
-
 // ── 메인 ─────────────────────────────────────────────────────────────────────
 const AGENCY_LABEL = {
   mih_speaker: '스피커',
@@ -134,14 +125,12 @@ async function main() {
   // ── 계정별 집계 ───────────────────────────────────────────────────────────
   const agencySlugs = Object.keys(agencies);
 
-  // RSS 기준 오늘 발행된 항목 (계정별)
   const publishedToday = {};
   for (const slug of agencySlugs) {
     publishedToday[slug] = (rssMap[slug] ?? [])
       .filter(r => r.ts && isKstToday(r.ts, todayStr))
       .sort((a, b) => a.ts - b.ts);
   }
-
 
   // ── RSS 발행 내역 필드 ────────────────────────────────────────────────────
   const rssField = agencySlugs
@@ -152,18 +141,18 @@ async function main() {
         const t = r.title.length > 30 ? r.title.slice(0, 30) + '…' : r.title;
         return `  \`${kstTimeStr(r.ts)}\` ${t}`;
       }).join('\n');
-      return `**[${AGENCY_LABEL[slug] ?? agency.blogSlug ?? slug}]**\n${lines}`;
+      return `**[${AGENCY_LABEL[slug] ?? slug}]**\n${lines}`;
     })
     .filter(Boolean)
     .join('\n\n');
 
   const totalPublished = agencySlugs.reduce((s, slug) => s + publishedToday[slug].length, 0);
 
-  // ── 임베드 구성 ──────────────────────────────────────────────────────────
+  // ── 임베드 구성 (기존 그대로) ─────────────────────────────────────────────
   const fields = [
     {
-      name:  `📡 오늘 발행 (${totalPublished}건)`,
-      value: (rssField || '아직 발행된 원고가 없습니다.').slice(0, 1024),
+      name:   `📡 오늘 발행 (${totalPublished}건)`,
+      value:  (rssField || '아직 발행된 원고가 없습니다.').slice(0, 1024),
       inline: false,
     },
   ];
@@ -184,17 +173,19 @@ async function main() {
     timestamp: new Date().toISOString(),
   }]);
 
-  // ── 두 번째 메시지: 날짜 · 키워드 · URL ──────────────────────────────────
-  const allTodayItems = agencySlugs.flatMap(slug =>
-    publishedToday[slug].map(r => ({ ...r, agencySlug: slug }))
-  ).sort((a, b) => a.ts - b.ts);
+  // ── 두 번째 메시지: 전날 발행 키워드 쿼리 URL ────────────────────────────
+  const yesterdayStr = kstDateStr(-1);
 
-  if (allTodayItems.length > 0) {
-    const lines = allTodayItems.map(r => {
-      const keyword = findSlug(r.title, manuscripts) ?? r.title.slice(0, 20);
-      return `${keyword} 섭외\n${r.link}`;
+  const allYesterdayItems = agencySlugs
+    .flatMap(slug => (rssMap[slug] ?? []).filter(r => r.ts && isKstToday(r.ts, yesterdayStr)))
+    .sort((a, b) => a.ts - b.ts);
+
+  if (allYesterdayItems.length > 0) {
+    const queryLines = allYesterdayItems.map(r => {
+      const keyword = r.title.match(/^\[(.*?)\]/)?.[1] ?? r.title.slice(0, 20);
+      return `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(keyword)}`;
     });
-    await sendContent(`▶ ${todayStr}\n\n${lines.join('\n\n')}`);
+    await sendContent(`▶ ${yesterdayStr} 검색 노출\n${queryLines.join('\n')}`);
   }
 
   console.log(`Discord 알림 전송 완료 (${todayStr})`);

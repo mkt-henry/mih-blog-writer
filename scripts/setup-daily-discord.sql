@@ -17,11 +17,11 @@ DROP FUNCTION IF EXISTS send_daily_discord_report();
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
--- 3) 매일 01:00 UTC (10:00 KST)에 Edge Function 호출
+-- 3) 매일 00:30 UTC (09:30 KST)에 Edge Function 호출
 --    Edge Function은 --no-verify-jwt 로 배포되어 별도 인증 헤더 없이 호출 가능.
 SELECT cron.schedule(
   'mih-daily-discord',
-  '0 1 * * *',
+  '30 0 * * *',
   $job$
     SELECT net.http_post(
       url := (select value from app_settings where key = 'EDGE_BASE_URL') || '/discord-notify',

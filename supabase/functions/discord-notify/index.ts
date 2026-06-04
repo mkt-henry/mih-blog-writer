@@ -1,17 +1,23 @@
 // MIH 발행 현황 Discord 알림 (Supabase Edge Function)
 //
-// 3개 블로그(mih_speaker / mih_casting / mih_agency)의 네이버 RSS를 동시에 fetch해서
-// KST 기준 오늘 발행분을 집계하고 Discord 웹훅으로 두 건의 메시지를 보낸다.
-//   1) 임베드 — 계정별 발행 목록 요약
-//   2) 텍스트 — 키워드 + URL (발행이 있는 날만)
+// 4개 블로그(mih_speaker / mih_casting / mih_agency / kyh620303)의 네이버 RSS를 동시에 fetch해서
+// KST 기준으로 두 채널에 메시지를 보낸다.
+//   1) 발행현황 채널 — 당일 발행 현황 (임베드 + 키워드/블로그 URL)
+//   2) 검색노출 채널 — 전일 발행 키워드의 네이버 블로그 검색 쿼리 URL
 //
-// pg_cron이 매일 10:00 KST에 net.http_post로 이 함수를 호출한다.
+// pg_cron이 매일 09:30 KST에 net.http_post로 이 함수를 호출한다.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const WEBHOOK =
+// 발행현황 채널 — 당일 발행 현황
+const WEBHOOK_STATUS =
   Deno.env.get("DISCORD_WEBHOOK_URL") ??
   "https://discordapp.com/api/webhooks/1503361197087658076/flMPRAdb4rEle3eno1zLg_fpb7tQ9YEvmrOlqPlqqWbnfvnb6MO1TYajU77gBreIog1m";
+
+// 검색노출 채널 — 전일 발행 키워드 검색 쿼리
+const WEBHOOK_SEARCH =
+  Deno.env.get("DISCORD_SEARCH_WEBHOOK_URL") ??
+  "https://discordapp.com/api/webhooks/1508364799757783040/3SGZMQrStbeUjeFm7Y7dSOkNKgrEOuPzuXAtvfEfzIyFEIYeNVz9Cc0SmlVl18wfDWX-";
 
 const AGENCIES = {
   mih_speaker: { label: "스피커", color: 0x1565c0 },
@@ -60,9 +66,9 @@ async function fetchRss(slug: AgencySlug): Promise<RssItem[]> {
 }
 
 const KST_OFFSET = 9 * 3600_000;
-const kstDateStr = ()           => new Date(Date.now() + KST_OFFSET).toISOString().slice(0, 10);
-const kstTimeStr = (ts: number) => new Date(ts + KST_OFFSET).toISOString().slice(11, 16);
-const isKstToday = (ts: number, today: string) => new Date(ts + KST_OFFSET).toISOString().slice(0, 10) === today;
+const kstDateStr  = (offsetDays = 0) => new Date(Date.now() + KST_OFFSET + offsetDays * 86400_000).toISOString().slice(0, 10);
+const kstTimeStr  = (ts: number)     => new Date(ts + KST_OFFSET).toISOString().slice(11, 16);
+const isKstDay    = (ts: number, day: string) => new Date(ts + KST_OFFSET).toISOString().slice(0, 10) === day;
 
 function extractKeyword(title: string): string {
   // 예: "[안정환 강연 섭외] ..."  →  "안정환 강연"
@@ -70,8 +76,8 @@ function extractKeyword(title: string): string {
   return m ? m[1] : title.slice(0, 20);
 }
 
-async function postJson(body: unknown) {
-  const res = await fetch(WEBHOOK, {
+async function postJson(webhook: string, body: unknown) {
+  const res = await fetch(webhook, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
     body:    JSON.stringify(body),
@@ -80,25 +86,30 @@ async function postJson(body: unknown) {
 }
 
 Deno.serve(async () => {
-  const today = kstDateStr();
+  const today     = kstDateStr(0);
+  const yesterday = kstDateStr(-1);
 
-  const publishedToday: Record<AgencySlug, RssItem[]> = {} as Record<AgencySlug, RssItem[]>;
+  // 계정별 RSS 전체를 한 번씩만 fetch해서 today / yesterday 둘 다 활용
+  const rssItems: Record<AgencySlug, RssItem[]> = {} as Record<AgencySlug, RssItem[]>;
   const rssErrors: string[] = [];
 
   await Promise.all(
     SLUGS.map(async (slug) => {
       try {
-        const items = await fetchRss(slug);
-        publishedToday[slug] = items
-          .filter(r => r.ts && isKstToday(r.ts, today))
-          .sort((a, b) => a.ts - b.ts);
+        rssItems[slug] = await fetchRss(slug);
       } catch (e) {
-        publishedToday[slug] = [];
+        rssItems[slug] = [];
         rssErrors.push(`${AGENCIES[slug].label}: ${(e as Error).message}`);
       }
     }),
   );
 
+  const itemsOn = (slug: AgencySlug, day: string) =>
+    (rssItems[slug] ?? []).filter(r => r.ts && isKstDay(r.ts, day)).sort((a, b) => a.ts - b.ts);
+
+  // ── 1) 발행현황 채널 — 당일 발행 현황 ───────────────────────────────────────
+  const publishedToday: Record<AgencySlug, RssItem[]> = {} as Record<AgencySlug, RssItem[]>;
+  for (const slug of SLUGS) publishedToday[slug] = itemsOn(slug, today);
   const total = SLUGS.reduce((s, slug) => s + publishedToday[slug].length, 0);
 
   const rssField = SLUGS
@@ -130,25 +141,36 @@ Deno.serve(async () => {
     });
   }
 
-  await postJson({
+  await postJson(WEBHOOK_STATUS, {
     embeds: [{
       title:     `📋 MIH 발행 현황 · ${today}`,
       color:     0x1565c0,
       fields,
-      footer:    { text: "MIH Blog Writer · 매일 10:00 KST" },
+      footer:    { text: "MIH Blog Writer · 매일 09:30 KST" },
       timestamp: new Date().toISOString(),
     }],
   });
 
   if (total > 0) {
-    const all = SLUGS.flatMap((slug) => publishedToday[slug].map((r) => ({ ...r, slug })))
-      .sort((a, b) => a.ts - b.ts);
+    const all = SLUGS.flatMap((slug) => publishedToday[slug]).sort((a, b) => a.ts - b.ts);
     const lines = all.map((r) => `${extractKeyword(r.title)} 섭외\n${r.link}`);
-    await postJson({ content: `▶ ${today}\n\n${lines.join("\n\n")}` });
+    await postJson(WEBHOOK_STATUS, { content: `▶ ${today}\n\n${lines.join("\n\n")}` });
+  }
+
+  // ── 2) 검색노출 채널 — 전일 발행 키워드 검색 쿼리 ───────────────────────────
+  const publishedYesterday = SLUGS.flatMap((slug) => itemsOn(slug, yesterday))
+    .sort((a, b) => a.ts - b.ts);
+
+  if (publishedYesterday.length > 0) {
+    const queryLines = publishedYesterday.map((r) => {
+      const kw = extractKeyword(r.title);
+      return `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(kw + " 섭외")}`;
+    });
+    await postJson(WEBHOOK_SEARCH, { content: `▶ ${yesterday} 검색 노출\n\n${queryLines.join("\n\n")}` });
   }
 
   return new Response(
-    JSON.stringify({ ok: true, date: today, total, errors: rssErrors }),
+    JSON.stringify({ ok: true, today, total, yesterday, yesterdayCount: publishedYesterday.length, errors: rssErrors }),
     { headers: { "Content-Type": "application/json" } },
   );
 });
