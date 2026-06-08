@@ -70,7 +70,13 @@ function collectOutputNames(dir, acc) {
   return acc;
 }
 
-const norm = (s) => (s || "").replace(/\s+/g, "").toLowerCase();
+// 괄호 주석 제거: "홍석천(강연)" → "홍석천", "정재승(카이스트(교수))" → "정재승"
+// 키워드의 (전각/반각) 괄호 메모는 후보 식별용일 뿐 실제 인물명이 아니므로,
+// 중복 비교 전에 반드시 떼어낸다. 괄호 주석은 항상 이름 뒤에 붙는 접미사이고
+// 중첩 괄호("정재승(카이스트(교수))")도 있으므로, 첫 여는 괄호 이후를 전부 제거한다.
+const stripParen = (s) => (s || "").replace(/[\(（].*$/s, "").trim();
+// 비교용 정규화: 괄호 주석 제거 + 공백 제거 + 소문자화
+const norm = (s) => stripParen(s).replace(/\s+/g, "").toLowerCase();
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
