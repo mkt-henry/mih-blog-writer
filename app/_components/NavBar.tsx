@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-type Props = { isAdmin: boolean };
+type Props = { isAdmin: boolean; keywordOnly: boolean };
 
-export default function NavBar({ isAdmin }: Props) {
+export default function NavBar({ isAdmin, keywordOnly }: Props) {
   const pathname = usePathname();
   if (pathname === "/login") return null;
 
@@ -30,10 +30,16 @@ export default function NavBar({ isAdmin }: Props) {
     <header className="sticky top-0 z-40 flex items-center gap-2 bg-white border-b border-[color:var(--color-border)] px-3 py-2">
       <div className="text-sm font-bold text-[color:var(--color-primary)]">MIH</div>
       <nav className="flex gap-1 ml-1">
-        {link("/", "모아보기")}
-        {link("/rss", "발행 현황")}
-        {link("/keywords", "키워드")}
-        {isAdmin && link("/admin/users", "사용자 관리")}
+        {keywordOnly ? (
+          link("/keywords", "키워드")
+        ) : (
+          <>
+            {link("/", "모아보기")}
+            {link("/rss", "발행 현황")}
+            {link("/keywords", "키워드")}
+            {isAdmin && link("/admin/users", "사용자 관리")}
+          </>
+        )}
       </nav>
       <div className="flex-1" />
       <form onSubmit={async (e) => {
