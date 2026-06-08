@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifySession } from "@/lib/auth";
 import { loadPermissions } from "@/lib/permissions";
+import { loadKeywordOnlyColumns, KEYWORD_COLUMNS } from "@/lib/keyword-columns";
 import KeywordClient, { type Keyword } from "./_components/KeywordClient";
 
 export const dynamic = "force-dynamic";
@@ -15,17 +16,27 @@ export default async function KeywordsPage() {
     perms.isAdmin ||
     Object.values(perms.agencies).some((r) => r === "editor");
 
+  const keywordOnly = perms.keywordOnly;
+  const visibleColumns = keywordOnly ? await loadKeywordOnlyColumns() : null;
+
+  // 키워드 전용 사용자는 노출 컬럼에 해당하는 DB 필드만 select (id/keyword/category는 항상)
+  const selectFields = (() => {
+    if (!visibleColumns) return "id,keyword,category,notes,instagram,agency,published_url,created_at";
+    const fields = new Set<string>(["id", "keyword", "category"]);
+    for (const col of visibleColumns) {
+      const meta = KEYWORD_COLUMNS.find((c) => c.key === col);
+      if (meta?.selectField) fields.add(meta.selectField);
+    }
+    return [...fields].join(",");
+  })();
+
   const sb = supabaseAdmin();
 
   const [kwRes, artRes] = await Promise.all([
-    sb
-      .from("keywords")
-      .select("id,keyword,category,notes,instagram,agency,published_url,created_at")
-      .order("category")
-      .order("keyword"),
-    sb
-      .from("articles")
-      .select("id,person_name,title,published_url,agency"),
+    sb.from("keywords").select(selectFields).order("category").order("keyword"),
+    keywordOnly
+      ? Promise.resolve({ data: [], error: null })
+      : sb.from("articles").select("id,person_name,title,published_url,agency"),
   ]);
 
   if (kwRes.error) {
@@ -47,12 +58,19 @@ export default async function KeywordsPage() {
     }
   }
 
-  const keywords: Keyword[] = (kwRes.data ?? []).map((k) => {
-    const art = articleMap.get(k.keyword);
+  const kwRows = (kwRes.data ?? []) as unknown as Record<string, unknown>[];
+  const keywords: Keyword[] = kwRows.map((k: Record<string, unknown>) => {
+    const name = k.keyword as string;
+    const art = articleMap.get(name);
     return {
-      ...k,
-      agency: k.agency ?? art?.agency ?? null,
-      published_url: k.published_url ?? art?.published_url ?? null,
+      id: k.id as string,
+      keyword: name,
+      category: (k.category as string) ?? "",
+      notes: (k.notes as string | null) ?? null,
+      instagram: (k.instagram as string | null) ?? null,
+      created_at: (k.created_at as string) ?? "",
+      agency: (k.agency as string | null) ?? art?.agency ?? null,
+      published_url: (k.published_url as string | null) ?? art?.published_url ?? null,
       has_article: !!art,
       article_id: art?.id ?? null,
       article_title: art?.title ?? null,
@@ -102,7 +120,7 @@ export default async function KeywordsPage() {
         })}
       </div>
 
-      <KeywordClient keywords={keywords} categories={categories} isEditor={isEditor} />
+      <KeywordClient keywords={keywords} categories={categories} isEditor={isEditor} visibleColumns={visibleColumns} />
     </div>
   );
 }

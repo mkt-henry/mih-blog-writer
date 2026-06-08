@@ -17,7 +17,12 @@ export type Keyword = {
   created_at: string;
 };
 
-type Props = { keywords: Keyword[]; categories: string[]; isEditor: boolean };
+type Props = {
+  keywords: Keyword[];
+  categories: string[];
+  isEditor: boolean;
+  visibleColumns: string[] | null; // null = 전체(기존 동작), 배열 = 키워드 전용 컬럼셋
+};
 
 /* ─── 원고 모달 ─── */
 type ArticleData = { title: string; html_content: string };
@@ -104,7 +109,7 @@ function ArticleModal({ articleId, onClose }: { articleId: string; onClose: () =
 }
 
 /* ─── 메인 컴포넌트 ─── */
-export default function KeywordClient({ keywords, categories, isEditor }: Props) {
+export default function KeywordClient({ keywords, categories, isEditor, visibleColumns }: Props) {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("전체");
   const [agencyFilter, setAgencyFilter] = useState("전체");
@@ -125,6 +130,16 @@ export default function KeywordClient({ keywords, categories, isEditor }: Props)
       setCopyingId(null);
     }
   }, []);
+
+  // visibleColumns=null → 기존 규칙(원고는 isEditor일 때). 배열이면 그 컬럼만(원고 영구 제외).
+  const show = (col: string): boolean => {
+    if (col === "article") return visibleColumns === null && isEditor;
+    if (visibleColumns === null) return true;
+    return visibleColumns.includes(col);
+  };
+  const bodyCols =
+    1 + // # 항상
+    ["keyword", "search", "article", "category", "agency", "published_url", "instagram", "notes"].filter(show).length;
 
   const agencies = useMemo(
     () => [...new Set(keywords.map((k) => k.agency).filter(Boolean) as string[])].sort(),
@@ -208,41 +223,49 @@ export default function KeywordClient({ keywords, categories, isEditor }: Props)
         <div className="rounded-lg border border-gray-100 overflow-x-auto bg-white">
           <table className="w-full text-sm">
             <colgroup>
-              <col style={{ width: "2rem" }} />         {/* # */}
-              <col style={{ width: "1%" }} />            {/* 키워드 — shrink to content */}
-              <col style={{ width: "5rem" }} />          {/* 검색 */}
-              {isEditor && <col style={{ width: "11rem" }} />}  {/* 원고 */}
-              <col style={{ width: "5rem" }} />          {/* 분류 */}
-              <col style={{ width: "8rem" }} />          {/* 계정 */}
-              <col />                                    {/* 발행 URL — 남은 공간 */}
+              <col style={{ width: "2rem" }} />
+              {show("keyword") && <col style={{ width: "1%" }} />}
+              {show("search") && <col style={{ width: "5rem" }} />}
+              {show("article") && <col style={{ width: "11rem" }} />}
+              {show("category") && <col style={{ width: "5rem" }} />}
+              {show("agency") && <col style={{ width: "8rem" }} />}
+              {show("instagram") && <col style={{ width: "12rem" }} />}
+              {show("notes") && <col style={{ width: "12rem" }} />}
+              {show("published_url") && <col />}
             </colgroup>
             <thead>
               <tr className="bg-gray-50 text-xs text-gray-400 border-b border-gray-100">
                 <th className="px-3 py-1.5 text-right font-medium">#</th>
-                <th className="px-3 py-1.5 text-left font-medium">키워드</th>
-                <th className="px-3 py-1.5 text-left font-medium">검색</th>
-                {isEditor && <th className="px-3 py-1.5 text-left font-medium">원고</th>}
-                <th className="px-3 py-1.5 text-left font-medium">분류</th>
-                <th className="px-3 py-1.5 text-left font-medium">계정</th>
-                <th className="px-3 py-1.5 text-left font-medium">발행 URL</th>
+                {show("keyword") && <th className="px-3 py-1.5 text-left font-medium">키워드</th>}
+                {show("search") && <th className="px-3 py-1.5 text-left font-medium">검색</th>}
+                {show("article") && <th className="px-3 py-1.5 text-left font-medium">원고</th>}
+                {show("category") && <th className="px-3 py-1.5 text-left font-medium">분류</th>}
+                {show("agency") && <th className="px-3 py-1.5 text-left font-medium">계정</th>}
+                {show("instagram") && <th className="px-3 py-1.5 text-left font-medium">인스타그램</th>}
+                {show("notes") && <th className="px-3 py-1.5 text-left font-medium">메모</th>}
+                {show("published_url") && <th className="px-3 py-1.5 text-left font-medium">발행 URL</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.map((k, idx) => (
                 <tr key={k.id} className="hover:bg-gray-50/60 transition-colors">
                   <td className="px-3 py-1 text-right text-xs text-gray-300 tabular-nums">{idx + 1}</td>
-                  <td className="px-3 py-1 font-medium text-gray-800 whitespace-nowrap">{k.keyword}</td>
-                  <td className="px-3 py-1">
-                    <a
-                      href={`https://search.naver.com/search.naver?query=${encodeURIComponent(k.keyword + " 섭외")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2.5 py-1 text-xs rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors whitespace-nowrap"
-                    >
-                      검색 ↗
-                    </a>
-                  </td>
-                  {isEditor && (
+                  {show("keyword") && (
+                    <td className="px-3 py-1 font-medium text-gray-800 whitespace-nowrap">{k.keyword}</td>
+                  )}
+                  {show("search") && (
+                    <td className="px-3 py-1">
+                      <a
+                        href={`https://search.naver.com/search.naver?query=${encodeURIComponent(k.keyword + " 섭외")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 text-xs rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors whitespace-nowrap"
+                      >
+                        검색 ↗
+                      </a>
+                    </td>
+                  )}
+                  {show("article") && (
                     <td className="px-3 py-1">
                       {k.article_id ? (
                         <div className="flex items-center gap-1.5">
@@ -271,28 +294,48 @@ export default function KeywordClient({ keywords, categories, isEditor }: Props)
                       )}
                     </td>
                   )}
-                  <td className="px-3 py-1 text-xs text-gray-400 whitespace-nowrap">{k.category}</td>
-                  <td className="px-3 py-1 text-xs text-gray-400 font-mono whitespace-nowrap">{k.agency ?? ""}</td>
-                  <td className="px-3 py-1">
-                    {k.published_url ? (
-                      <a
-                        href={k.published_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-emerald-600 hover:underline truncate block"
-                        title={k.published_url}
-                      >
-                        {k.published_url.replace(/^https?:\/\//, "")}
-                      </a>
-                    ) : (
-                      <span className="text-gray-200 text-xs">—</span>
-                    )}
-                  </td>
+                  {show("category") && (
+                    <td className="px-3 py-1 text-xs text-gray-400 whitespace-nowrap">{k.category}</td>
+                  )}
+                  {show("agency") && (
+                    <td className="px-3 py-1 text-xs text-gray-400 font-mono whitespace-nowrap">{k.agency ?? ""}</td>
+                  )}
+                  {show("instagram") && (
+                    <td className="px-3 py-1 text-xs">
+                      {k.instagram ? (
+                        <a href={k.instagram} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate block" title={k.instagram}>
+                          {k.instagram.replace(/^https?:\/\//, "")}
+                        </a>
+                      ) : (
+                        <span className="text-gray-200">—</span>
+                      )}
+                    </td>
+                  )}
+                  {show("notes") && (
+                    <td className="px-3 py-1 text-xs text-gray-500 whitespace-pre-wrap">{k.notes ?? ""}</td>
+                  )}
+                  {show("published_url") && (
+                    <td className="px-3 py-1">
+                      {k.published_url ? (
+                        <a
+                          href={k.published_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-emerald-600 hover:underline truncate block"
+                          title={k.published_url}
+                        >
+                          {k.published_url.replace(/^https?:\/\//, "")}
+                        </a>
+                      ) : (
+                        <span className="text-gray-200 text-xs">—</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={isEditor ? 7 : 6} className="py-10 text-center text-sm text-gray-300">
+                  <td colSpan={bodyCols} className="py-10 text-center text-sm text-gray-300">
                     키워드가 없습니다.
                   </td>
                 </tr>
