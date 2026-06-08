@@ -12,10 +12,20 @@ function mkPerms(over: Partial<UserPermissions> = {}): UserPermissions {
     userId: 'u1',
     username: 'someone',
     isAdmin: false,
+    keywordOnly: false,
     agencies: { mih_speaker: null, mih_casting: null, mih_agency: null, other: null },
     ...over,
   };
 }
+
+describe('UserPermissions.keywordOnly', () => {
+  it('defaults to false in helper', () => {
+    expect(mkPerms().keywordOnly).toBe(false);
+  });
+  it('can be set true', () => {
+    expect(mkPerms({ keywordOnly: true }).keywordOnly).toBe(true);
+  });
+});
 
 describe('isAdminUsername', () => {
   const original = process.env.ADMIN_USERNAMES;

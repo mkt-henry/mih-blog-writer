@@ -7,6 +7,7 @@ export type UserPermissions = {
   userId: string;
   username: string;
   isAdmin: boolean;
+  keywordOnly: boolean;
   agencies: Record<AgencySlug, AgencyRole | null>;
 };
 
@@ -29,6 +30,7 @@ export async function loadPermissions(
       userId,
       username,
       isAdmin: true,
+      keywordOnly: false,
       agencies: {
         mih_speaker: "editor",
         mih_casting: "editor",
@@ -39,10 +41,10 @@ export async function loadPermissions(
   }
 
   const sb = supabaseAdmin();
-  const { data } = await sb
-    .from("user_agency_permissions")
-    .select("agency, role")
-    .eq("user_id", userId);
+  const [{ data }, { data: urow }] = await Promise.all([
+    sb.from("user_agency_permissions").select("agency, role").eq("user_id", userId),
+    sb.from("app_users").select("keyword_only").eq("id", userId).maybeSingle(),
+  ]);
 
   const agencies = emptyAgencies();
   for (const r of data ?? []) {
@@ -52,7 +54,7 @@ export async function loadPermissions(
       agencies[agency] = role;
     }
   }
-  return { userId, username, isAdmin: false, agencies };
+  return { userId, username, isAdmin: false, keywordOnly: !!urow?.keyword_only, agencies };
 }
 
 export function visibleAgencies(p: UserPermissions): AgencySlug[] {
