@@ -16,6 +16,9 @@ migration-failures.log
 temp_*.png
 temp_*.jpg
 
+# 외부 반입 데이터(연예인 리스트 등) + 비교 결과 — 커밋 제외
+data/
+
 # Supabase CLI cache
 supabase/.temp/
 
