@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifySession } from "@/lib/auth";
+import { loadPermissions } from "@/lib/permissions";
 import { isAgencySlug, type AgencySlug } from "@/lib/agencies";
 
 export const runtime = "nodejs";
@@ -22,6 +24,11 @@ export type ArticleSummary = Omit<ArticleRow, "html_content">;
 
 // 기본은 본문 제외한 목록만. ?include=html 이면 본문 포함.
 export async function GET(req: Request) {
+  const session = await verifySession();
+  if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  const perms = await loadPermissions(session.id, session.username);
+  if (perms.keywordOnly) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
   const url = new URL(req.url);
   const includeHtml = url.searchParams.get("include") === "html";
   const agency = url.searchParams.get("agency");
