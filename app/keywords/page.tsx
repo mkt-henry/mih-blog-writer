@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { verifySession } from "@/lib/auth";
 import { loadPermissions } from "@/lib/permissions";
-import { loadKeywordOnlyColumns, KEYWORD_COLUMNS } from "@/lib/keyword-columns";
+import { KEYWORD_COLUMNS } from "@/lib/keyword-columns";
+import { loadKeywordOnlyColumns } from "@/lib/keyword-columns.server";
 import KeywordClient, { type Keyword } from "./_components/KeywordClient";
 
 export const dynamic = "force-dynamic";

@@ -62,17 +62,22 @@ export default function UsersTable({ initialUsers, currentUserId }: Props) {
   async function setKeywordOnly(user: AdminUserRow, next: boolean) {
     const prev = user.keywordOnly;
     setUsers((cur) => cur.map((u) => (u.id === user.id ? { ...u, keywordOnly: next } : u)));
-    const res = await fetch(`/api/admin/users/${user.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword_only: next }),
-    });
-    if (!res.ok) {
-      const { error } = await res.json().catch(() => ({ error: "request failed" }));
-      toast.error(`저장 실패: ${error}`);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword_only: next }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: "request failed" }));
+        toast.error(`저장 실패: ${error}`);
+        setUsers((cur) => cur.map((u) => (u.id === user.id ? { ...u, keywordOnly: prev } : u)));
+      } else {
+        toast.success("저장됨");
+      }
+    } catch {
+      toast.error("저장 실패: 네트워크 오류");
       setUsers((cur) => cur.map((u) => (u.id === user.id ? { ...u, keywordOnly: prev } : u)));
-    } else {
-      toast.success("저장됨");
     }
   }
 

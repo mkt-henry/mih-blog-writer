@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/api-guards";
-import { loadKeywordOnlyColumns, normalizeColumns } from "@/lib/keyword-columns";
+import { normalizeColumns } from "@/lib/keyword-columns";
+import { loadKeywordOnlyColumns } from "@/lib/keyword-columns.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

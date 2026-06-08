@@ -1,5 +1,3 @@
-import { supabaseAdmin } from "./supabase";
-
 export type KeywordColumnKey =
   | "keyword"
   | "search"
@@ -42,17 +40,4 @@ export function normalizeColumns(keys: string[]): KeywordColumnKey[] {
   }
   picked.add("keyword");
   return KEYWORD_COLUMNS.filter((c) => picked.has(c.key)).map((c) => c.key);
-}
-
-// 전역 컬럼셋을 app_config 에서 로드. 누락/오류 시 기본값.
-export async function loadKeywordOnlyColumns(): Promise<KeywordColumnKey[]> {
-  const sb = supabaseAdmin();
-  const { data } = await sb
-    .from("app_config")
-    .select("value")
-    .eq("key", "keyword_only_columns")
-    .maybeSingle();
-  const raw = data?.value;
-  if (Array.isArray(raw)) return normalizeColumns(raw as string[]);
-  return DEFAULT_KEYWORD_COLUMNS;
 }

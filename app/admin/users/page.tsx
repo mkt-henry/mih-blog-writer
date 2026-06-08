@@ -3,7 +3,7 @@ import { verifySession } from "@/lib/auth";
 import { loadPermissions, isAdminUsername, type AgencyRole } from "@/lib/permissions";
 import type { AgencySlug } from "@/lib/agencies";
 import { supabaseAdmin } from "@/lib/supabase";
-import { loadKeywordOnlyColumns } from "@/lib/keyword-columns";
+import { loadKeywordOnlyColumns } from "@/lib/keyword-columns.server";
 import UsersTable from "./_components/UsersTable";
 import ColumnSettingsCard from "./_components/ColumnSettingsCard";
 

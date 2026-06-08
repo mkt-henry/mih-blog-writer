@@ -22,17 +22,22 @@ export default function ColumnSettingsCard({ initialColumns }: { initialColumns:
   async function save() {
     setSaving(true);
     const columns = KEYWORD_COLUMNS.filter((c) => c.always || selected.has(c.key)).map((c) => c.key);
-    const res = await fetch("/api/admin/settings/keyword-columns", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ columns }),
-    });
-    setSaving(false);
-    if (!res.ok) {
-      const { error } = await res.json().catch(() => ({ error: "request failed" }));
-      toast.error(`저장 실패: ${error}`);
-    } else {
-      toast.success("컬럼 설정 저장됨");
+    try {
+      const res = await fetch("/api/admin/settings/keyword-columns", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ columns }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: "request failed" }));
+        toast.error(`저장 실패: ${error}`);
+      } else {
+        toast.success("컬럼 설정 저장됨");
+      }
+    } catch {
+      toast.error("저장 실패: 네트워크 오류");
+    } finally {
+      setSaving(false);
     }
   }
 
