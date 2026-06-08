@@ -61,7 +61,7 @@ function LoginForm() {
       >
         <h1 style={{ margin: 0, fontSize: 18 }}>메이드인헤븐 원고 관리</h1>
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 12, color: "var(--muted)" }}>아이디</span>
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>아이디</span>
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -71,7 +71,7 @@ function LoginForm() {
           />
         </label>
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 12, color: "var(--muted)" }}>비밀번호</span>
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>비밀번호</span>
           <input
             type="password"
             value={password}
