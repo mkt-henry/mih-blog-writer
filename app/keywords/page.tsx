@@ -12,17 +12,18 @@ export default async function KeywordsPage() {
   if (!user) redirect("/login");
 
   const perms = await loadPermissions(user.id, user.username);
-  const isEditor =
-    perms.isAdmin ||
-    Object.values(perms.agencies).some((r) => r === "editor");
-
   const keywordOnly = perms.keywordOnly;
+  // 키워드 전용 사용자는 editor 기능(원고/상태필터/KPI)을 절대 보지 않는다.
+  const isEditor =
+    !keywordOnly &&
+    (perms.isAdmin || Object.values(perms.agencies).some((r) => r === "editor"));
+
   const visibleColumns = keywordOnly ? await loadKeywordOnlyColumns() : null;
 
-  // 키워드 전용 사용자는 노출 컬럼에 해당하는 DB 필드만 select (id/keyword/category는 항상)
+  // 키워드 전용 사용자는 노출 컬럼에 해당하는 DB 필드만 select (id/keyword/category/created_at 는 항상)
   const selectFields = (() => {
     if (!visibleColumns) return "id,keyword,category,notes,instagram,agency,published_url,created_at";
-    const fields = new Set<string>(["id", "keyword", "category"]);
+    const fields = new Set<string>(["id", "keyword", "category", "created_at"]);
     for (const col of visibleColumns) {
       const meta = KEYWORD_COLUMNS.find((c) => c.key === col);
       if (meta?.selectField) fields.add(meta.selectField);
