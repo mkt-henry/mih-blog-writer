@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Permissions = Partial<Record<AgencySlug, AgencyRole | null>>;
-type PatchBody = { password?: string; permissions?: Permissions };
+type PatchBody = { password?: string; permissions?: Permissions; keyword_only?: boolean };
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const g = await requireAdmin();
@@ -36,6 +36,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       { error: "admin user permissions are env-controlled" },
       { status: 400 },
     );
+  }
+
+  if (body.keyword_only !== undefined) {
+    if (isAdminUsername(target.username)) {
+      return NextResponse.json({ error: "cannot set keyword_only on admin" }, { status: 400 });
+    }
+    const { error } = await sb
+      .from("app_users")
+      .update({ keyword_only: !!body.keyword_only })
+      .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   if (body.password !== undefined) {

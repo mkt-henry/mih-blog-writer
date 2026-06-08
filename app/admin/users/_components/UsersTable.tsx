@@ -59,6 +59,23 @@ export default function UsersTable({ initialUsers, currentUserId }: Props) {
     }
   }
 
+  async function setKeywordOnly(user: AdminUserRow, next: boolean) {
+    const prev = user.keywordOnly;
+    setUsers((cur) => cur.map((u) => (u.id === user.id ? { ...u, keywordOnly: next } : u)));
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword_only: next }),
+    });
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({ error: "request failed" }));
+      toast.error(`저장 실패: ${error}`);
+      setUsers((cur) => cur.map((u) => (u.id === user.id ? { ...u, keywordOnly: prev } : u)));
+    } else {
+      toast.success("저장됨");
+    }
+  }
+
   async function removeUser(user: AdminUserRow) {
     if (!confirm(`사용자 ${user.username}을(를) 삭제하시겠습니까?`)) return;
     const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
@@ -84,6 +101,7 @@ export default function UsersTable({ initialUsers, currentUserId }: Props) {
             {AGENCY_SLUGS.map((a) => (
               <th key={a} className="text-left px-3 py-2">{AGENCIES[a].blogSlug}</th>
             ))}
+            <th className="text-left px-3 py-2 w-24">키워드 전용</th>
             <th className="text-left px-3 py-2 w-24">작업</th>
           </tr>
         </thead>
@@ -116,6 +134,17 @@ export default function UsersTable({ initialUsers, currentUserId }: Props) {
                   )}
                 </td>
               ))}
+              <td className="px-3 py-2">
+                {u.isAdmin ? (
+                  <span className="text-xs text-gray-400">—</span>
+                ) : (
+                  <input
+                    type="checkbox"
+                    checked={u.keywordOnly}
+                    onChange={(e) => setKeywordOnly(u, e.target.checked)}
+                  />
+                )}
+              </td>
               <td className="px-3 py-2">
                 {u.isAdmin ? (
                   <span className="text-xs text-gray-400">—</span>

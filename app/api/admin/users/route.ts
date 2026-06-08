@@ -20,7 +20,7 @@ export async function GET() {
 
   const sb = supabaseAdmin();
   const [usersRes, permsRes] = await Promise.all([
-    sb.from("app_users").select("id, username, created_at").order("created_at"),
+    sb.from("app_users").select("id, username, created_at, keyword_only").order("created_at"),
     sb.from("user_agency_permissions").select("user_id, agency, role"),
   ]);
   if (usersRes.error) return NextResponse.json({ error: usersRes.error.message }, { status: 500 });
@@ -39,6 +39,7 @@ export async function GET() {
     id: u.id,
     username: u.username,
     isAdmin: isAdminUsername(u.username),
+    keywordOnly: !!(u as { keyword_only?: boolean }).keyword_only,
     permissions: byUser.get(u.id) ?? emptyPerms(),
   }));
 
@@ -98,6 +99,7 @@ export async function POST(req: Request) {
         id: created.id,
         username: created.username,
         isAdmin: isAdminUsername(created.username),
+        keywordOnly: false,
         permissions: { ...emptyPerms(), ...perms },
       },
     },

@@ -3,7 +3,9 @@ import { verifySession } from "@/lib/auth";
 import { loadPermissions, isAdminUsername, type AgencyRole } from "@/lib/permissions";
 import type { AgencySlug } from "@/lib/agencies";
 import { supabaseAdmin } from "@/lib/supabase";
+import { loadKeywordOnlyColumns } from "@/lib/keyword-columns";
 import UsersTable from "./_components/UsersTable";
+import ColumnSettingsCard from "./_components/ColumnSettingsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,7 @@ export type AdminUserRow = {
   id: string;
   username: string;
   isAdmin: boolean;
+  keywordOnly: boolean;
   permissions: Record<AgencySlug, AgencyRole | null>;
 };
 
@@ -26,7 +29,7 @@ export default async function AdminUsersPage() {
 
   const sb = supabaseAdmin();
   const [usersRes, permsRes] = await Promise.all([
-    sb.from("app_users").select("id, username, created_at").order("created_at"),
+    sb.from("app_users").select("id, username, created_at, keyword_only").order("created_at"),
     sb.from("user_agency_permissions").select("user_id, agency, role"),
   ]);
 
@@ -44,10 +47,13 @@ export default async function AdminUsersPage() {
     if (map) map[r.agency as AgencySlug] = r.role as AgencyRole;
   }
 
+  const keywordColumns = await loadKeywordOnlyColumns();
+
   const rows: AdminUserRow[] = (usersRes.data ?? []).map((u) => ({
     id: u.id,
     username: u.username,
     isAdmin: isAdminUsername(u.username),
+    keywordOnly: !!(u as { keyword_only?: boolean }).keyword_only,
     permissions: byUser.get(u.id) ?? emptyPerms(),
   }));
 
@@ -55,6 +61,7 @@ export default async function AdminUsersPage() {
     <div className="min-h-screen bg-[color:var(--color-muted)]">
       <main className="max-w-4xl mx-auto p-6">
         <h1 className="text-lg font-bold mb-4">사용자 관리</h1>
+        <ColumnSettingsCard initialColumns={keywordColumns} />
         <UsersTable initialUsers={rows} currentUserId={user.id} />
       </main>
     </div>
