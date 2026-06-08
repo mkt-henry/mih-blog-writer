@@ -1,7 +1,9 @@
 // 네이버 RSS를 fetch해 articles와 매칭 → published_at/published_url을 채운다.
-// 매칭 실패 항목은 unmatched_rss_items에 upsert.
+// 매칭 실패한 섭외글([..] 패턴)은 발행행으로 직접 누적(ingest)한다.
+//   → 초안 없이 네이버에 직접 발행된 글도 DB에 빠짐없이 반영(DB = 발행 현실).
+// 섭외글 패턴이 아닌 항목(공지 등)만 unmatched_rss_items에 진단용으로 남긴다.
 //
-// 트리거: pg_cron이 10분마다 net.http_post 로 호출.
+// 트리거: pg_cron이 매일 09:55 KST 에 net.http_post 로 호출.
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -123,6 +125,7 @@ Deno.serve(async () => {
   }));
 
   let matchedCount = 0;
+  let ingestedCount = 0;
   let unmatchedCount = 0;
   const errors: string[] = [];
 
@@ -130,6 +133,15 @@ Deno.serve(async () => {
     if (error) errors.push(`${slug}: ${error}`);
     for (const item of items) {
       const rss: RssItem = { agency: slug, title: item.title, link: item.link, pub_ts: item.pub_ts };
+
+      // 이미 다른 발행 원고에 할당된 URL이면 건너뜀.
+      // (한 인물에 미발행 초안이 2개 이상일 때, 같은 블로그 글이 두 초안 모두에
+      //  발행 도장을 찍던 중복발행 버그 방지.) 남아있는 미매칭 기록은 정리.
+      if (publishedUrls.has(item.link)) {
+        await sb.from('unmatched_rss_items').delete().eq('agency', slug).eq('link', item.link);
+        continue;
+      }
+
       const { matched, reason } = matchRssItem(rss, candidates);
 
       if (matched && reason !== 'none') {
@@ -151,8 +163,37 @@ Deno.serve(async () => {
           await sb.from('unmatched_rss_items').delete()
             .eq('agency', slug).eq('link', item.link);
         }
-      } else if (!publishedUrls.has(item.link)) {
-        // 이미 발행된 원고의 RSS 링크는 미매칭으로 집계하지 않음
+      } else if (/^\s*\[.+?\]/.test(item.title)) {
+        // 누적: 대응 초안이 없는 섭외글을 새 발행행으로 직접 등록.
+        // (매칭은 위에서 제목/인물명/slug까지 시도하므로, 여기까지 온 건 초안 자체가 없는 글.)
+        const person = extractTitleKeyword(item.title) ?? item.title;
+        const date = new Date(item.pub_ts + 9 * 3600_000).toISOString().slice(0, 10);
+        const logNo = item.link.match(/\/(\d{6,})(?:\?|$)/)?.[1] ?? String(item.pub_ts);
+        const baseRow = {
+          publish_date: date,
+          agency: slug,
+          person_name: person,
+          title: item.title,
+          html_content: '<!-- RSS 누적 등록: 원본 초안 없음 -->',
+          published_at: new Date(item.pub_ts).toISOString(),
+          published_url: item.link,
+          published_source: 'rss',
+          notes: 'RSS 누적(초안 없음)',
+        };
+        // 슬러그 유니크 제약(publish_date, agency, slug) 충돌 시 logNo 접미로 재시도
+        let { error: insErr } = await sb.from('articles').insert({ ...baseRow, slug: person });
+        if (insErr && /duplicate key|23505/.test(insErr.message)) {
+          ({ error: insErr } = await sb.from('articles').insert({ ...baseRow, slug: `${person}-${logNo}` }));
+        }
+        if (insErr) {
+          errors.push(`ingest ${item.link}: ${insErr.message}`);
+        } else {
+          ingestedCount++;
+          publishedUrls.add(item.link);
+          await sb.from('unmatched_rss_items').delete().eq('agency', slug).eq('link', item.link);
+        }
+      } else {
+        // 섭외글 패턴이 아님(공지 등) → 미매칭 항목으로 기록 (진단용)
         unmatchedCount++;
         await sb.from('unmatched_rss_items').upsert({
           agency: slug,
@@ -178,6 +219,7 @@ Deno.serve(async () => {
       ok: true,
       duration_ms: Date.now() - startedAt,
       matched: matchedCount,
+      ingested: ingestedCount,
       unmatched: unmatchedCount,
       errors,
     }),
