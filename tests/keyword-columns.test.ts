@@ -7,7 +7,7 @@ import {
 
 describe('KEYWORD_COLUMNS', () => {
   it('does not include the article(원고) column', () => {
-    expect(KEYWORD_COLUMNS.some((c) => c.key === 'article')).toBe(false);
+    expect(KEYWORD_COLUMNS.some((c) => (c.key as string) === 'article')).toBe(false);
   });
   it('keyword column is always-on', () => {
     const kw = KEYWORD_COLUMNS.find((c) => c.key === 'keyword');
