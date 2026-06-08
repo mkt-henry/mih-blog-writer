@@ -19,6 +19,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const session = await verifySession();
   if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
+  const perms = await loadPermissions(session.id, session.username);
+  if (perms.keywordOnly) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
   const { id } = await params;
   const sb = supabaseAdmin();
   const { data, error } = await sb.from("articles").select("*").eq("id", id).maybeSingle();

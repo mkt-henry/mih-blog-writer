@@ -12,6 +12,7 @@ export default async function DashboardV2Page() {
   const user = await verifySession();
   if (!user) redirect("/login");
   const perms = await loadPermissions(user.id, user.username);
+  if (perms.keywordOnly) redirect("/keywords");
   const visible = visibleAgencies(perms);
 
   const sb = supabaseAdmin();

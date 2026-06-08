@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import NavBar from "./_components/NavBar";
 import { verifySession } from "@/lib/auth";
-import { isAdminUsername } from "@/lib/permissions";
+import { loadPermissions } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,12 +22,18 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const user = await verifySession();
-  const isAdmin = user ? isAdminUsername(user.username) : false;
+  let isAdmin = false;
+  let keywordOnly = false;
+  if (user) {
+    const perms = await loadPermissions(user.id, user.username);
+    isAdmin = perms.isAdmin;
+    keywordOnly = perms.keywordOnly;
+  }
 
   return (
     <html lang="ko" className={cn("font-sans", geist.variable)}>
       <body>
-        {user && <NavBar isAdmin={isAdmin} />}
+        {user && <NavBar isAdmin={isAdmin} keywordOnly={keywordOnly} />}
         {children}
         <Toaster position="bottom-right" richColors />
       </body>

@@ -1,4 +1,7 @@
+import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifySession } from "@/lib/auth";
+import { loadPermissions } from "@/lib/permissions";
 import { computeRssStats } from "@/lib/rss-stats";
 import type { AgencySlug } from "@/lib/agencies";
 import { isAgencySlug } from "@/lib/agencies";
@@ -14,6 +17,10 @@ function kstMidnightMs(now = Date.now()): number {
 type Search = { days?: string };
 
 export default async function RssV2Page({ searchParams }: { searchParams: Promise<Search> }) {
+  const user = await verifySession();
+  if (!user) redirect("/login");
+  const perms = await loadPermissions(user.id, user.username);
+  if (perms.keywordOnly) redirect("/keywords");
   const sp = await searchParams;
   const days = Math.min(90, Math.max(7, parseInt(sp.days ?? "14", 10) || 14));
 
