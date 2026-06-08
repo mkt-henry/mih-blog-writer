@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifySession } from "@/lib/auth";
+import { loadPermissions } from "@/lib/permissions";
 import { AGENCIES, type AgencySlug } from "@/lib/agencies";
 import { mergeWithBusinessCard, buildBusinessCardHtml } from "@/lib/business-card";
 import type { ArticleRow } from "@/lib/articles";
@@ -10,6 +13,11 @@ export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ id: string }> };
 
 export default async function ArticlePage({ params }: Props) {
+  const user = await verifySession();
+  if (!user) redirect("/login");
+  const perms = await loadPermissions(user.id, user.username);
+  if (perms.keywordOnly) redirect("/keywords");
+
   const { id } = await params;
   const sb = supabaseAdmin();
   const { data, error } = await sb
