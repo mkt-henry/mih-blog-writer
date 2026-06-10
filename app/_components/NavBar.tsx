@@ -8,7 +8,7 @@ type Props = { isAdmin: boolean; keywordOnly: boolean };
 
 export default function NavBar({ isAdmin, keywordOnly }: Props) {
   const pathname = usePathname();
-  if (pathname === "/login") return null;
+  if (pathname === "/login" || pathname.startsWith("/share")) return null;
 
   const link = (href: string, label: string) => {
     const active = pathname === href || (href !== "/" && pathname.startsWith(href));
