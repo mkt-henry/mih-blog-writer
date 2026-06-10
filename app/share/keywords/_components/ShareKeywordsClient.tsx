@@ -2,7 +2,14 @@
 
 import { useState, useMemo } from "react";
 
-type Row = { keyword: string; category: string; published_url: string | null };
+type Row = { keyword: string; category: string; published_url: string | null; published_at: string | null };
+
+function fmtDate(iso: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso.slice(0, 10);
+  return d.toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, ".").replace(/\.$/, "");
+}
 
 export default function ShareKeywordsClient({ rows }: { rows: Row[] }) {
   const [query, setQuery] = useState("");
@@ -79,8 +86,9 @@ export default function ShareKeywordsClient({ rows }: { rows: Row[] }) {
         <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <colgroup>
             <col style={{ width: "2rem" }} />
-            <col style={{ width: "35%" }} />
+            <col style={{ width: "30%" }} />
             <col style={{ width: "5rem" }} />
+            <col style={{ width: "6rem" }} />
             <col />
           </colgroup>
           <thead>
@@ -88,6 +96,7 @@ export default function ShareKeywordsClient({ rows }: { rows: Row[] }) {
               <th className="px-3 py-2 text-right font-medium">#</th>
               <th className="px-3 py-2 text-left font-medium">키워드</th>
               <th className="px-3 py-2 text-left font-medium">분류</th>
+              <th className="px-3 py-2 text-left font-medium">발행 일자</th>
               <th className="px-3 py-2 text-left font-medium">발행 URL</th>
             </tr>
           </thead>
@@ -97,6 +106,9 @@ export default function ShareKeywordsClient({ rows }: { rows: Row[] }) {
                 <td className="px-3 py-1.5 text-right text-xs text-gray-300 tabular-nums">{idx + 1}</td>
                 <td className="px-3 py-1.5 font-medium text-gray-800">{r.keyword}</td>
                 <td className="px-3 py-1.5 text-xs text-gray-400 whitespace-nowrap">{r.category}</td>
+                <td className="px-3 py-1.5 text-xs text-gray-400 whitespace-nowrap tabular-nums">
+                  {fmtDate(r.published_at) ?? <span className="text-gray-200">—</span>}
+                </td>
                 <td className="px-3 py-1.5 text-xs truncate">
                   {r.published_url ? (
                     <a
@@ -115,7 +127,7 @@ export default function ShareKeywordsClient({ rows }: { rows: Row[] }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-10 text-center text-sm text-gray-300">
+                <td colSpan={5} className="py-10 text-center text-sm text-gray-300">
                   결과가 없습니다.
                 </td>
               </tr>
