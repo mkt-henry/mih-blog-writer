@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import SyncButton from "./SyncButton";
 
 export type FilterChip = "all" | "unpublished" | "today" | "missing_instagram";
 
@@ -28,6 +29,8 @@ export default function FilterBar({ search, onSearch, chip, onChip }: Props) {
           placeholder="🔍 인물명·제목 검색..."
           className="flex-1 sm:max-w-xs"
         />
+        <div className="flex-1" />
+        <SyncButton />
       </div>
       <div className="flex gap-1.5 px-3 sm:px-4 py-2 overflow-x-auto scrollbar-none">
         {CHIPS.map(({ key, label }) => (
