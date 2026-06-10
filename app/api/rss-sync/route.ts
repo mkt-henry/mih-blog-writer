@@ -25,7 +25,14 @@ export async function POST() {
       signal: AbortSignal.timeout(30_000),
     });
     const body = await res.text();
-    return new NextResponse(body, { status: res.status, headers: { "Content-Type": "application/json" } });
+    let json: string;
+    try {
+      JSON.parse(body);
+      json = body;
+    } catch {
+      json = JSON.stringify({ error: body || `HTTP ${res.status}` });
+    }
+    return new NextResponse(json, { status: res.status, headers: { "Content-Type": "application/json" } });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
