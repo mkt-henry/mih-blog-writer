@@ -216,7 +216,19 @@ export default function KeywordClient({ keywords, categories, isEditor, visibleC
             </div>
           )}
 
-          <span className="ml-auto text-xs text-gray-400">{filtered.length} / {keywords.length}건</span>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-gray-400">{filtered.length} / {keywords.length}건</span>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/share/keywords`;
+                navigator.clipboard.writeText(url).then(() => toast.success("공유 URL 복사 완료"));
+              }}
+              className="h-8 px-3 text-xs rounded-md border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center gap-1.5"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              공유 URL 복사
+            </button>
+          </div>
         </div>
 
         {/* 테이블 */}
