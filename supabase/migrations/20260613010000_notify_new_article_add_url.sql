@@ -5,7 +5,7 @@
 insert into app_settings (key, value, description)
 values (
   'SITE_BASE_URL',
-  'https://mih.vercel.app',
+  'https://mih.bp-studio.com',
   '배포 모아보기 사이트 베이스 URL (Discord 알림의 원고 링크에 사용)'
 )
 on conflict (key) do update set value = excluded.value, updated_at = now();
