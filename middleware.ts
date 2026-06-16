@@ -19,6 +19,8 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // /login, /api/auth/*, 정적 자산 제외 전부 보호
-  matcher: ["/((?!login|share|api/auth|api/cron|_next/static|_next/image|favicon.ico).*)"],
+  // /login, /api/auth/*, 정적 자산, 계정별 공개 피드(OpenClaw 발행용) 제외 전부 보호
+  matcher: [
+    "/((?!login|share|mih_speaker|mih_casting|mih_agency|mih_other|kyh620303|api/auth|api/cron|_next/static|_next/image|favicon.ico).*)",
+  ],
 };
