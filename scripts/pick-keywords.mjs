@@ -95,7 +95,7 @@ async function main() {
 
   const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   const [{ data: kw, error: kwErr }, { data: arts, error: artErr }] = await Promise.all([
-    sb.from("keywords").select("keyword,category,agency,published_url"),
+    sb.from("keywords").select("keyword,category,agency,published_url,is_active"),
     sb.from("articles").select("person_name"),
   ]);
   if (kwErr) throw kwErr;
@@ -108,7 +108,7 @@ async function main() {
 
   // 미작성 후보: published_url 없음 + 제외 집합에 없음
   const available = (kw || []).filter(
-    (k) => !k.published_url && !excluded.has(norm(k.keyword)),
+    (k) => k.is_active !== false && !k.published_url && !excluded.has(norm(k.keyword)),
   );
 
   // 전역 중복 방지(같은 키워드가 한 실행에서 두 번 뽑히지 않게)

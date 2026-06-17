@@ -23,8 +23,8 @@ export default async function KeywordsPage() {
 
   // 키워드 전용 사용자는 노출 컬럼에 해당하는 DB 필드만 select (id/keyword/category/created_at 는 항상)
   const selectFields = (() => {
-    if (!visibleColumns) return "id,keyword,category,notes,instagram,agency,published_url,created_at";
-    const fields = new Set<string>(["id", "keyword", "category", "created_at"]);
+    if (!visibleColumns) return "id,keyword,category,notes,instagram,agency,published_url,is_active,created_at";
+    const fields = new Set<string>(["id", "keyword", "category", "is_active", "created_at"]);
     for (const col of visibleColumns) {
       const meta = KEYWORD_COLUMNS.find((c) => c.key === col);
       if (meta?.selectField) fields.add(meta.selectField);
@@ -73,15 +73,18 @@ export default async function KeywordsPage() {
       created_at: (k.created_at as string) ?? "",
       agency: (k.agency as string | null) ?? art?.agency ?? null,
       published_url: (k.published_url as string | null) ?? art?.published_url ?? null,
+      is_active: (k.is_active as boolean | null) !== false,
       has_article: !!art,
       article_id: art?.id ?? null,
       article_title: art?.title ?? null,
     };
-  });
+  }).filter((k) => isEditor || k.is_active);
 
-  const categories = [...new Set(keywords.map((k) => k.category))].sort();
-  const publishedCount = keywords.filter((k) => k.published_url).length;
-  const articleCount = keywords.filter((k) => k.has_article).length;
+  const activeKeywords = keywords.filter((k) => k.is_active);
+  const categories = [...new Set(activeKeywords.map((k) => k.category))].sort();
+  const publishedCount = activeKeywords.filter((k) => k.published_url).length;
+  const articleCount = activeKeywords.filter((k) => k.has_article).length;
+  const inactiveCount = keywords.length - activeKeywords.length;
 
   return (
     <div className="min-h-screen bg-[color:var(--color-bg)]">
@@ -89,10 +92,14 @@ export default async function KeywordsPage() {
       <div className="flex gap-4 px-4 py-3 border-b border-gray-100 bg-white text-sm">
         <div>
           <span className="text-gray-400 text-xs">전체</span>
-          <span className="ml-1.5 font-bold text-gray-800">{keywords.length.toLocaleString()}</span>
+          <span className="ml-1.5 font-bold text-gray-800">{activeKeywords.length.toLocaleString()}</span>
         </div>
         {isEditor && (
           <>
+            <div>
+              <span className="text-gray-400 text-xs">비활성</span>
+              <span className="ml-1.5 font-bold text-gray-400">{inactiveCount}</span>
+            </div>
             <div>
               <span className="text-gray-400 text-xs">원고 작성</span>
               <span className="ml-1.5 font-bold text-blue-600">{articleCount}</span>
@@ -103,16 +110,16 @@ export default async function KeywordsPage() {
             </div>
             <div>
               <span className="text-gray-400 text-xs">원고만 (미발행)</span>
-              <span className="ml-1.5 font-bold text-amber-600">{keywords.filter((k) => k.has_article && !k.published_url).length}</span>
+              <span className="ml-1.5 font-bold text-amber-600">{activeKeywords.filter((k) => k.has_article && !k.published_url).length}</span>
             </div>
             <div>
               <span className="text-gray-400 text-xs">미작성</span>
-              <span className="ml-1.5 font-bold text-gray-400">{keywords.filter((k) => !k.has_article && !k.published_url).length}</span>
+              <span className="ml-1.5 font-bold text-gray-400">{activeKeywords.filter((k) => !k.has_article && !k.published_url).length}</span>
             </div>
           </>
         )}
         {categories.map((c) => {
-          const cnt = keywords.filter((k) => k.category === c).length;
+          const cnt = activeKeywords.filter((k) => k.category === c).length;
           return (
             <div key={c}>
               <span className="text-gray-400 text-xs">{c}</span>
