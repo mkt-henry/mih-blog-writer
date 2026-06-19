@@ -7,6 +7,7 @@ describe('norm/stripParen', () => {
   it('strips paren annotations and normalizes', () => {
     expect(stripParen('정재승(카이스트(교수))')).toBe('정재승');
     expect(norm('  송길영  ')).toBe('송길영');
+    expect(norm('송 길 영')).toBe('송길영');
   });
 });
 
@@ -39,5 +40,8 @@ describe('makeSplitter', () => {
 describe('ALL_CAT_NOS', () => {
   it('includes speaker, gagman, broadcast and performance CatNos', () => {
     for (const n of [87, 85, 89, 74, 40, 58]) expect(ALL_CAT_NOS).toContain(n);
+  });
+  it('has no duplicate CatNos', () => {
+    expect(new Set(ALL_CAT_NOS).size).toBe(ALL_CAT_NOS.length);
   });
 });
