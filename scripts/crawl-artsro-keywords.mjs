@@ -6,6 +6,10 @@
 //   node scripts/crawl-artsro-keywords.mjs --apply    # 신규 행 upsert
 
 import { pathToFileURL } from 'node:url';
+import { supabaseSelect, supabaseUpsert } from './lib/supabase-rest.js';
+import { loadEnv } from './lib/env.js';
+
+loadEnv();
 
 // ── 정규화 (pick-keywords.mjs와 동일) ───────────────────────────────────────
 export const stripParen = (s) => (s || '').replace(/[\(（].*$/s, '').trim();
@@ -95,8 +99,97 @@ export function makeSplitter() {
   return () => ENT_ACCOUNTS[i++ % ENT_ACCOUNTS.length];
 }
 
+const BASE = 'https://www.artsro.com/right/enter_list.html';
+const UA = 'Mozilla/5.0 (compatible; mih-blog-writer/1.0)';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchPage(catNo, start) {
+  const url = `${BASE}?CatNo=${catNo}&start=${start}`;
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': UA } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const html = await res.text();
+      await sleep(400); // 예의상 rate limit
+      return html;
+    } catch (e) {
+      lastErr = e;
+      await sleep(800 * (attempt + 1)); // 백오프
+    }
+  }
+  console.warn(`  ⚠ fetch 실패(스킵): CatNo=${catNo} start=${start} — ${lastErr?.message}`);
+  return ''; // 빈 페이지 → 해당 CatNo 종료 신호
+}
+
 async function main() {
-  // Task 5에서 구현
+  const apply = process.argv.includes('--apply');
+
+  // 1) 기존 DB 키워드/원고 인물명 → 제외(중복) 집합
+  const [kw, arts] = await Promise.all([
+    supabaseSelect('keywords', { columns: 'keyword' }),
+    supabaseSelect('articles', { columns: 'person_name' }),
+  ]);
+  const excluded = new Set();
+  for (const k of kw || []) excluded.add(norm(k.keyword));
+  for (const a of arts || []) excluded.add(norm(a.person_name));
+
+  // 2) 전체 CatNo 순회 크롤링
+  const splitter = makeSplitter();
+  const newRows = [];
+  const seenThisRun = new Set(); // 같은 인물이 여러 CatNo에 중복 등장 방지
+  let totalCrawled = 0;
+  let dup = 0;
+  const byBucket = {}; // `${category}/${agency}` → [name]
+
+  for (const catNo of ALL_CAT_NOS) {
+    const people = await crawlCategory(catNo, fetchPage);
+    totalCrawled += people.length;
+    if (people.length === 0) {
+      console.warn(`  ⚠ CatNo=${catNo}: 수집 0건`);
+      continue;
+    }
+    const { category, agency: fixedAgency, split } = classify(catNo);
+    for (const p of people) {
+      const nn = norm(p.name);
+      if (isDuplicate(p.name, excluded) || isDuplicate(p.name, seenThisRun)) { dup++; continue; }
+      seenThisRun.add(nn);
+      const agency = split ? splitter() : fixedAgency;
+      newRows.push(buildRow({ ...p, catNo }, agency));
+      const bucket = `${category}/${agency}`;
+      (byBucket[bucket] ||= []).push(p.name);
+    }
+    console.log(`  CatNo=${catNo} [${category}] 수집 ${people.length}`);
+  }
+
+  // 3) 방어: 전체 0건이면 비정상 → 실패 처리
+  if (totalCrawled === 0) {
+    console.error('전체 수집 0건 — 사이트 마크업이 변경되었을 수 있습니다.');
+    process.exit(1);
+  }
+
+  // 4) 리포트
+  console.log('\n=== artsro 크롤 결과 ===');
+  console.log(`전체 수집 ${totalCrawled} / 신규 ${newRows.length} / 중복(스킵) ${dup}\n`);
+  for (const [bucket, names] of Object.entries(byBucket)) {
+    console.log(`■ ${bucket} (${names.length})`);
+    names.forEach((n, i) => console.log(`  ${i + 1}. ${n}`));
+    console.log('');
+  }
+
+  if (!apply) {
+    console.log('실제 추가하려면 --apply 로 재실행하세요.');
+    return;
+  }
+
+  // 5) upsert (청크 200)
+  let inserted = 0;
+  for (let i = 0; i < newRows.length; i += 200) {
+    const chunk = newRows.slice(i, i + 200);
+    await supabaseUpsert('keywords', chunk, { onConflict: 'id' });
+    inserted += chunk.length;
+  }
+  console.log(`완료: ${inserted}건 upsert.`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
