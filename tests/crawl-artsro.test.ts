@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   stripParen, norm, classify, makeSplitter, ALL_CAT_NOS, parseListPage,
-  isDuplicate, buildRow, crawlCategory,
+  isDuplicate, buildRow, crawlCategory, shuffle, collectOutputNames,
 } from '@/scripts/crawl-artsro-keywords.mjs';
 
 const SAMPLE = `
@@ -130,5 +130,22 @@ describe('crawlCategory', () => {
     const fetchPage = async () => pageHtml([1, 2]); // 항상 같은 페이지
     const rows = await crawlCategory(99, fetchPage);
     expect(rows.map((r) => r.goIdx)).toEqual(['1', '2']);
+  });
+});
+
+describe('shuffle', () => {
+  it('returns a permutation with the same elements', () => {
+    const input = [1, 2, 3, 4, 5, 6, 7, 8];
+    const out = shuffle([...input]);
+    expect(out.length).toBe(input.length);
+    expect([...out].sort((a, b) => a - b)).toEqual(input);
+  });
+});
+
+describe('collectOutputNames', () => {
+  it('returns the accumulator unchanged for a missing directory', () => {
+    const acc = new Set<string>(['기존']);
+    expect(collectOutputNames('definitely-nonexistent-dir-xyz', acc)).toBe(acc);
+    expect([...acc]).toEqual(['기존']);
   });
 });

@@ -8,6 +8,8 @@
 import { pathToFileURL } from 'node:url';
 import { supabaseSelect, supabaseUpsert } from './lib/supabase-rest.js';
 import { loadEnv } from './lib/env.js';
+import { readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 
 loadEnv();
 
@@ -99,6 +101,32 @@ export function makeSplitter() {
   return () => ENT_ACCOUNTS[i++ % ENT_ACCOUNTS.length];
 }
 
+// Fisher-Yates 셔플 (assign-keyword-agency.mjs와 동일)
+export function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// output/ 폴더의 html 파일명 접두어(인물명)를 제외 집합에 추가 (pick-keywords.mjs와 동일)
+export function collectOutputNames(dir, acc) {
+  let entries;
+  try { entries = readdirSync(dir); } catch { return acc; }
+  for (const e of entries) {
+    const p = join(dir, e);
+    let st;
+    try { st = statSync(p); } catch { continue; }
+    if (st.isDirectory()) collectOutputNames(p, acc);
+    else if (e.toLowerCase().endsWith('.html')) {
+      const prefix = e.split('_')[0].trim();
+      if (prefix) acc.add(norm(prefix));
+    }
+  }
+  return acc;
+}
+
 const BASE = 'https://www.artsro.com/right/enter_list.html';
 const UA = 'Mozilla/5.0 (compatible; mih-blog-writer/1.0)';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -125,7 +153,7 @@ async function fetchPage(catNo, start) {
 async function main() {
   const apply = process.argv.includes('--apply');
 
-  // 1) 기존 DB 키워드/원고 인물명 → 제외(중복) 집합
+  // 1) 기존 DB 키워드/원고 인물명 + output/ 파일명 → 제외(중복) 집합
   const [kw, arts] = await Promise.all([
     supabaseSelect('keywords', { columns: 'keyword' }),
     supabaseSelect('articles', { columns: 'person_name' }),
@@ -133,14 +161,13 @@ async function main() {
   const excluded = new Set();
   for (const k of kw || []) excluded.add(norm(k.keyword));
   for (const a of arts || []) excluded.add(norm(a.person_name));
+  collectOutputNames('output', excluded); // 발행 대기 원고(output/)도 제외
 
-  // 2) 전체 CatNo 순회 크롤링
-  const splitter = makeSplitter();
-  const newRows = [];
+  // 2) 전체 CatNo 순회 크롤링 — 신규 인물만 수집(계정 배정은 이후)
+  const pending = []; // { p, catNo, category, split, fixedAgency, agency? }
   const seenThisRun = new Set(); // 같은 인물이 여러 CatNo에 중복 등장 방지
   let totalCrawled = 0;
   let dup = 0;
-  const byBucket = {}; // `${category}/${agency}` → [name]
 
   for (const catNo of ALL_CAT_NOS) {
     const people = await crawlCategory(catNo, fetchPage);
@@ -154,10 +181,7 @@ async function main() {
       const nn = norm(p.name);
       if (isDuplicate(p.name, excluded) || isDuplicate(p.name, seenThisRun)) { dup++; continue; }
       seenThisRun.add(nn);
-      const agency = split ? splitter() : fixedAgency;
-      newRows.push(buildRow({ ...p, catNo }, agency));
-      const bucket = `${category}/${agency}`;
-      (byBucket[bucket] ||= []).push(p.name);
+      pending.push({ p, catNo, category, split, fixedAgency });
     }
     console.log(`  CatNo=${catNo} [${category}] 수집 ${people.length}`);
   }
@@ -168,7 +192,21 @@ async function main() {
     process.exit(1);
   }
 
-  // 4) 리포트
+  // 4) 계정 배정 — split 대상은 셔플 후 라운드로빈(랜덤·균등), 강연자는 mih_speaker 고정
+  const splitter = makeSplitter();
+  shuffle(pending.filter((e) => e.split)).forEach((e) => { e.agency = splitter(); });
+  for (const e of pending) if (!e.split) e.agency = e.fixedAgency;
+
+  // 5) 행 생성 + 리포트 버킷
+  const newRows = [];
+  const byBucket = {}; // `${category}/${agency}` → [name]
+  for (const e of pending) {
+    newRows.push(buildRow({ ...e.p, catNo: e.catNo }, e.agency));
+    const bucket = `${e.category}/${e.agency}`;
+    (byBucket[bucket] ||= []).push(e.p.name);
+  }
+
+  // 6) 리포트
   console.log('\n=== artsro 크롤 결과 ===');
   console.log(`전체 수집 ${totalCrawled} / 신규 ${newRows.length} / 중복(스킵) ${dup}\n`);
   for (const [bucket, names] of Object.entries(byBucket)) {
@@ -182,7 +220,7 @@ async function main() {
     return;
   }
 
-  // 5) upsert (청크 200)
+  // 7) upsert (청크 200)
   let inserted = 0;
   const total = newRows.length;
   for (let i = 0; i < total; i += 200) {
