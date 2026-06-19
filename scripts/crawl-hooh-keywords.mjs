@@ -35,3 +35,22 @@ export function buildRow({ idx, name, title, cate }) {
     is_active: true,
   };
 }
+
+export async function crawlAll(fetchPage, { maxPage = 300 } = {}) {
+  const acc = [];
+  const seen = new Set();
+  for (let page = 1; page <= maxPage; page++) {
+    const html = await fetchPage(page);
+    const rows = parseListPage(html);
+    if (rows.length === 0) break;          // 마지막 페이지 도달
+    let fresh = 0;
+    for (const r of rows) {
+      if (seen.has(r.idx)) continue;
+      seen.add(r.idx);
+      acc.push(r);
+      fresh++;
+    }
+    if (fresh === 0) break;                // clamp된 반복 페이지 → 종료
+  }
+  return acc;
+}

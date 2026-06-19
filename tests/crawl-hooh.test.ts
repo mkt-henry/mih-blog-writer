@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseListPage, buildRow } from '@/scripts/crawl-hooh-keywords.mjs';
+import { parseListPage, buildRow, crawlAll } from '@/scripts/crawl-hooh-keywords.mjs';
 
 const SAMPLE = `
 <ul class="list clearfix">
@@ -59,5 +59,36 @@ describe('buildRow', () => {
     expect(buildRow({ idx: '7', name: '홍길동', title: '', cate: '리더십' }).notes).toBe('리더십');
     expect(buildRow({ idx: '8', name: '임꺽정', title: '작가', cate: '' }).notes).toBe('작가');
     expect(buildRow({ idx: '9', name: '아무개', title: '', cate: '' }).notes).toBe('');
+  });
+});
+
+function pageHtml(ids: number[]): string {
+  return ids.map((id) =>
+    `<li><a href="/sub/teacher/next.asp?m_idx=${id}" onclick="hash_form()">` +
+    `<div class="lname"><p>P${id}</p><span>t${id}</span></div>` +
+    `<p class="cate">c${id}</p></a></li>`,
+  ).join('');
+}
+
+describe('crawlAll', () => {
+  it('paginates from page 1 until an empty page', async () => {
+    const pages: Record<number, number[]> = { 1: [1, 2], 2: [3], 3: [] };
+    const fetchPage = async (page: number) => pageHtml(pages[page] ?? []);
+    const rows = await crawlAll(fetchPage);
+    expect(rows.map((r) => r.idx)).toEqual(['1', '2', '3']);
+  });
+
+  it('stops when a page repeats already-seen ids (clamped)', async () => {
+    const fetchPage = async () => pageHtml([1, 2]); // 항상 같은 페이지
+    const rows = await crawlAll(fetchPage);
+    expect(rows.map((r) => r.idx)).toEqual(['1', '2']);
+  });
+
+  it('respects maxPage safety cap', async () => {
+    let calls = 0;
+    const fetchPage = async (page: number) => { calls++; return pageHtml([page]); };
+    const rows = await crawlAll(fetchPage, { maxPage: 3 });
+    expect(calls).toBe(3);
+    expect(rows.map((r) => r.idx)).toEqual(['1', '2', '3']);
   });
 });
