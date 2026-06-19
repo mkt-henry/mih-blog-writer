@@ -37,12 +37,19 @@ export async function supabaseUpsert(table, rows, { onConflict } = {}) {
 
 export async function supabaseSelect(table, { columns = '*', filter = '', limit } = {}) {
   const PAGE = 1000;
+  const MAX_PAGES = 1000; // 런어웨이 루프 방지 (1000페이지 × 1000행 = 최대 100만 행)
   const baseUrl = `${endpoint()}/rest/v1/${table}?${new URLSearchParams({ select: columns })}${filter ? `&${filter}` : ''}`;
 
   const all = [];
   let start = 0;
+  let pageCount = 0;
 
   while (true) {
+    // 페이지 요청 수 초과 확인
+    if (pageCount >= MAX_PAGES) {
+      throw new Error(`${table} select 실패: 페이지 수 상한선 초과 (MAX_PAGES=${MAX_PAGES})`);
+    }
+
     // If limit is set, only request what we still need; otherwise request a full page
     const remaining = limit != null ? limit - all.length : PAGE;
     if (remaining <= 0) break;
@@ -69,6 +76,7 @@ export async function supabaseSelect(table, { columns = '*', filter = '', limit 
     if (rows.length < PAGE) break;
 
     start += rows.length;
+    pageCount++;
   }
 
   return all;

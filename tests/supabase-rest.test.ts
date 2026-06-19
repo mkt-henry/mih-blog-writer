@@ -89,4 +89,40 @@ describe('supabaseSelect pagination', () => {
     const rangeHeader = mockFetch.mock.calls[0][1].headers['Range'];
     expect(rangeHeader).toBe('0-9');
   });
+
+  it('limit=1500: crosses page boundary — 2 pages (1000, 500), Range headers bounded correctly', async () => {
+    const page1 = makeRows(0, 1000);
+    const page2 = makeRows(1000, 500);
+
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce(makeResponse(page1, 206))
+      .mockResolvedValueOnce(makeResponse(page2, 206));
+
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await supabaseSelect('keywords', { columns: 'keyword', limit: 1500 });
+
+    expect(result).toHaveLength(1500);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+
+    // Check Range headers: second page should be bounded to remaining limit (1000-1499, not 1000-1999)
+    const calls = mockFetch.mock.calls;
+    expect(calls[0][1].headers['Range']).toBe('0-999');
+    expect(calls[1][1].headers['Range']).toBe('1000-1499');
+  });
+
+  it('select error (500): rejects with error message matching status and text', async () => {
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: async () => 'oops',
+      });
+
+    vi.stubGlobal('fetch', mockFetch);
+
+    await expect(supabaseSelect('keywords', {}))
+      .rejects
+      .toThrow('keywords select 실패: 500 oops');
+  });
 });
