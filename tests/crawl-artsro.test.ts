@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   stripParen, norm, classify, makeSplitter, ALL_CAT_NOS, parseListPage,
-  isDuplicate, buildRow,
+  isDuplicate, buildRow, crawlCategory,
 } from '@/scripts/crawl-artsro-keywords.mjs';
 
 const SAMPLE = `
@@ -108,5 +108,27 @@ describe('buildRow', () => {
       notes: '따뜻한 상담 전문가 | https://www.artsro.com/right/enter_view.html?GoIdx=4778&CatNo=87',
       is_active: true,
     });
+  });
+});
+
+function pageHtml(ids: number[]): string {
+  return ids.map((id) =>
+    `<li><a href="enter_view.html?GoIdx=${id}&CatNo=99">` +
+    `<p class="idol_title">P${id}</p><p class="idol_txt">d${id}</p></a></li>`,
+  ).join('');
+}
+
+describe('crawlCategory', () => {
+  it('paginates until an empty page', async () => {
+    const pages: Record<number, number[]> = { 0: [1, 2], 15: [3], 30: [] };
+    const fetchPage = async (_cat: number, start: number) => pageHtml(pages[start] ?? []);
+    const rows = await crawlCategory(99, fetchPage);
+    expect(rows.map((r) => r.goIdx)).toEqual(['1', '2', '3']);
+  });
+
+  it('stops when a page repeats already-seen ids (clamped)', async () => {
+    const fetchPage = async () => pageHtml([1, 2]); // 항상 같은 페이지
+    const rows = await crawlCategory(99, fetchPage);
+    expect(rows.map((r) => r.goIdx)).toEqual(['1', '2']);
   });
 });

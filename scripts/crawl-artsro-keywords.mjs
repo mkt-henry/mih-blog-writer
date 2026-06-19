@@ -68,6 +68,27 @@ export function buildRow({ goIdx, name, desc, catNo }, agency) {
   return { id: `artsro-${goIdx}`, keyword: name, category, agency, notes, is_active: true };
 }
 
+const PAGE_SIZE = 15;
+
+export async function crawlCategory(catNo, fetchPage) {
+  const acc = [];
+  const seen = new Set();
+  for (let start = 0; ; start += PAGE_SIZE) {
+    const html = await fetchPage(catNo, start);
+    const rows = parseListPage(html);
+    if (rows.length === 0) break;
+    let fresh = 0;
+    for (const r of rows) {
+      if (seen.has(r.goIdx)) continue;
+      seen.add(r.goIdx);
+      acc.push(r);
+      fresh++;
+    }
+    if (fresh === 0) break; // 새 항목 없음(clamp된 마지막 페이지) → 종료
+  }
+  return acc;
+}
+
 const ENT_ACCOUNTS = ['mih_casting', 'mih_agency', 'other'];
 export function makeSplitter() {
   let i = 0;
