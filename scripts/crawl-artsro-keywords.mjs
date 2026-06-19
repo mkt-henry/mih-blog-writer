@@ -69,9 +69,9 @@ export function isDuplicate(name, excludedSet) {
 
 export function buildRow({ goIdx, name, desc, catNo }, agency) {
   const { category } = classify(catNo);
-  const url = `https://www.artsro.com/right/enter_view.html?GoIdx=${goIdx}&CatNo=${catNo}`;
-  const notes = desc ? `${desc} | ${url}` : url;
-  return { id: `artsro-${goIdx}`, keyword: name, category, agency, notes, is_active: true };
+  // 출처(artsro 상세 URL)는 source 컬럼에 따로 기록, notes 에는 소개글만 남긴다.
+  const source = `https://www.artsro.com/right/enter_view.html?GoIdx=${goIdx}&CatNo=${catNo}`;
+  return { id: `artsro-${goIdx}`, keyword: name, category, agency, notes: desc, source, is_active: true };
 }
 
 const PAGE_SIZE = 15;
