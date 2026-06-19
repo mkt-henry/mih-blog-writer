@@ -18,6 +18,7 @@
     "secrets:pull": "node scripts/secrets-pull.js",
     "collect:images": "node scripts/collect-instagram-images.js",
     "crawl:keywords": "node scripts/crawl-artsro-keywords.mjs",
+    "crawl:hooh": "node scripts/crawl-hooh-keywords.mjs",
     "legacy:build-manifest": "node scripts/build-manifest.js",
     "legacy:dev-server": "node scripts/dev-server.js",
     "check:article": "node scripts/check-article.mjs"
