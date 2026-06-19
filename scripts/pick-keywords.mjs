@@ -78,6 +78,18 @@ const stripParen = (s) => (s || "").replace(/[\(（].*$/s, "").trim();
 // 비교용 정규화: 괄호 주석 제거 + 공백 제거 + 소문자화
 const norm = (s) => stripParen(s).replace(/\s+/g, "").toLowerCase();
 
+// 키워드에 "작가", "강사" 등 직함이 붙으면 norm 결과가 "송길영작가"처럼 달라져
+// excluded 집합의 "송길영"(파일명/DB 인물명)과 exact match가 실패한다.
+// 양방향 startsWith로 "송길영작가".startsWith("송길영") → true 를 잡는다.
+function isExcluded(keyword, excludedSet) {
+  const kn = norm(keyword);
+  if (excludedSet.has(kn)) return true;
+  for (const ex of excludedSet) {
+    if (kn.startsWith(ex) || ex.startsWith(kn)) return true;
+  }
+  return false;
+}
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -108,7 +120,7 @@ async function main() {
 
   // 미작성 후보: published_url 없음 + 제외 집합에 없음
   const available = (kw || []).filter(
-    (k) => k.is_active !== false && !k.published_url && !excluded.has(norm(k.keyword)),
+    (k) => k.is_active !== false && !k.published_url && !isExcluded(k.keyword, excluded),
   );
 
   // 전역 중복 방지(같은 키워드가 한 실행에서 두 번 뽑히지 않게)
@@ -122,7 +134,7 @@ async function main() {
     }
     const pool = shuffle(
       available.filter(
-        (k) => k.agency === agency && !usedThisRun.has(norm(k.keyword)),
+        (k) => k.agency === agency && !isExcluded(k.keyword, usedThisRun),
       ),
     );
     const poolSize = pool.length;
