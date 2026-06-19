@@ -1,7 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import {
-  stripParen, norm, classify, makeSplitter, ALL_CAT_NOS,
+  stripParen, norm, classify, makeSplitter, ALL_CAT_NOS, parseListPage,
 } from '@/scripts/crawl-artsro-keywords.mjs';
+
+const SAMPLE = `
+  <!--li><a href="#idol_pop0"-->
+  <li><a href="enter_view.html?GoIdx=4778&CatNo=87">
+    <div class="idol_img"><img src="/x.png" /></div>
+    <div class="idol_tbox">
+      <p class="idol_title">이호선</p>
+      <p class="idol_txt" style="height:60px;">따뜻한 상담 전문가</p>
+    </div>
+    </a>
+  </li>
+  <li><a href="enter_view.html?GoIdx=3550&CatNo=87">
+    <div class="idol_img"><img src="/y.jpg" /></div>
+    <div class="idol_tbox">
+      <p class="idol_title">임용한 박사</p>
+      <p class="idol_txt">통찰력 있는 분석가</p>
+    </div>
+    </a>
+  </li>`;
 
 describe('norm/stripParen', () => {
   it('strips paren annotations and normalizes', () => {
@@ -43,5 +62,19 @@ describe('ALL_CAT_NOS', () => {
   });
   it('has no duplicate CatNos', () => {
     expect(new Set(ALL_CAT_NOS).size).toBe(ALL_CAT_NOS.length);
+  });
+});
+
+describe('parseListPage', () => {
+  it('extracts goIdx, name, desc per person', () => {
+    const rows = parseListPage(SAMPLE);
+    expect(rows).toEqual([
+      { goIdx: '4778', name: '이호선', desc: '따뜻한 상담 전문가' },
+      { goIdx: '3550', name: '임용한 박사', desc: '통찰력 있는 분석가' },
+    ]);
+  });
+
+  it('returns empty array when no person items', () => {
+    expect(parseListPage('<div>no items</div>')).toEqual([]);
   });
 });

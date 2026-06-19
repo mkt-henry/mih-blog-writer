@@ -40,6 +40,17 @@ export function classify(catNo) {
   return { category: '가수', agency: null, split: true };
 }
 
+const ITEM_RE =
+  /enter_view\.html\?GoIdx=(\d+)[^"]*"[\s\S]*?idol_title">([^<]+)<\/p>[\s\S]*?idol_txt"[^>]*>([^<]*)<\/p>/g;
+
+export function parseListPage(html) {
+  const out = [];
+  for (const m of (html || '').matchAll(ITEM_RE)) {
+    out.push({ goIdx: m[1], name: m[2].trim(), desc: m[3].trim() });
+  }
+  return out;
+}
+
 const ENT_ACCOUNTS = ['mih_casting', 'mih_agency', 'other'];
 export function makeSplitter() {
   let i = 0;
