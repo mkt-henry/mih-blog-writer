@@ -95,7 +95,7 @@ describe('isDuplicate', () => {
 });
 
 describe('buildRow', () => {
-  it('builds keywords row with artsro id + notes source link', () => {
+  it('records source URL in a separate field; notes holds only the description', () => {
     const row = buildRow(
       { goIdx: '4778', name: '이호선', desc: '따뜻한 상담 전문가', catNo: 87 },
       'mih_speaker',
@@ -105,9 +105,17 @@ describe('buildRow', () => {
       keyword: '이호선',
       category: '강연자',
       agency: 'mih_speaker',
-      notes: '따뜻한 상담 전문가 | https://www.artsro.com/right/enter_view.html?GoIdx=4778&CatNo=87',
+      notes: '따뜻한 상담 전문가',
+      source: 'https://www.artsro.com/right/enter_view.html?GoIdx=4778&CatNo=87',
       is_active: true,
     });
+  });
+
+  it('keeps notes empty but still records source when desc is empty', () => {
+    const row = buildRow({ goIdx: '10', name: '홍길동', desc: '', catNo: 40 }, 'other');
+    expect(row.notes).toBe('');
+    expect(row.source).toBe('https://www.artsro.com/right/enter_view.html?GoIdx=10&CatNo=40');
+    expect(row.category).toBe('가수');
   });
 });
 
