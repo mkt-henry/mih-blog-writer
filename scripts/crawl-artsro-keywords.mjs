@@ -184,10 +184,18 @@ async function main() {
 
   // 5) upsert (청크 200)
   let inserted = 0;
-  for (let i = 0; i < newRows.length; i += 200) {
+  const total = newRows.length;
+  for (let i = 0; i < total; i += 200) {
     const chunk = newRows.slice(i, i + 200);
-    await supabaseUpsert('keywords', chunk, { onConflict: 'id' });
+    try {
+      await supabaseUpsert('keywords', chunk, { onConflict: 'id' });
+    } catch (e) {
+      console.error(`upsert 실패: ${inserted}/${total}건까지 반영됨. 청크 ${i}~${i + chunk.length} 실패 — ${e.message}`);
+      console.error('id 기준 멱등이므로 그대로 재실행하면 이어서 반영됩니다.');
+      throw e;
+    }
     inserted += chunk.length;
+    console.log(`  upsert 진행 ${inserted}/${total}`);
   }
   console.log(`완료: ${inserted}건 upsert.`);
 }
