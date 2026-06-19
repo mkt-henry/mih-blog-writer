@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   stripParen, norm, classify, makeSplitter, ALL_CAT_NOS, parseListPage,
+  isDuplicate, buildRow,
 } from '@/scripts/crawl-artsro-keywords.mjs';
 
 const SAMPLE = `
@@ -76,5 +77,36 @@ describe('parseListPage', () => {
 
   it('returns empty array when no person items', () => {
     expect(parseListPage('<div>no items</div>')).toEqual([]);
+  });
+});
+
+describe('isDuplicate', () => {
+  const excluded = new Set(['송길영', '임용한']);
+  it('exact normalized match', () => {
+    expect(isDuplicate('송길영', excluded)).toBe(true);
+  });
+  it('bidirectional startsWith catches title suffix', () => {
+    expect(isDuplicate('임용한 박사', excluded)).toBe(true);   // kn="임용한박사" startsWith "임용한"
+    expect(isDuplicate('송길영 작가', excluded)).toBe(true);
+  });
+  it('non-match returns false', () => {
+    expect(isDuplicate('홍길동', excluded)).toBe(false);
+  });
+});
+
+describe('buildRow', () => {
+  it('builds keywords row with artsro id + notes source link', () => {
+    const row = buildRow(
+      { goIdx: '4778', name: '이호선', desc: '따뜻한 상담 전문가', catNo: 87 },
+      'mih_speaker',
+    );
+    expect(row).toEqual({
+      id: 'artsro-4778',
+      keyword: '이호선',
+      category: '강연자',
+      agency: 'mih_speaker',
+      notes: '따뜻한 상담 전문가 | https://www.artsro.com/right/enter_view.html?GoIdx=4778&CatNo=87',
+      is_active: true,
+    });
   });
 });

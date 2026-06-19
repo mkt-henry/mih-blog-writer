@@ -50,6 +50,24 @@ export function parseListPage(html) {
   return out;
 }
 
+export function isDuplicate(name, excludedSet) {
+  const kn = norm(name);
+  if (!kn) return false;
+  if (excludedSet.has(kn)) return true;
+  for (const ex of excludedSet) {
+    if (!ex) continue;
+    if (kn.startsWith(ex) || ex.startsWith(kn)) return true;
+  }
+  return false;
+}
+
+export function buildRow({ goIdx, name, desc, catNo }, agency) {
+  const { category } = classify(catNo);
+  const url = `https://www.artsro.com/right/enter_view.html?GoIdx=${goIdx}&CatNo=${catNo}`;
+  const notes = desc ? `${desc} | ${url}` : url;
+  return { id: `artsro-${goIdx}`, keyword: name, category, agency, notes, is_active: true };
+}
+
 const ENT_ACCOUNTS = ['mih_casting', 'mih_agency', 'other'];
 export function makeSplitter() {
   let i = 0;
