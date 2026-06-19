@@ -36,16 +36,40 @@ export async function supabaseUpsert(table, rows, { onConflict } = {}) {
 }
 
 export async function supabaseSelect(table, { columns = '*', filter = '', limit } = {}) {
-  const params = new URLSearchParams();
-  params.set('select', columns);
-  if (limit) params.set('limit', String(limit));
-  const url = `${endpoint()}/rest/v1/${table}?${params}${filter ? `&${filter}` : ''}`;
-  const res = await fetch(url, {
-    headers: { apikey: key(), Authorization: `Bearer ${key()}` },
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`${table} select 실패: ${res.status} ${txt}`);
+  const PAGE = 1000;
+  const baseUrl = `${endpoint()}/rest/v1/${table}?${new URLSearchParams({ select: columns })}${filter ? `&${filter}` : ''}`;
+
+  const all = [];
+  let start = 0;
+
+  while (true) {
+    // If limit is set, only request what we still need; otherwise request a full page
+    const remaining = limit != null ? limit - all.length : PAGE;
+    if (remaining <= 0) break;
+    const end = start + Math.min(remaining, PAGE) - 1;
+
+    const res = await fetch(baseUrl, {
+      headers: {
+        apikey: key(),
+        Authorization: `Bearer ${key()}`,
+        Range: `${start}-${end}`,
+      },
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`${table} select 실패: ${res.status} ${txt}`);
+    }
+
+    const rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) break;
+    all.push(...rows);
+
+    // Stop if we've satisfied the limit, or if the server returned a partial page (last page)
+    if (limit != null && all.length >= limit) break;
+    if (rows.length < PAGE) break;
+
+    start += rows.length;
   }
-  return res.json();
+
+  return all;
 }
