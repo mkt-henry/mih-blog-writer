@@ -19,10 +19,10 @@ description: 네이버 블로그 섭외 원고(인물/카테고리)를 작성·�
 - 카테고리: `docs/지침/04_카테고리_키워드_원고_작성_지침.md` (자료 조사 포함, 이미지는 DB 아티스트 이미지 사용).
 
 ## 2. 작성
-- 인물: `docs/지침/02_원고_작성_지침.md` + `AGENTS.md` 공통 규칙 + `SKILL.md`(SE3 HTML 패턴).
+- 인물: **`write-article` 스킬**을 호출한다. SEO 최적화(C-Rank·DIA+·AI브리핑·스니펫), SE3 HTML 구조, LSI 연관어, FAQ, 해시태그, 저장·후처리까지 일괄 지침 제공.
+- 카테고리: `docs/지침/04_카테고리_키워드_원고_작성_지침.md` 사용 (변동 없음).
 - `output/YYYY-MM-DD/{agency_slug}/[slug]_[제목].html`로 저장.
 - 비협상 규칙: 본문 이미지 4 + 출처 4, `se-text-paragraph` 필수, 모든 table `table-layout:fixed`, 유튜브 iframe 2개, 카카오 단일 URL, data URI/placeholder 금지.
-- 문장 끝 `<br><br>` 후처리 스크립트 실행 (AGENTS.md "줄바꿈 규칙").
 
 ## 3. 이미지 업로드
 - 인물: `node scripts/upload-article-images.js "<html>" <인물이름> <ascii-slug>` 로 외부 이미지를 Vercel Blob에 올리고 src 교체.
