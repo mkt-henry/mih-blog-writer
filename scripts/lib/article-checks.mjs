@@ -33,6 +33,7 @@ export function findBareParagraphs(html) {
     if (/<img\b/i.test(b)) return false;                   // 이미지 래퍼
     if (/^<p\b[^>]*>\s*(?:<br\s*\/?>)?\s*<\/p>$/i.test(b)) return false; // 빈 줄
     if (/id="SE-h/i.test(b)) return false;                 // 대제목
+    if (/id="SE-intro"/i.test(b)) return false;            // 글 제목
     const text = b.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
     return text.length > 0;
   }).length;

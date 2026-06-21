@@ -11,6 +11,7 @@
 //   agency 가 비어 있는 키워드(단순키워드 등)는 인물 풀에서 제외된다.
 //
 // 제외 기준(중복 방지):
+//   0) keywords.is_active=false 이면 비활성 → 제외
 //   1) keywords.published_url 이 있으면 = 발행 완료 → 제외
 //   2) keyword 가 articles.person_name 과 일치 = 원고 작성됨(발행 대기 포함) → 제외
 //   3) keyword 가 output/ 폴더의 html 파일명 접두어(인물명)와 일치 → 제외

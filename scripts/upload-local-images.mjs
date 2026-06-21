@@ -65,18 +65,24 @@ for (let i = 0; i < files.length; i++) {
       process.stderr.write(' Supabase ✓');
     }
 
-    // Vercel Blob 업로드
-    const blob = await put(`${BUCKET}/${slug}/${remoteName}`, buf, {
-      access: 'public',
-      contentType: 'image/jpeg',
-      contentDisposition: 'inline',
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      token: BLOB_TOKEN,
-      cacheControlMaxAge: 31536000,
-    });
-    process.stderr.write(` Blob ✓\n`);
-    console.log(blob.url);
+    // Vercel Blob 업로드. 정지/실패 시 Supabase 공개 URL로 폴백 서빙.
+    try {
+      const blob = await put(`${BUCKET}/${slug}/${remoteName}`, buf, {
+        access: 'public',
+        contentType: 'image/jpeg',
+        contentDisposition: 'inline',
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        token: BLOB_TOKEN,
+        cacheControlMaxAge: 31536000,
+      });
+      process.stderr.write(` Blob ✓\n`);
+      console.log(blob.url);
+    } catch (blobErr) {
+      const fallback = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${slug}/${remoteName}`;
+      process.stderr.write(` Blob ✗ (${blobErr.message}) → Supabase 폴백\n`);
+      console.log(fallback);
+    }
   } catch (e) {
     process.stderr.write(` ✗ ${e.message}\n`);
   }

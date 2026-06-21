@@ -95,6 +95,12 @@ async function uploadToBlob(slug, index, buffer) {
   return blob.url;
 }
 
+// ── Supabase 공개 URL (Blob 폴백 서빙) ──────────────────────────────────────
+// Vercel Blob 정지/실패 시 이미 아카이브된 Supabase Storage 공개 URL로 서빙한다.
+function supabasePublicUrl(slug, index) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${slug}/img${index}.jpg`;
+}
+
 // ── 메인 ────────────────────────────────────────────────────────────────────
 const htmlPath    = process.argv[2];
 const personName  = process.argv[3];
@@ -138,16 +144,22 @@ for (let i = 0; i < toProcess.length; i++) {
   try {
     const buf = await downloadImage(url);
 
-    // Supabase 업로드 (아카이브)
+    // Supabase 업로드 (아카이브 + 폴백 서빙)
     await uploadToSupabase(storageSlug, i + 1, buf);
     process.stdout.write(' Supabase ✓');
 
-    // Vercel Blob 업로드 (서빙)
-    const blobUrl = await uploadToBlob(storageSlug, i + 1, buf);
-    process.stdout.write(' · Blob ✓\n');
-    console.log(`    → ${blobUrl}`);
+    // Vercel Blob 업로드 (서빙). 정지/실패 시 Supabase 공개 URL로 폴백.
+    let serveUrl;
+    try {
+      serveUrl = await uploadToBlob(storageSlug, i + 1, buf);
+      process.stdout.write(' · Blob ✓\n');
+    } catch (blobErr) {
+      serveUrl = supabasePublicUrl(storageSlug, i + 1);
+      process.stdout.write(` · Blob ✗ (${blobErr.message}) → Supabase 폴백\n`);
+    }
+    console.log(`    → ${serveUrl}`);
 
-    html = html.replace(url, blobUrl);
+    html = html.replace(url, serveUrl);
     replaced++;
   } catch (e) {
     console.log(` ✗ ${e.message}`);
