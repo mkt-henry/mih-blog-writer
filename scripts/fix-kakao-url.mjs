@@ -1,57 +1,44 @@
-#!/usr/bin/env node
-// 발행 대기 원고의 html_content 중 카카오 오픈채팅 URL이 다른 것을 통일
+/**
+ * 오래된 원고 HTML에서 잘못된 카카오 오픈채팅 URL을 올바른 URL로 교체한다.
+ * 사용법: node scripts/fix-kakao-url.mjs [--dry]
+ */
+import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
+import { join, basename } from 'path';
 
-import { loadEnv, requireEnv } from './lib/env.js';
-import { supabaseSelect } from './lib/supabase-rest.js';
+const dryRun = process.argv.includes('--dry');
+const CORRECT = 'https://open.kakao.com/o/snG6VXti';
+const WRONG_RE = /https?:\/\/open\.kakao\.com\/o\/(?!snG6VXti)[a-zA-Z0-9]+/g;
 
-loadEnv();
-
-const TARGET_URL = 'https://open.kakao.com/o/snG6VXti';
-const KAKAO_RE = /https:\/\/open\.kakao\.com\/o\/[A-Za-z0-9]+/g;
-
-async function supabaseUpdate(id, html_content) {
-  const url = `${requireEnv('SUPABASE_URL')}/rest/v1/articles?id=eq.${id}`;
-  const key = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
-  const res = await fetch(url, {
-    method: 'PATCH',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal',
-    },
-    body: JSON.stringify({ html_content }),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`update 실패: ${res.status} ${txt}`);
+function collectHtmlFiles(dir) {
+  const results = [];
+  for (const dateEntry of readdirSync(dir)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateEntry)) continue;
+    const datePath = join(dir, dateEntry);
+    if (!statSync(datePath).isDirectory()) continue;
+    for (const agencyEntry of readdirSync(datePath)) {
+      const agencyPath = join(datePath, agencyEntry);
+      if (!statSync(agencyPath).isDirectory()) continue;
+      for (const file of readdirSync(agencyPath)) {
+        if (!file.endsWith('.html')) continue;
+        results.push(join(datePath, agencyEntry, file));
+      }
+    }
   }
+  return results;
 }
 
-const articles = await supabaseSelect('articles', {
-  columns: 'id,person_name,agency,html_content',
-  filter: 'published_at=is.null',
-});
+const files = collectHtmlFiles('output');
+let fixedFiles = 0;
 
-console.log(`발행 대기 원고: ${articles.length}개\n`);
-
-let updated = 0;
-for (const a of articles) {
-  const kakaoUrls = [...new Set(a.html_content.match(KAKAO_RE) ?? [])];
-  const wrong = kakaoUrls.filter((u) => u !== TARGET_URL);
-  if (wrong.length === 0) continue;
-
-  console.log(`[${a.agency}] ${a.person_name}`);
-  console.log(`  변경: ${wrong.join(', ')} → ${TARGET_URL}`);
-
-  const fixed = a.html_content.replace(KAKAO_RE, TARGET_URL);
-  try {
-    await supabaseUpdate(a.id, fixed);
-    console.log(`  ✓ 완료`);
-    updated++;
-  } catch (e) {
-    console.error(`  ✗ 실패: ${e.message}`);
-  }
+for (const file of files) {
+  let content;
+  try { content = readFileSync(file, 'utf8'); } catch { continue; }
+  if (!WRONG_RE.test(content)) { WRONG_RE.lastIndex = 0; continue; }
+  WRONG_RE.lastIndex = 0;
+  const fixed = content.replace(WRONG_RE, CORRECT);
+  if (fixed === content) continue;
+  if (!dryRun) writeFileSync(file, fixed, 'utf8');
+  console.log(`[${dryRun ? 'DRY' : 'FIX'}] ${basename(file)}`);
+  fixedFiles++;
 }
-
-console.log(`\n완료: ${updated}개 업데이트`);
+console.log(`\n완료: ${fixedFiles}개 파일 카카오 URL 수정${dryRun ? ' (dry)' : ''}`);
