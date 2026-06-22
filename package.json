@@ -21,7 +21,9 @@
     "crawl:hooh": "node scripts/crawl-hooh-keywords.mjs",
     "legacy:build-manifest": "node scripts/build-manifest.js",
     "legacy:dev-server": "node scripts/dev-server.js",
-    "check:article": "node scripts/check-article.mjs"
+    "check:article": "node scripts/check-article.mjs",
+    "migrate:blob": "node scripts/migrate-blob-images.mjs",
+    "migrate:blob:dry": "node scripts/migrate-blob-images.mjs --dry-run"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
