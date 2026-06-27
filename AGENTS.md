@@ -399,9 +399,10 @@ console.log('sentence spacing applied');
   - 가수·아이돌·뮤지션 관련 원고 → `mih_casting` / `mih_agency` 골고루 배분 (별도 기준 없음)
 - **카카오 오픈채팅 URL (모든 계정 공통):** `https://open.kakao.com/o/snG6VXti`
 - **명함 이미지 URL** (모아보기가 자동으로 합성하므로 원고에 직접 넣지 않음):
-  - `mih_speaker`: `https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_speaker/business-card.png`
-  - `mih_casting`: `https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_casting/business-card.png`
-  - `mih_agency`: `https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_agency/business-card.png`
+  - `mih_speaker`: `https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/mih_speaker/business-card.jpg`
+  - `mih_casting`: `https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/mih_casting/business-card.jpg`
+  - `mih_agency`: `https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/mih_agency/business-card.jpg`
+  - `kyh620303` (other): `https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/kyh620303/business-card.jpg`
 - **명함 클릭 링크 (모든 계정 공통):** `tel:01054881456`
 - 위 값들의 단일 출처는 `lib/agencies.ts` 상단 상수다. 변경 시 그 파일을 고치고 `npm run build` 실행.
 - **톤:** 정중한 존댓말, 행사 기획 담당자 대상, 과장 없음.
