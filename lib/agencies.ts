@@ -14,7 +14,7 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
     short: "mih_speaker",
     blogSlug: "mih_speaker",
     businessCardImageUrl:
-      "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_speaker/business-card.png",
+      "https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/mih_speaker/business-card.jpg",
     businessCardWidth: 544,
   },
   mih_casting: {
@@ -22,7 +22,7 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
     short: "mih_casting",
     blogSlug: "mih_casting",
     businessCardImageUrl:
-      "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_casting/business-card.png",
+      "https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/mih_casting/business-card.jpg",
     businessCardWidth: 544,
   },
   mih_agency: {
@@ -30,7 +30,7 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
     short: "mih_agency",
     blogSlug: "mih_agency",
     businessCardImageUrl:
-      "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_agency/business-card.png",
+      "https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/mih_agency/business-card.jpg",
     businessCardWidth: 544,
   },
   other: {
@@ -38,7 +38,7 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
     short: "other",
     blogSlug: "kyh620303",
     businessCardImageUrl:
-      "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/kyh620303/business-card.jpg",
+      "https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/kyh620303/business-card.jpg",
     businessCardWidth: 544,
   },
 };
