@@ -7,7 +7,8 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'fs';
-import { join, basename } from 'path';
+import { join } from 'path';
+import { parseArticlePath } from './lib/parse-article-path.js';
 
 function loadEnv() {
   try {
@@ -75,17 +76,12 @@ async function fetchExistingPaths() {
   return paths;
 }
 
-async function uploadFile(normalizedPath) {
-  const parts = normalizedPath.split('/');
-  const publishDate = parts[1];
-  const agency = parts[2];
-  const filename = basename(normalizedPath, '.html');
-  const underscoreIdx = filename.indexOf('_');
-  const slug = filename.substring(0, underscoreIdx);
-  const title = filename.substring(underscoreIdx + 1);
-  const htmlContent = readFileSync(normalizedPath, 'utf8');
+// localPath: 파일 읽기용(output/ 포함), parsed: parseArticlePath 결과(표준 source_path)
+async function uploadFile(localPath, parsed) {
+  const htmlContent = readFileSync(localPath, 'utf8');
 
   // upsert: 충돌(publish_date, agency, slug 복합키) 시 title·html_content·source_path 업데이트
+  // source_path는 publish-article.js와 동일한 표준 형식({date}/{agency}/{file}, output/ 접두사 없음)으로 저장
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/articles?on_conflict=publish_date,agency,slug`,
     {
@@ -95,21 +91,21 @@ async function uploadFile(normalizedPath) {
         Prefer: 'resolution=merge-duplicates,return=representation',
       },
       body: JSON.stringify({
-        publish_date: publishDate,
-        agency,
-        slug,
-        person_name: slug,
-        title,
+        publish_date: parsed.publishDate,
+        agency: parsed.agency,
+        slug: parsed.slug,
+        person_name: parsed.personName,
+        title: parsed.title,
         html_content: htmlContent,
-        source_path: normalizedPath,
+        source_path: parsed.sourcePath,
       }),
     }
   );
   if (res.ok) {
-    console.log(`  ✓ 업로드: ${title}`);
+    console.log(`  ✓ 업로드: ${parsed.title}`);
     return true;
   } else {
-    console.error(`  ✗ 실패: ${title}\n    ${await res.text()}`);
+    console.error(`  ✗ 실패: ${parsed.title}\n    ${await res.text()}`);
     return false;
   }
 }
@@ -119,10 +115,23 @@ async function uploadFile(normalizedPath) {
 const localFiles = collectHtmlFiles('output');
 console.log(`로컬 원고 ${localFiles.length}개 발견`);
 
+// 각 로컬 파일을 표준 경로로 파싱. 파싱 실패(파일명 규칙 위반) 파일은 경고 후 제외.
+const parsedFiles = [];
+for (const p of localFiles) {
+  const normalized = p.replace(/\\/g, '/');
+  const parsed = parseArticlePath(normalized);
+  if (!parsed) {
+    console.warn(`  ⚠️  경로 파싱 실패(건너뜀): ${p}`);
+    continue;
+  }
+  parsedFiles.push({ localPath: normalized, parsed });
+}
+
 const existing = await fetchExistingPaths();
 console.log(`DB 등록 원고 ${existing.size}개`);
 
-const pending = localFiles.filter(p => !existing.has(p.replace(/\\/g, '/')));
+// 매칭은 표준 source_path({date}/{agency}/{file}) 기준 — DB 저장 형식과 일치
+const pending = parsedFiles.filter(x => !existing.has(x.parsed.sourcePath));
 
 if (pending.length === 0) {
   console.log('업로드할 원고가 없습니다. 모두 DB에 있습니다.');
@@ -130,7 +139,7 @@ if (pending.length === 0) {
 }
 
 console.log(`\n미업로드 원고 ${pending.length}개:`);
-for (const p of pending) console.log(`  - ${p}`);
+for (const x of pending) console.log(`  - ${x.parsed.sourcePath}`);
 
 if (dryRun) {
   console.log('\n--dry 모드: 실제 업로드는 건너뜁니다.');
@@ -139,8 +148,8 @@ if (dryRun) {
 
 console.log('\n업로드 시작...');
 let ok = 0, fail = 0;
-for (const p of pending) {
-  const success = await uploadFile(p.replace(/\\/g, '/'));
+for (const x of pending) {
+  const success = await uploadFile(x.localPath, x.parsed);
   success ? ok++ : fail++;
 }
 
