@@ -33,7 +33,7 @@ export function parseFeedSearchParams(sp: SearchParams): {
 //   - dedup(인물당 최신 1개) 이후 reserved_at 유무로 노출/숨김 목록을 나눈다.
 //
 // 페이지네이션:
-//   - 노출(또는 숨김) 목록을 created_at 최신순으로 3개씩, ?page=N 으로 이동.
+//   - 노출(또는 숨김) 목록을 created_at 오래된순으로 3개씩, ?page=N 으로 이동.
 //   - ?showHidden=1 이면 예약 완료(숨김) 목록을 보여준다.
 //
 // 사람이 보는 관리용 페이지(/, /keywords 등)는 그대로 유지된다.
@@ -79,7 +79,14 @@ export default async function AccountFeed({
   }
 
   // 3) 이미 발행된 인물 제외 + 인물당 1개(최신)만 → 전체 후보 목록.
-  type Row = { id: string; title: string; person_name: string; reserved: boolean };
+  //    조회는 최신순이라 인물당 최신 원고가 선택되고, 표시는 오래된순으로 정렬한다.
+  type Row = {
+    id: string;
+    title: string;
+    person_name: string;
+    reserved: boolean;
+    created_at: string;
+  };
   const seenPersons = new Set<string>();
   const all: Row[] = [];
   for (const a of pending ?? []) {
@@ -92,8 +99,11 @@ export default async function AccountFeed({
       title: (a.title as string) ?? "",
       person_name: person,
       reserved: a.reserved_at != null,
+      created_at: (a.created_at as string) ?? "",
     });
   }
+  // 표시 순서: 오래된 원고가 먼저 나오도록 created_at 오름차순 정렬.
+  all.sort((x, y) => x.created_at.localeCompare(y.created_at));
 
   // 4) reserved_at 유무로 노출/숨김 분리.
   const visible = all.filter((r) => !r.reserved);
