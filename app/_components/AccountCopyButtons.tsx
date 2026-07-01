@@ -4,13 +4,15 @@ import { useState } from "react";
 import { copyPlain, copyRichHtml } from "@/lib/clipboard";
 
 type Props = {
+  articleId: string;
   title: string;
   body: string;
 };
 
 // 계정별 공개 피드용 복사 버튼.
-// OpenClaw 자동화가 data-copy="title" / data-copy="body"로 셀렉트해 클릭한다.
-export default function AccountCopyButtons({ title, body }: Props) {
+// 자동화 셀렉터: data-copy-title / data-copy-body (표준),
+// data-copy="title" / data-copy="body" (하위호환) 둘 다 제공한다.
+export default function AccountCopyButtons({ articleId, title, body }: Props) {
   const [done, setDone] = useState<"title" | "body" | null>(null);
 
   async function copy(kind: "title" | "body") {
@@ -29,6 +31,8 @@ export default function AccountCopyButtons({ title, body }: Props) {
       <button
         type="button"
         data-copy="title"
+        data-copy-title
+        data-post-id={articleId}
         onClick={() => copy("title")}
         className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
       >
@@ -37,6 +41,8 @@ export default function AccountCopyButtons({ title, body }: Props) {
       <button
         type="button"
         data-copy="body"
+        data-copy-body
+        data-post-id={articleId}
         onClick={() => copy("body")}
         className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
       >

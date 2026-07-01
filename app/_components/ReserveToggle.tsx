@@ -37,9 +37,14 @@ export default function ReserveToggle({ articleId, reserved }: Props) {
   const disabled = busy || isPending;
 
   return (
-    <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-gray-500 select-none">
+    <label
+      data-scheduled-label
+      className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-gray-500 select-none"
+    >
       <input
         type="checkbox"
+        data-scheduled-checkbox
+        data-post-id={articleId}
         checked={reserved}
         disabled={disabled}
         onChange={toggle}

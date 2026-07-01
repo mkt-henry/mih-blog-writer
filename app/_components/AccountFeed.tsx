@@ -60,10 +60,10 @@ export default async function AccountFeed({
       .filter(Boolean)
   );
 
-  // 2) 발행 대기 원고 목록(최신순) — 본문(html)은 제외해 가볍게 조회. reserved_at 포함.
+  // 2) 발행 대기 원고 목록(최신순) — 본문(html)은 제외해 가볍게 조회. reserved_at/category 포함.
   const { data: pending, error } = await sb
     .from("articles")
-    .select("id, title, person_name, created_at, reserved_at")
+    .select("id, title, person_name, category, created_at, reserved_at")
     .eq("agency", account)
     .is("published_at", null)
     .order("created_at", { ascending: false });
@@ -84,7 +84,9 @@ export default async function AccountFeed({
     id: string;
     title: string;
     person_name: string;
+    category: string;
     reserved: boolean;
+    reserved_at: string | null;
     created_at: string;
   };
   const seenPersons = new Set<string>();
@@ -98,7 +100,9 @@ export default async function AccountFeed({
       id: a.id as string,
       title: (a.title as string) ?? "",
       person_name: person,
+      category: (a.category as string) ?? "",
       reserved: a.reserved_at != null,
+      reserved_at: (a.reserved_at as string) ?? null,
       created_at: (a.created_at as string) ?? "",
     });
   }
@@ -145,13 +149,33 @@ export default async function AccountFeed({
   };
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <main
+      className="mx-auto max-w-3xl p-6"
+      data-page="post-manager"
+      data-blog-workspace
+      data-blog-id={account}
+      data-blog-name={AGENCIES[account].name}
+      data-blog-slug={accountName}
+      data-pending-count={visible.length}
+      data-current-page={currentPage}
+      data-total-pages={totalPages}
+    >
       <header className="mb-5 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-lg font-bold">{AGENCIES[account].name}</h1>
+          <h1 className="text-lg font-bold" data-blog-title>
+            {AGENCIES[account].name}
+          </h1>
           <p className="text-sm text-gray-500">
-            {showHidden ? "예약 완료(숨김) 원고" : "발행 대기 원고"} · 총 {list.length}개
-            {totalPages > 1 ? ` · ${currentPage}/${totalPages} 페이지` : ""} ({accountName})
+            {showHidden ? "예약 완료(숨김) 원고" : "발행 대기 원고"} · 총{" "}
+            <span data-list-count>{list.length}</span>개
+            {totalPages > 1 ? (
+              <>
+                {" · "}
+                <span data-current-page>{currentPage}</span>/
+                <span data-total-pages>{totalPages}</span> 페이지
+              </>
+            ) : null}{" "}
+            ({accountName})
           </p>
         </div>
         {/* 노출 ↔ 숨김 목록 토글 */}
@@ -180,23 +204,56 @@ export default async function AccountFeed({
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {rows.map((a) => (
+          {rows.map((a, idx) => (
             <li
               key={a.id}
+              // 기존 속성(하위호환) — 기존 자동화가 참조 중일 수 있어 유지한다.
               data-account={accountName}
               data-article-id={a.id}
               data-status={a.reserved ? "reserved" : "pending"}
+              // 표준 자동화 속성.
+              data-post-card
+              data-post-id={a.id}
+              data-post-status={a.reserved ? "scheduled" : "pending"}
+              data-category={a.category || undefined}
+              data-post-keyword={a.person_name || undefined}
+              data-order={start + idx + 1}
+              data-scheduled-at={a.reserved_at ?? undefined}
               className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 bg-white p-4"
             >
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">{a.title}</div>
+                <div
+                  className="truncate text-sm font-semibold"
+                  data-post-title-preview
+                >
+                  {a.title}
+                </div>
                 {a.person_name ? (
-                  <div className="truncate text-xs text-gray-500">{a.person_name}</div>
+                  <div
+                    className="truncate text-xs text-gray-500"
+                    data-post-category
+                  >
+                    {a.person_name}
+                  </div>
                 ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-3">
+                <span
+                  data-automation-status
+                  className="text-xs text-gray-400"
+                >
+                  {a.reserved ? "완료" : "대기"}
+                </span>
+                {a.reserved && a.reserved_at ? (
+                  <span
+                    data-scheduled-at-display
+                    className="text-xs text-gray-400"
+                  >
+                    {a.reserved_at}
+                  </span>
+                ) : null}
                 <ReserveToggle articleId={a.id} reserved={a.reserved} />
-                <AccountCopyButtons title={a.title} body={a.body} />
+                <AccountCopyButtons articleId={a.id} title={a.title} body={a.body} />
               </div>
             </li>
           ))}
@@ -205,16 +262,21 @@ export default async function AccountFeed({
 
       {/* 이전 / 다음 */}
       {totalPages > 1 ? (
-        <nav className="mt-5 flex items-center justify-between">
+        <nav className="mt-5 flex items-center justify-between" data-pagination>
           {currentPage > 1 ? (
             <Link
               href={qs(currentPage - 1, showHidden)}
+              data-pagination-prev
               className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
             >
               ← 이전
             </Link>
           ) : (
-            <span className="rounded border border-gray-100 px-3 py-1.5 text-xs font-medium text-gray-300">
+            <span
+              data-pagination-prev
+              data-disabled
+              className="rounded border border-gray-100 px-3 py-1.5 text-xs font-medium text-gray-300"
+            >
               ← 이전
             </span>
           )}
@@ -224,12 +286,17 @@ export default async function AccountFeed({
           {currentPage < totalPages ? (
             <Link
               href={qs(currentPage + 1, showHidden)}
+              data-pagination-next
               className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
             >
               다음 →
             </Link>
           ) : (
-            <span className="rounded border border-gray-100 px-3 py-1.5 text-xs font-medium text-gray-300">
+            <span
+              data-pagination-next
+              data-disabled
+              className="rounded border border-gray-100 px-3 py-1.5 text-xs font-medium text-gray-300"
+            >
               다음 →
             </span>
           )}
