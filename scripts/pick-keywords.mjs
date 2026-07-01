@@ -66,6 +66,10 @@ function collectOutputNames(dir, acc) {
       // 파일명 패턴: "{인물명}_[{인물명} 섭외] ....html"
       const prefix = e.split("_")[0].trim();
       if (prefix) acc.add(norm(prefix));
+      // 영문 슬러그 접두어 대응: fitvely_[핏블리 섭외]... → [섭외] 앞 텍스트도 추출
+      // norm() 결과가 빈 문자열이면 skip (e.g. [(여자)아이들] → stripParen 후 빈 문자열)
+      const bracketMatch = e.match(/\[([^\]]+?)\s+섭외/);
+      if (bracketMatch) { const v = norm(bracketMatch[1].trim()); if (v) acc.add(v); }
     }
   }
   return acc;
