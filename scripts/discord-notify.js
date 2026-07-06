@@ -174,13 +174,15 @@ async function main() {
   }]);
 
   // ── 두 번째 메시지: 전날 발행 키워드 쿼리 URL ────────────────────────────
+  // SKIP_SEARCH_EXPOSURE=true(수동 실행 시) 이면 검색노출 메시지를 생략한다.
+  const skipSearchExposure = process.env.SKIP_SEARCH_EXPOSURE === 'true';
   const yesterdayStr = kstDateStr(-1);
 
   const allYesterdayItems = agencySlugs
     .flatMap(slug => (rssMap[slug] ?? []).filter(r => r.ts && isKstToday(r.ts, yesterdayStr)))
     .sort((a, b) => a.ts - b.ts);
 
-  if (allYesterdayItems.length > 0) {
+  if (!skipSearchExposure && allYesterdayItems.length > 0) {
     const queryLines = allYesterdayItems.map(r => {
       const keyword = r.title.match(/^\[(.*?)\]/)?.[1] ?? r.title.slice(0, 20);
       return `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(keyword)}`;
