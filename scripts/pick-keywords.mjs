@@ -86,13 +86,45 @@ const norm = (s) => stripParen(s).replace(/\s+/g, "").toLowerCase();
 // 키워드에 "작가", "강사" 등 직함이 붙으면 norm 결과가 "송길영작가"처럼 달라져
 // excluded 집합의 "송길영"(파일명/DB 인물명)과 exact match가 실패한다.
 // 양방향 startsWith로 "송길영작가".startsWith("송길영") → true 를 잡는다.
+//
+// 그룹명은 "여자아이들"(발행됨) vs "아이들"(요청 키워드)처럼 접두사가 아니라
+// 부분 문자열로만 겹치는 경우가 있어 startsWith만으로는 못 잡는다. 양쪽 다
+// 2글자 이상일 때 includes로도 비교해 이런 케이스를 잡는다. (1글자는 오탐 위험이
+// 커서 제외 — 별칭·채널명처럼 텍스트가 전혀 겹치지 않는 경우는 문자열 매칭으로
+// 원천적으로 불가능하니 자료 수집 단계의 수동 재확인에 맡긴다.)
 function isExcluded(keyword, excludedSet) {
   const kn = norm(keyword);
+  if (!kn) return false;
+  // 짧은 문자열(1~2글자)이라도 정확히 일치하면 반드시 제외한다 (예: "츄", "벤", "딘").
+  // 오탐 위험이 큰 것은 startsWith/includes 같은 "부분 문자열" 비교뿐이므로,
+  // 그 fuzzy 비교만 2글자 이상일 때로 제한하고 exact match는 길이 제한 없이 항상 적용한다.
   if (excludedSet.has(kn)) return true;
+  if (kn.length < 2) return false;
   for (const ex of excludedSet) {
+    if (ex.length < 2) continue;
     if (kn.startsWith(ex) || ex.startsWith(kn)) return true;
+    if (kn.includes(ex) || ex.includes(kn)) return true;
   }
   return false;
+}
+
+// Supabase(PostgREST) 기본 페이지 크기는 1000행이라, .select()를 그냥 부르면
+// 테이블이 1000행을 넘을 때 나머지가 조용히 잘려나간다. articles(1,125행)·keywords(6,139행)
+// 모두 1000행을 초과해 후보 풀과 제외 집합이 매번 임의로 잘린 채 계산되고 있었다.
+// 전체 행을 확실히 받기 위해 .range()로 페이지네이션한다.
+async function selectAll(sb, table, columns) {
+  const PAGE = 1000;
+  const all = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await sb.from(table).select(columns).range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
 }
 
 function shuffle(arr) {
@@ -111,12 +143,10 @@ async function main() {
   }
 
   const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-  const [{ data: kw, error: kwErr }, { data: arts, error: artErr }] = await Promise.all([
-    sb.from("keywords").select("keyword,category,agency,published_url,is_active"),
-    sb.from("articles").select("person_name"),
+  const [kw, arts] = await Promise.all([
+    selectAll(sb, "keywords", "keyword,category,agency,published_url,is_active"),
+    selectAll(sb, "articles", "person_name"),
   ]);
-  if (kwErr) throw kwErr;
-  if (artErr) throw artErr;
 
   // 제외 집합: articles 인물명 + output/ 파일명 접두어
   const excluded = new Set();
