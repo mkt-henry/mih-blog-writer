@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 1 * * *'   # 매일 10:00 KST (01:00 UTC)
   workflow_dispatch:        # 수동 실행
+    inputs:
+      send_search_exposure:
+        description: '검색노출(전날 키워드) 메시지도 함께 발송'
+        type: boolean
+        default: false
 
 jobs:
   notify:
@@ -25,4 +30,5 @@ jobs:
       - name: Discord 알림 전송
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SEND_SEARCH_EXPOSURE: ${{ inputs.send_search_exposure }}
         run: node scripts/discord-notify.js

@@ -174,13 +174,15 @@ async function main() {
   }]);
 
   // ── 두 번째 메시지: 전날 발행 키워드 쿼리 URL ────────────────────────────
+  // 기본은 발행 현황만 발송한다. SEND_SEARCH_EXPOSURE=true 일 때만 검색노출 메시지를 보낸다.
+  const sendSearchExposure = process.env.SEND_SEARCH_EXPOSURE === 'true';
   const yesterdayStr = kstDateStr(-1);
 
   const allYesterdayItems = agencySlugs
     .flatMap(slug => (rssMap[slug] ?? []).filter(r => r.ts && isKstToday(r.ts, yesterdayStr)))
     .sort((a, b) => a.ts - b.ts);
 
-  if (allYesterdayItems.length > 0) {
+  if (sendSearchExposure && allYesterdayItems.length > 0) {
     const queryLines = allYesterdayItems.map(r => {
       const keyword = r.title.match(/^\[(.*?)\]/)?.[1] ?? r.title.slice(0, 20);
       return `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(keyword)}`;

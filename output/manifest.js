@@ -24,6 +24,13 @@ window.MIH = {
       "blogSlug": "mih_agency",
       "businessCardImageUrl": "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_agency/business-card.png",
       "businessCardWidth": 544
+    },
+    "other": {
+      "name": "kyh620303",
+      "short": "other",
+      "blogSlug": "kyh620303",
+      "businessCardImageUrl": "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/kyh620303/business-card.jpg",
+      "businessCardWidth": 544
     }
   },
   "manuscripts": [
