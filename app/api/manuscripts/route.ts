@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { verifySession } from "@/lib/auth";
 import { loadPermissions } from "@/lib/permissions";
 import { isAgencySlug, type AgencySlug } from "@/lib/agencies";
+import { fetchAll } from "@/lib/name-match.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,19 +35,24 @@ export async function GET(req: Request) {
   const agency = url.searchParams.get("agency");
 
   const sb = supabaseAdmin();
-  let query = sb
-    .from("articles")
-    .select(includeHtml ? "*" : "id, publish_date, agency, slug, person_name, title, source_path, created_at, updated_at")
-    .order("publish_date", { ascending: false })
-    .order("slug", { ascending: true });
-
-  if (agency && isAgencySlug(agency)) {
-    query = query.eq("agency", agency);
+  // fetchAll: range 없이 select 하면 PostgREST 가 1000행만 돌려줘 원고 목록이 조용히 잘린다.
+  try {
+    const data = await fetchAll(
+      sb,
+      "articles",
+      includeHtml
+        ? "*"
+        : "id, publish_date, agency, slug, person_name, title, source_path, created_at, updated_at",
+      (q) => {
+        const ordered = q.order("publish_date", { ascending: false }).order("slug", { ascending: true });
+        return agency && isAgencySlug(agency) ? ordered.eq("agency", agency) : ordered;
+      },
+    );
+    return NextResponse.json(data);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
 }
 
 // publish-article.js 스크립트가 호출. 단일 원고 upsert.

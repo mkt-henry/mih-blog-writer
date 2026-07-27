@@ -35,6 +35,13 @@ export async function supabaseUpsert(table, rows, { onConflict } = {}) {
   return { count: rows.length };
 }
 
+/**
+ * PostgREST select — 1000행 페이지 제한을 넘겨 전체(또는 limit 만큼)를 가져온다.
+ * @param {string} table
+ * @param {{columns?: string, filter?: string, limit?: number}} [options]
+ *   limit 을 주면 그 개수까지만 받는다(마지막 페이지 Range 도 남은 개수로 좁힌다).
+ * @returns {Promise<any[]>}
+ */
 export async function supabaseSelect(table, { columns = '*', filter = '', limit } = {}) {
   const PAGE = 1000;
   const MAX_PAGES = 1000; // 런어웨이 루프 방지 (1000페이지 × 1000행 = 최대 100만 행)
