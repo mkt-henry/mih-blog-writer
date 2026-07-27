@@ -113,16 +113,32 @@ describe('excludeReason — 제외 사유', () => {
     expect(excludeReason('송길영작가', new Set(['송길영']))?.via).toBe('prefix');
   });
 
-  it('무관한 이름은 null', () => {
-    // "이브" ↔ "아이브" 처럼 단순 부분문자열은 다른 인물이므로 제외하지 않는다.
-    expect(excludeReason('이브', new Set(['아이브']))).toBeNull();
-    expect(excludeReason('지민', new Set(['김지민']))).toBeNull();
+  it('그룹명 부분 겹침은 substring 으로 잡는다', () => {
+    // "여자아이들"(발행) ↔ "아이들"(후보)처럼 접두사가 아니라 중간에 겹치는 그룹명.
+    // 중복 발행 비용이 오탈락 비용보다 훨씬 크므로 이 fuzzy 비교를 유지한다.
+    expect(excludeReason('아이들', new Set(['여자아이들']))).toMatchObject({ via: 'substring' });
+    expect(excludeReason('키노', new Set(['팬타곤키노']))).toMatchObject({ via: 'substring' });
+  });
+
+  it('1글자는 fuzzy 비교에서 빼고 정확히 같을 때만 제외한다', () => {
+    // "벤"·"숀"·"츄" 같은 1글자 인물명은 exact 로는 반드시 잡고,
+    // 부분 비교에 넣으면 "벤티"·"츄파춥스" 같은 무관한 이름이 통째로 날아간다.
+    expect(excludeReason('벤', new Set(['벤']))?.via).toBe('exact');
+    expect(excludeReason('벤티', new Set(['벤']))).toBeNull();
+    expect(excludeReason('벤', new Set(['벤티']))).toBeNull();
+  });
+
+  it('빈 이름과 빈 제외집합은 null', () => {
+    expect(excludeReason('', new Set(['아이브']))).toBeNull();
+    expect(excludeReason('아이유', new Set())).toBeNull();
+    expect(excludeReason('아이유', new Set(['']))).toBeNull();
   });
 
   it('isExcluded 는 excludeReason 과 일치한다', () => {
-    const set = new Set(['임혁필', '아이브']);
+    const set = new Set(['임혁필', '여자아이들']);
     expect(isExcluded('샌드아트 임혁필', set)).toBe(true);
-    expect(isExcluded('이브', set)).toBe(false);
+    expect(isExcluded('아이들', set)).toBe(true);
+    expect(isExcluded('오수화', set)).toBe(false);
   });
 });
 

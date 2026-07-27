@@ -105,14 +105,20 @@ async function main() {
 
   // 미작성 후보: 제외 집합에 없음 + keywords 쪽 발행 표기도 없음
   const available = [];
-  const variantDrops = []; // 표기 변형으로 제외된 건 — 오탈락 확인용으로 보여준다
+  // 표기 변형·부분 겹침으로 제외된 건 — 오탈락 확인용으로 보여준다(exact/prefix 는 자명해서 생략).
+  const fuzzyDrops = [];
   for (const k of kw || []) {
     if (k.is_active === false || k.published_url) continue;
     const reason = excludeReason(k.keyword, excluded);
     if (!reason) {
       available.push(k);
-    } else if (reason.via === 'alias') {
-      variantDrops.push({ keyword: k.keyword, matched: reason.matched, agency: k.agency });
+    } else if (reason.via === "alias" || reason.via === "substring") {
+      fuzzyDrops.push({
+        keyword: k.keyword,
+        matched: reason.matched,
+        via: reason.via,
+        agency: k.agency,
+      });
     }
   }
 
@@ -150,13 +156,18 @@ async function main() {
     });
     console.log("");
   }
-  // 표기 변형 제외분 — 대부분 정당한 중복이지만, 괄호가 소속을 뜻하는 경우
-  // ("이선호(엑소)")처럼 별개 인물이 걸릴 수 있어 눈으로 확인할 수 있게 남긴다.
-  if (variantDrops.length) {
-    console.log(`※ 표기 변형으로 제외된 후보 ${variantDrops.length}건 (--why 로 상세)`);
+  // fuzzy 제외분 — 대부분 정당한 중복이지만, 괄호가 소속을 뜻하는 경우("이선호(엑소)")나
+  // 남남인데 이름이 겹치는 경우("이브"↔"아이브")도 섞이므로 눈으로 확인할 수 있게 남긴다.
+  if (fuzzyDrops.length) {
+    const byVia = { alias: 0, substring: 0 };
+    for (const d of fuzzyDrops) byVia[d.via]++;
+    console.log(
+      `※ 이름 겹침으로 제외된 후보 ${fuzzyDrops.length}건 (표기변형 ${byVia.alias} / 부분겹침 ${byVia.substring}) — --why 로 상세`,
+    );
     if (process.argv.includes("--why")) {
-      for (const d of variantDrops) {
-        console.log(`   - ${d.keyword} [${d.agency}] ← 기존 원고 "${d.matched}"`);
+      const label = { alias: "표기변형", substring: "부분겹침" };
+      for (const d of fuzzyDrops) {
+        console.log(`   - ${d.keyword} [${d.agency}] ← 기존 원고 "${d.matched}" (${label[d.via]})`);
       }
     }
     console.log("");
