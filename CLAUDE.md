@@ -13,7 +13,10 @@
    - 카테고리 원고: `04_카테고리_키워드_원고_작성_지침.md` → `03_원고_검토_지침.md`
    - **인물·키워드 미지정 요청**이면 기본은 인물 섭외 원고. 스피커 계정은 강연, 그 외는 가수 등 섭외로 구성하고, 이미 발행/발행 대기된 인물·키워드(DB + `output/`)는 제외한다.
    - **`계정별로 N개씩 써줘`처럼 개수만 지정한 요청**은 `05_랜덤_키워드_셀렉트_지침.md`를 따른다. `node scripts/pick-keywords.mjs <agency>=<n>`으로 미작성 후보를 랜덤 추출 → 사용자 확인 → `01→02→03`.
-3. 작성 후 **`npm run check:article "<html-path>"` 통과 전에는 publish(`npm run publish`/`npm run upload`)하지 않는다.**
+3. **작성 착수 전 중복 검사는 필수다** — 인물이 정해지면(사용자 지정이든 랜덤 추출이든)
+   `node scripts/check-keyword.mjs "<인물명>"` 을 돌려 `✅`를 확인한다. `⛔`면 그 인물은 쓰지 않는다.
+   (표기 변형 `팬타곤 키노`↔`키노` 까지 잡는다. 현황 감사는 `node scripts/diag-keyword-dupe.mjs`)
+4. 작성 후 **`npm run check:article "<html-path>"` 통과 전에는 publish(`npm run publish`/`npm run upload`)하지 않는다.**
 
 ## 비협상 규칙 (자주 깨짐 — 반드시 지킬 것)
 

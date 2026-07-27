@@ -6,6 +6,7 @@ import { computeRssStats } from "@/lib/rss-stats";
 import type { AgencySlug } from "@/lib/agencies";
 import { isAgencySlug } from "@/lib/agencies";
 import RssClient from "./_components/RssClient";
+import { fetchAll } from "@/lib/name-match.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +31,17 @@ export default async function RssV2Page({ searchParams }: { searchParams: Promis
 
   const sb = supabaseAdmin();
   const [aRes, uRes, recentUnmatched, pubRes] = await Promise.all([
-    sb.from("articles")
-      .select("id,agency,created_at,published_at")
-      .not("published_at", "is", null)
-      .gte("published_at", new Date(startMs).toISOString())
-      .lt("published_at", new Date(endMs).toISOString()),
+    // 집계용 전건 조회 — range 없이 select 하면 1000행에서 잘려 통계가 어긋난다(PostgREST 기본 제한).
+    fetchAll<{ id: string; agency: string; created_at: string; published_at: string }>(
+      sb,
+      "articles",
+      "id,agency,created_at,published_at",
+      (q) =>
+        q
+          .not("published_at", "is", null)
+          .gte("published_at", new Date(startMs).toISOString())
+          .lt("published_at", new Date(endMs).toISOString()),
+    ).then((data) => ({ data, error: null as { message: string } | null })),
     sb.from("unmatched_rss_items").select("agency", { count: "exact", head: true }),
     sb.from("unmatched_rss_items")
       .select("agency,title,link,pub_ts,last_seen_at")

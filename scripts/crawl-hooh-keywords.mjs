@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { supabaseSelect, supabaseUpsert } from './lib/supabase-rest.js';
 import { loadEnv } from './lib/env.js';
 import { norm, isDuplicate, collectOutputNames } from './crawl-artsro-keywords.mjs';
+import { titleName } from '../lib/name-match.mjs';
 
 loadEnv();
 
@@ -90,11 +91,14 @@ async function main() {
   // 1) 제외(중복) 집합: 기존 keywords + articles + output/ 발행대기
   const [kw, arts] = await Promise.all([
     supabaseSelect('keywords', { columns: 'keyword' }),
-    supabaseSelect('articles', { columns: 'person_name' }),
+    // 제목까지 받아 로마자 person_name 원고의 한글 인물명도 제외 집합에 넣는다.
+    supabaseSelect('articles', { columns: 'person_name,title' }),
   ]);
   const excluded = new Set();
   for (const k of kw || []) excluded.add(norm(k.keyword));
-  for (const a of arts || []) excluded.add(norm(a.person_name));
+  for (const a of arts || []) {
+    for (const n of [norm(a.person_name), titleName(a.title)].filter(Boolean)) excluded.add(n);
+  }
   collectOutputNames('output', excluded);
 
   // 2) 전수 크롤링

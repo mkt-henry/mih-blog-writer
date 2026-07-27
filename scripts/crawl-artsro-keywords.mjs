@@ -10,12 +10,13 @@ import { supabaseSelect, supabaseUpsert } from './lib/supabase-rest.js';
 import { loadEnv } from './lib/env.js';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { norm, titleName, fileNames } from '../lib/name-match.mjs';
 
 loadEnv();
 
-// ── 정규화 (pick-keywords.mjs와 동일) ───────────────────────────────────────
-export const stripParen = (s) => (s || '').replace(/[\(（].*$/s, '').trim();
-export const norm = (s) => stripParen(s).replace(/\s+/g, '').toLowerCase();
+// ── 정규화·중복 판정은 lib/name-match.mjs 단일 구현을 쓴다 (pick-keywords.mjs 와 동일 규칙) ──
+// 기존 import 경로 호환을 위해 여기서 재수출한다.
+export { stripParen, norm, isExcluded as isDuplicate } from '../lib/name-match.mjs';
 
 // ── CatNo → category/agency 매핑 ────────────────────────────────────────────
 const SPEAKER = new Set([87, 88, 90, 95, 97, 129, 91, 92, 93, 94, 96]);
@@ -54,17 +55,6 @@ export function parseListPage(html) {
     out.push({ goIdx: m[1], name: m[2].trim(), desc: m[3].trim() });
   }
   return out;
-}
-
-export function isDuplicate(name, excludedSet) {
-  const kn = norm(name);
-  if (!kn) return false;
-  if (excludedSet.has(kn)) return true;
-  for (const ex of excludedSet) {
-    if (!ex) continue;
-    if (kn.startsWith(ex) || ex.startsWith(kn)) return true;
-  }
-  return false;
 }
 
 export function buildRow({ goIdx, name, desc, catNo }, agency) {
@@ -110,7 +100,8 @@ export function shuffle(arr) {
   return arr;
 }
 
-// output/ 폴더의 html 파일명 접두어(인물명)를 제외 집합에 추가 (pick-keywords.mjs와 동일)
+// output/ 폴더의 html 파일명에서 인물명을 제외 집합에 추가 (pick-keywords.mjs와 동일)
+// 파일명 접두 슬러그와 "[인물명 섭외]" 대괄호 이름을 모두 넣는다.
 export function collectOutputNames(dir, acc) {
   let entries;
   try { entries = readdirSync(dir); } catch { return acc; }
@@ -120,8 +111,7 @@ export function collectOutputNames(dir, acc) {
     try { st = statSync(p); } catch { continue; }
     if (st.isDirectory()) collectOutputNames(p, acc);
     else if (e.toLowerCase().endsWith('.html')) {
-      const prefix = e.split('_')[0].trim();
-      if (prefix) acc.add(norm(prefix));
+      for (const n of fileNames(e)) acc.add(n);
     }
   }
   return acc;
@@ -156,11 +146,15 @@ async function main() {
   // 1) 기존 DB 키워드/원고 인물명 + output/ 파일명 → 제외(중복) 집합
   const [kw, arts] = await Promise.all([
     supabaseSelect('keywords', { columns: 'keyword' }),
-    supabaseSelect('articles', { columns: 'person_name' }),
+    // 제목까지 받는다 — person_name 이 로마자 슬러그(bumsup 등)로 저장된 원고가 있어
+    // person_name 만으로는 이미 원고가 있는 한글 인물명을 놓친다.
+    supabaseSelect('articles', { columns: 'person_name,title' }),
   ]);
   const excluded = new Set();
   for (const k of kw || []) excluded.add(norm(k.keyword));
-  for (const a of arts || []) excluded.add(norm(a.person_name));
+  for (const a of arts || []) {
+    for (const n of [norm(a.person_name), titleName(a.title)].filter(Boolean)) excluded.add(n);
+  }
   collectOutputNames('output', excluded); // 발행 대기 원고(output/)도 제외
 
   // 2) 전체 CatNo 순회 크롤링 — 신규 인물만 수집(계정 배정은 이후)

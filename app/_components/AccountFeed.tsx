@@ -4,6 +4,7 @@ import { AGENCIES, type AgencySlug } from "@/lib/agencies";
 import { buildBusinessCardHtml, mergeWithBusinessCard } from "@/lib/business-card";
 import AccountCopyButtons from "./AccountCopyButtons";
 import ReserveToggle from "./ReserveToggle";
+import { buildNameIndex, fetchAll, namesOf } from "@/lib/name-match.mjs";
 
 const PAGE_SIZE = 3;
 
@@ -49,16 +50,16 @@ export default async function AccountFeed({
   const sb = supabaseAdmin();
 
   // 1) 이미 발행된 인물 집합 — 한 번 발행된 인물은 피드에서 영구 제외(1인 1원고).
-  const { data: publishedRows } = await sb
-    .from("articles")
-    .select("person_name")
-    .eq("agency", account)
-    .not("published_at", "is", null);
-  const publishedPersons = new Set(
-    (publishedRows ?? [])
-      .map((r) => ((r.person_name as string) ?? "").trim())
-      .filter(Boolean)
+  //    계정을 가리지 않고 전 계정 발행본을 본다(docs/지침/05_랜덤_키워드_셀렉트_지침.md).
+  //    이름 비교는 정규화 기준이며, person_name 이 로마자 슬러그인 원고는 제목의 [인물명] 으로도 잡는다.
+  const publishedRows = await fetchAll<{ person_name: string | null; title: string | null }>(
+    sb,
+    "articles",
+    "person_name,title",
+    (q) => q.not("published_at", "is", null),
   );
+  // 조회 자체가 발행본만 걸러왔으므로 written 집합이 곧 '발행된 인물' 집합이다.
+  const { written: publishedPersons } = buildNameIndex(publishedRows);
 
   // 2) 발행 대기 원고 목록(최신순) — 본문(html)은 제외해 가볍게 조회. reserved_at/category 포함.
   const { data: pending, error } = await sb
@@ -93,9 +94,12 @@ export default async function AccountFeed({
   const all: Row[] = [];
   for (const a of pending ?? []) {
     const person = ((a.person_name as string) ?? "").trim();
-    if (person && publishedPersons.has(person)) continue; // 이미 발행된 인물
-    if (person && seenPersons.has(person)) continue; // 인물당 1개(최신)
-    if (person) seenPersons.add(person);
+    // 표기가 갈려도(괄호 주석·공백·로마자 슬러그·"[유성남 셰프 섭외]" 같은 직함) 같은 인물로 묶이도록
+    // person_name 과 제목 인물명 **둘 다** 정규화해 비교한다. 하나라도 걸리면 같은 인물로 본다.
+    const keys = namesOf({ person_name: person, title: a.title as string | null });
+    if (keys.some((k) => publishedPersons.has(k))) continue; // 이미 발행된 인물(전 계정)
+    if (keys.some((k) => seenPersons.has(k))) continue; // 인물당 1개(최신)
+    for (const k of keys) seenPersons.add(k);
     all.push({
       id: a.id as string,
       title: (a.title as string) ?? "",

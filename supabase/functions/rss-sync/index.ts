@@ -35,6 +35,71 @@ function normalizeTitle(s: string): string {
   return s.replace(/[ 　]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+// 인물명 비교 정규화 — 괄호 주석 제거 + 공백 제거 + 소문자.
+// lib/name-match.mjs 의 norm() 과 동일 규칙이어야 한다(엣지 함수는 Deno 라 그 모듈을 import 할 수 없어 복제).
+function normKey(s: string | null | undefined): string {
+  return String(s ?? '')
+    .replace(/[\(（].*$/s, '')
+    .trim()
+    .replace(/\s+/g, '')
+    .toLowerCase();
+}
+
+// 발행 URL 은 RSS 링크에서 추적 쿼리를 떼고 저장한다(키워드 화면 노출용).
+const canonicalUrl = (u: string): string => u.replace(/\?.*$/, '');
+
+// keywords 중 published_url 이 비어 있는 행들의 normKey → id 목록.
+// PostgREST 는 정규화 비교를 서버에서 못 하므로 전량을 받아 메모리에서 맞춘다.
+// range 없이 select 하면 1000행에서 잘리므로 반드시 페이지네이션한다(키워드 6100+).
+async function loadKeywordMap(
+  // deno-lint-ignore no-explicit-any
+  sb: any,
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb
+      .from('keywords')
+      .select('id,keyword,published_url')
+      .order('id')
+      .range(from, from + 999);
+    if (error || !data) break;
+    for (const k of data as Array<{ id: string; keyword: string; published_url: string | null }>) {
+      if (k.published_url) continue; // 이미 발행 표기됨
+      const key = normKey(k.keyword);
+      if (!key) continue;
+      const arr = map.get(key) ?? [];
+      arr.push(k.id);
+      map.set(key, arr);
+    }
+    if (data.length < 1000) break;
+  }
+  return map;
+}
+
+// 발행이 확정된 인물의 키워드에 발행 URL 을 찍는다.
+// 이걸 빼먹은 동안 발행 922건 중 keywords.published_url 이 채워진 건 9건뿐이어서
+// 키워드 화면의 '발행 완료' 표시·필터가 사실상 무동작이었다.
+async function stampKeywords(
+  // deno-lint-ignore no-explicit-any
+  sb: any,
+  kwMap: Map<string, string[]>,
+  names: Array<string | null | undefined>,
+  link: string,
+  errors: string[],
+): Promise<void> {
+  const keys = [...new Set(names.map(normKey).filter(Boolean))];
+  const ids = new Set<string>();
+  for (const key of keys) for (const id of kwMap.get(key) ?? []) ids.add(id);
+  if (ids.size === 0) return;
+  const { error } = await sb
+    .from('keywords')
+    .update({ published_url: canonicalUrl(link) })
+    .in('id', [...ids])
+    .is('published_url', null);
+  if (error) errors.push(`keyword stamp ${keys.join('/')}: ${error.message}`);
+  else for (const key of keys) kwMap.delete(key); // 같은 실행에서 중복 갱신 방지
+}
+
 function extractTitleKeyword(rawTitle: string): string | null {
   const title = normalizeTitle(rawTitle);
   const m = title.match(/^\[([^\]]+?)(?:\s+섭외)?\]/);
@@ -115,6 +180,9 @@ Deno.serve(async () => {
     .not('published_url', 'is', null);
   const publishedUrls = new Set((pubLinks || []).map((r: { published_url: string }) => r.published_url));
 
+  // 발행 확정 시 keywords.published_url 도 함께 찍기 위한 조회(정규화 매칭용).
+  const kwMap = await loadKeywordMap(sb);
+
   const results = await Promise.all(SLUGS.map(async (slug) => {
     try {
       const items = await fetchRss(slug);
@@ -157,6 +225,13 @@ Deno.serve(async () => {
         else {
           matchedCount++;
           publishedUrls.add(item.link);
+          await stampKeywords(
+            sb,
+            kwMap,
+            [matched.person_name, extractTitleKeyword(item.title)],
+            item.link,
+            errors,
+          );
           const idx = candidates.findIndex((c) => c.id === matched.id);
           if (idx >= 0) candidates.splice(idx, 1);
           // 이전 sync에서 미매칭으로 기록됐던 항목 삭제
@@ -190,6 +265,7 @@ Deno.serve(async () => {
         } else {
           ingestedCount++;
           publishedUrls.add(item.link);
+          await stampKeywords(sb, kwMap, [person, extractTitleKeyword(item.title)], item.link, errors);
           await sb.from('unmatched_rss_items').delete().eq('agency', slug).eq('link', item.link);
         }
       } else {
