@@ -142,6 +142,28 @@ describe('excludeReason — 제외 사유', () => {
   });
 });
 
+describe('한 실행 안에서의 중복 방지 (pick-keywords usedThisRun)', () => {
+  // pick-keywords 는 뽑은 키워드의 별칭을 usedThisRun 에 넣고 excludeReason 으로 걸러야 한다.
+  // exact 비교만 하면 "키노"와 "팬타곤 키노"가 서로 다른 계정으로 각각 뽑혀 같은 인물을 두 번 쓴다.
+  function pickWouldSkip(candidate: string, alreadyPicked: string[]): boolean {
+    const used = new Set<string>();
+    for (const p of alreadyPicked) for (const a of aliasesOf(p)) used.add(a);
+    return excludeReason(candidate, used) !== null;
+  }
+
+  it('같은 인물의 다른 표기는 같은 실행에서 두 번 뽑히지 않는다', () => {
+    expect(pickWouldSkip('키노', ['팬타곤 키노'])).toBe(true);
+    expect(pickWouldSkip('팬타곤 키노', ['키노'])).toBe(true);
+    expect(pickWouldSkip('김하온', ['HAON(김하온)'])).toBe(true);
+    expect(pickWouldSkip('임혁필', ['샌드아트 임혁필'])).toBe(true);
+  });
+
+  it('다른 인물은 정상적으로 뽑힌다', () => {
+    expect(pickWouldSkip('오수화', ['팬타곤 키노'])).toBe(false);
+    expect(pickWouldSkip('김은형', ['HAON(김하온)'])).toBe(false);
+  });
+});
+
 describe('namesOf', () => {
   it('person_name 과 제목 인물명을 둘 다 돌려준다(중복 제거)', () => {
     expect(namesOf({ person_name: '유성남', title: '[유성남 셰프 섭외] 훈남 오너셰프' })).toEqual([

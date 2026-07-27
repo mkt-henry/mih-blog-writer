@@ -25,7 +25,7 @@ import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { norm, excludeReason, buildNameIndex, fileNames, fetchAll } from "../lib/name-match.mjs";
+import { aliasesOf, excludeReason, buildNameIndex, fileNames, fetchAll } from "../lib/name-match.mjs";
 
 config({ path: ".env.local" });
 
@@ -132,11 +132,14 @@ async function main() {
       process.exit(1);
     }
     const pool = shuffle(
-      available.filter((k) => k.agency === agency && !usedThisRun.has(norm(k.keyword))),
+      // 한 실행 안에서도 같은 인물이 두 번 뽑히지 않게 제외 판정을 그대로 적용한다.
+      // exact 비교만 하면 "키노"와 "팬타곤 키노"가 서로 다른 계정으로 각각 뽑힌다(후보 풀에 147쌍 존재).
+      available.filter((k) => k.agency === agency && !excludeReason(k.keyword, usedThisRun)),
     );
     const poolSize = pool.length;
     const picked = pool.slice(0, count);
-    picked.forEach((k) => usedThisRun.add(norm(k.keyword)));
+    // 별칭까지 등록한다. 완전명만 넣으면 "HAON(김하온)" 을 뽑은 뒤 "김하온" 이 그대로 통과한다.
+    picked.forEach((k) => aliasesOf(k.keyword).forEach((a) => usedThisRun.add(a)));
     result[agency] = { picked, poolSize, count };
   }
 
