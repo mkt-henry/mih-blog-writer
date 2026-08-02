@@ -134,6 +134,9 @@ import {
   checkTitle,
   bodyTextLength,
   countKeyword,
+  bodyProseText,
+  keywordDensity,
+  countHashtagsWithKeyword,
   runPersonChecks,
 } from '@/scripts/lib/article-checks.mjs';
 
@@ -162,11 +165,75 @@ describe('countKeyword', () => {
   });
 });
 
+describe('bodyProseText', () => {
+  it('strips tags and hashtag tokens', () => {
+    expect(bodyProseText('<p>가나다 라마</p><p>#섭외 #대학축제</p>')).toBe('가나다 라마');
+  });
+  it('drops script and style blocks', () => {
+    expect(bodyProseText('<style>p{color:red}</style><script>var a=1</script><p>본문</p>')).toBe('본문');
+  });
+});
+
+describe('keywordDensity', () => {
+  // 1000자 본문에 "섭외" n회 → 밀도 n.0
+  const prose = (chars: number, kw: number) =>
+    `<p>${'가'.repeat(chars - kw * 2)}${'섭외'.repeat(kw)}</p>`;
+
+  it('counts per 1000 chars of prose', () => {
+    expect(keywordDensity(prose(1000, 4), '섭외')).toBeCloseTo(4.0, 5);
+  });
+
+  it('excludes hashtags from both numerator and denominator', () => {
+    // 본문 1000자에 4회 + 해시태그에 10회 → 여전히 4.0
+    const html = prose(1000, 4) + '<p>' + '#섭외태그 '.repeat(10) + '</p>';
+    expect(keywordDensity(html, '섭외')).toBeCloseTo(4.0, 5);
+  });
+
+  it('returns 0 for empty html', () => {
+    expect(keywordDensity('', '섭외')).toBe(0);
+  });
+});
+
+describe('countHashtagsWithKeyword', () => {
+  it('counts only hashtags containing the keyword', () => {
+    const html = '<p>본문 섭외 이야기</p><p>#가수섭외 #대학축제 #섭외문의 #행사</p>';
+    expect(countHashtagsWithKeyword(html, '섭외')).toBe(2);
+  });
+});
+
 describe('runPersonChecks', () => {
   it('returns a fail finding when images != 4', () => {
     const html = '<p class="se-text-paragraph"><span>본문</span></p>';
     const findings = runPersonChecks(html, { title: '[아이유 섭외] 청량 보이스의 국민 가수, 대학 축제 섭외 행사' });
     const imgFinding = findings.find((f) => f.id === 'body_images');
     expect(imgFinding.level).toBe('fail');
+  });
+
+  // 밀도 경계 — 4.9 통과 / 5.0 통과 / 5.1 실패
+  const densityBody = (kw: number) => `<p class="se-text-paragraph"><span>${'가'.repeat(4000 - kw * 2)}${'섭외'.repeat(kw)}</span></p>`;
+
+  it('passes density at 5.0 per 1000 chars', () => {
+    const findings = runPersonChecks(densityBody(20)); // 4000자에 20회 = 5.0
+    expect(findings.find((f) => f.id === 'keyword_density' && f.level === 'fail')).toBeUndefined();
+  });
+
+  it('fails density above 5.0 per 1000 chars', () => {
+    const findings = runPersonChecks(densityBody(21)); // 4000자에 21회 = 5.25
+    expect(findings.find((f) => f.id === 'keyword_density')?.level).toBe('fail');
+  });
+
+  it('warns when density is below 3.0', () => {
+    const findings = runPersonChecks(densityBody(8)); // 4000자에 8회 = 2.0
+    expect(findings.find((f) => f.id === 'keyword_density')?.level).toBe('warn');
+  });
+
+  it('fails when prose is shorter than 3800 chars', () => {
+    const html = `<p class="se-text-paragraph"><span>${'가'.repeat(3000)}</span></p>`;
+    expect(runPersonChecks(html).find((f) => f.id === 'prose_length')?.level).toBe('fail');
+  });
+
+  it('fails when more than 7 hashtags contain the keyword', () => {
+    const html = densityBody(16) + '<p>' + '#가수섭외 '.repeat(8) + '</p>';
+    expect(runPersonChecks(html).find((f) => f.id === 'hashtag_keyword')?.level).toBe('fail');
   });
 });

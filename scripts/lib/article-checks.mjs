@@ -98,6 +98,38 @@ export function countKeyword(html, keyword) {
   return (text.match(new RegExp(esc, 'g')) || []).length;
 }
 
+// 밀도 계산용 본문 — 태그·해시태그를 걷어내고 공백을 단일화한 순수 서술 텍스트.
+// bodyTextLength는 공백을 전부 제거하므로 값이 다르다. 상위 노출 문서와 같은
+// 방식으로 재기 위해(해시태그 20여 개가 밀도를 부풀린다) 별도로 둔다.
+export function bodyProseText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&[a-z]+;/g, ' ')
+    .replace(/#[^\s#]+/g, ' ')   // 해시태그 토큰 제외
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// 본문(해시태그 제외) 1000자당 키워드 등장 횟수
+export function keywordDensity(html, keyword) {
+  const text = bodyProseText(html);
+  if (!text.length || !keyword) return 0;
+  const esc = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const n = (text.match(new RegExp(esc, 'g')) || []).length;
+  return (n / text.length) * 1000;
+}
+
+// 해시태그 단락 안에서 키워드를 포함한 태그 개수
+export function countHashtagsWithKeyword(html, keyword) {
+  if (!keyword) return 0;
+  const text = html.replace(/<[^>]+>/g, ' ');
+  const tags = text.match(/#[^\s#<]+/g) || [];
+  return tags.filter((t) => t.includes(keyword)).length;
+}
+
 // 인물 원고 종합 검증 → findings[] ({ level:'fail'|'warn', id, message })
 export function runPersonChecks(html, { title } = {}) {
   const findings = [];
@@ -136,18 +168,21 @@ export function runPersonChecks(html, { title } = {}) {
     if (!tc.ok) fail('title', `제목 형식/길이 위반 ([이름 섭외] + 30~60자, 현재 ${tc.len}자)`);
   }
 
-  // 경고 (비차단)
-  const len = bodyTextLength(html);
-  if (len < 2000 || len > 3000) warn('length', `본문 ${len}자 (권장 2,000~3,000)`);
+  // 본문 분량 — 해시태그를 뺀 서술 텍스트 기준.
+  // 상위 노출 문서 실측 3,883~5,823자에 맞춘다.
+  const prose = bodyProseText(html).length;
+  if (prose < 3800) fail('prose_length', `본문 ${prose}자 (해시태그 제외 3,800자 이상 필요)`);
+  else if (prose > 6000) warn('prose_length', `본문 ${prose}자 (6,000자 이하 권장)`);
 
-  if (title) {
-    const m = title.match(/^\[([^\]]*?)\s*섭외\]/);
-    const keyword = m ? `${m[1].trim()} 섭외` : null;
-    if (keyword) {
-      const n = countKeyword(html, keyword);
-      if (n < 10 || n > 20) warn('keyword_density', `메인 키워드 "${keyword}" ${n}회 (권장 10~20)`);
-    }
-  }
+  // "섭외" 밀도 — 같은 말 반복 대신 의미 범위를 넓히기 위한 상한.
+  // 상위 노출 문서 실측 3.4~6.0회/1000자.
+  const density = keywordDensity(html, '섭외');
+  if (density > 5) fail('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 (5.0 이하 필요)`);
+  else if (density < 3) warn('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 (3.0 이상 권장)`);
+
+  // 해시태그에 키워드를 몰아넣는 것도 반복 신호다. 상위 노출 문서는 0~7개.
+  const kwTags = countHashtagsWithKeyword(html, '섭외');
+  if (kwTags > 7) fail('hashtag_keyword', `"섭외" 포함 해시태그 ${kwTags}개 (7개 이하 필요)`);
 
   return findings;
 }
