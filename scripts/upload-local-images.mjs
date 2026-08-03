@@ -1,5 +1,5 @@
 /**
- * 로컬 이미지 파일을 Vercel Blob에 업로드한다.
+ * 로컬 이미지 파일을 Supabase Storage 버킷에 업로드한다.
  *
  * 사용법:
  *   node scripts/upload-local-images.mjs <slug> <file1> <file2> ...
@@ -7,10 +7,11 @@
  * 예시:
  *   node scripts/upload-local-images.mjs iu C:/Temp/img1.jpg C:/Temp/img2.jpg
  *
- * stdout: 업로드된 Vercel Blob URL (줄바꿈 구분)
+ * stdout: 업로드된 Supabase 공개 URL (줄바꿈 구분)
+ *
+ * 원고 본문에 넣는 이미지 URL은 Supabase 버킷 공개 URL을 쓴다 — Vercel Blob은 쓰지 않는다.
  */
 import { readFileSync } from 'fs';
-import { put } from '@vercel/blob';
 
 function loadEnv() {
   try {
@@ -23,7 +24,6 @@ function loadEnv() {
 }
 loadEnv();
 
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET = 'article-images';
@@ -51,38 +51,19 @@ for (let i = 0; i < files.length; i++) {
   try {
     const buf = readFileSync(filePath);
 
-    // Supabase 아카이브
-    if (SUPABASE_URL && SUPABASE_KEY) {
-      await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${slug}/${remoteName}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'image/jpeg',
-          'x-upsert': 'true',
-        },
-        body: buf,
-      });
-      process.stderr.write(' Supabase ✓');
-    }
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${slug}/${remoteName}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'image/jpeg',
+        'x-upsert': 'true',
+      },
+      body: buf,
+    });
+    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
 
-    // Vercel Blob 업로드. 정지/실패 시 Supabase 공개 URL로 폴백 서빙.
-    try {
-      const blob = await put(`${BUCKET}/${slug}/${remoteName}`, buf, {
-        access: 'public',
-        contentType: 'image/jpeg',
-        contentDisposition: 'inline',
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        token: BLOB_TOKEN,
-        cacheControlMaxAge: 31536000,
-      });
-      process.stderr.write(` Blob ✓\n`);
-      console.log(blob.url);
-    } catch (blobErr) {
-      const fallback = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${slug}/${remoteName}`;
-      process.stderr.write(` Blob ✗ (${blobErr.message}) → Supabase 폴백\n`);
-      console.log(fallback);
-    }
+    process.stderr.write(' Supabase ✓\n');
+    console.log(`${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${slug}/${remoteName}`);
   } catch (e) {
     process.stderr.write(` ✗ ${e.message}\n`);
   }

@@ -27,17 +27,21 @@ node scripts/check-keyword.mjs "인물명1" "인물명2"
 
 ## 1. 자료 수집
 - 인물: `docs/지침/01_자료_수집_지침.md`를 따른다. WebSearch 5회+ / WebFetch 1회+. 학습 데이터만으로 프로필 작성 금지.
-- **이미지 4개 선확보**: 공식 인스타그램에서 수집(`node scripts/collect-instagram-images.js <handle>` — Apify 경로). 수집한 이미지는 Read 도구로 본인·적합성을 눈으로 확인한 뒤 4개 선정. 인스타에 본인 단독 사진이 부족하면 **보도자료를 제외한 기타 이미지**(일상·화보·비공식 SNS 등)로 채운다 — 이미지 부족으로 작성을 중단하지 않는다.
+- **이미지 4개 선확보**: 공식 인스타그램에서 수집(`node scripts/collect-instagram-images.js <handle> --upload <ascii-slug>` — Apify 경로, Supabase 버킷에 바로 업로드). 수집한 이미지는 Read 도구로 본인·적합성을 눈으로 확인한 뒤 4개 선정. 인스타에 본인 단독 사진이 부족하면 **보도자료를 제외한 기타 이미지**(일상·화보·비공식 SNS 등)로 채운다 — 이미지 부족으로 작성을 중단하지 않는다.
+  - 인스타 외 소스에서 받은 로컬 파일은 `node scripts/upload-local-images.mjs <ascii-slug> <file1> ... <file4>` 로 올린다.
+  - **이미지는 Supabase Storage 버킷(`article-images`)에만 올린다. Vercel Blob은 쓰지 않는다.**
 - 카테고리: `docs/지침/04_카테고리_키워드_원고_작성_지침.md` (자료 조사 포함, 이미지는 DB 아티스트 이미지 사용).
 
 ## 2. 작성
 - 인물: **`write-article` 스킬**을 호출한다. SEO 최적화(C-Rank·DIA+·AI브리핑·스니펫), SE3 HTML 구조, LSI 연관어, FAQ, 해시태그, 저장·후처리까지 일괄 지침 제공.
 - 카테고리: `docs/지침/04_카테고리_키워드_원고_작성_지침.md` 사용 (변동 없음).
 - `output/YYYY-MM-DD/{agency_slug}/[slug]_[제목].html`로 저장.
-- 비협상 규칙: 본문 이미지 4 + 출처 4, `se-text-paragraph` 필수, 모든 table `table-layout:fixed`, 유튜브 iframe 2개, 카카오 단일 URL, data URI/placeholder 금지.
+- 비협상 규칙: 본문 이미지 4 + 출처 4, **이미지 src는 Supabase 버킷 URL**, `se-text-paragraph` 필수, 모든 table `table-layout:fixed`, 유튜브 iframe 2개, 카카오 단일 URL, data URI/placeholder/Vercel Blob URL 금지.
 
 ## 3. 이미지 업로드
-- 인물: `node scripts/upload-article-images.js "<html>" <인물이름> <ascii-slug>` 로 외부 이미지를 Vercel Blob에 올리고 src 교체.
+- 인물: `node scripts/upload-article-images.js "<html>" <인물이름> <ascii-slug>` 로 외부 이미지를 **Supabase 버킷**에 올리고 src 교체.
+- 1·2단계에서 이미 Supabase 버킷 URL을 본문에 넣었다면 `처리할 이미지가 없습니다`가 정상이다. 단, 본문 이미지가 4개인지는 따로 확인한다.
+- 최종 src 형식: `https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/{ascii-slug}/img{N}.jpg`
 
 ## 4. 검토 + 기계 검증 (발행 게이트)
 - `docs/지침/03_원고_검토_지침.md`로 검토.

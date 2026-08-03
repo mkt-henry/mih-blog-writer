@@ -1,9 +1,10 @@
-// 에이전시 명함 이미지를 Vercel Blob에 업로드한다.
+// 에이전시 명함 이미지를 Supabase Storage 버킷에 업로드한다.
 //   node scripts/upload-business-card.mjs <agency_slug> <image_path>
-// → agency/<slug>/business-card.<ext> 경로로 업로드하고 public URL을 출력한다.
-// .env.local 의 BLOB_READ_WRITE_TOKEN 사용 (기존 bulk-upload-images.mjs 와 동일 방식).
+// → article-images/agency/<slug>/business-card.<ext> 경로로 업로드하고 public URL을 출력한다.
+//
+// 이 경로는 lib/agencies.ts 의 businessCardUrl 과 반드시 일치해야 한다.
+// (모아보기가 카카오 링크 직전에 이 이미지를 자동 합성한다.)
 
-import { put } from '@vercel/blob';
 import { readFileSync } from 'fs';
 import { extname } from 'path';
 
@@ -13,14 +14,19 @@ for (const l of raw.split('\n')) {
   if (m) process.env[m[1].trim()] = m[2].trim();
 }
 
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const BUCKET = 'article-images';
+
 const [slug, imgPath] = process.argv.slice(2);
 if (!slug || !imgPath) {
   console.error('사용법: node scripts/upload-business-card.mjs <agency_slug> <image_path>');
   process.exit(1);
 }
-
-const token = process.env.BLOB_READ_WRITE_TOKEN;
-if (!token) throw new Error('BLOB_READ_WRITE_TOKEN 미설정');
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('필요한 환경 변수(SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)가 없습니다.');
+  process.exit(1);
+}
 
 const ext = extname(imgPath).toLowerCase() === '.jpeg' ? '.jpg' : extname(imgPath).toLowerCase();
 const contentType =
@@ -50,16 +56,20 @@ if (ext === '.jpg') {
   if (sz) console.log(`[info] 이미지 해상도 ≈ ${sz.w}x${sz.h}px, 용량 ${buf.length}B`);
 }
 
-const res = await put(key, buf, {
-  access: 'public',
-  contentType,
-  contentDisposition: 'inline',
-  addRandomSuffix: false,
-  allowOverwrite: true,
-  token,
-  cacheControlMaxAge: 31536000,
+const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${key}`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': contentType,
+    'x-upsert': 'true',
+  },
+  body: buf,
 });
+if (!res.ok) {
+  console.error(`업로드 실패 — Supabase ${res.status}: ${await res.text()}`);
+  process.exit(1);
+}
 
 console.log('✓ 업로드 완료');
-console.log('  key:', key);
-console.log('  url:', res.url);
+console.log('  key:', `${BUCKET}/${key}`);
+console.log('  url:', `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${key}`);

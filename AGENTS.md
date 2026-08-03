@@ -22,7 +22,7 @@ mih-blog-writer/
 │   └── 네이버_블로그_상위_노출_전략.md
 ├── scripts/
 │   ├── publish-article.js      ← HTML → Supabase articles 업로드
-│   ├── upload-article-images.js← 이미지 Vercel Blob 업로드
+│   ├── upload-article-images.js← 이미지 Supabase 버킷 업로드
 │   └── migrate-*.js            ← 일회성 마이그레이션
 ├── supabase/migrations/        ← DB 스키마 (articles, keywords, app_users 등)
 ├── AGENTS.md                   ← 이 문서: 공통 규칙
@@ -55,7 +55,7 @@ mih-blog-writer/
    - 인물 원고는 작성 전에 본문 이미지 4개를 확보한다. 공식 인스타그램을 우선 시도하되, 본인 단독 사진이 부족하면 **보도자료를 제외한 기타 이미지**(본인이 나온 일상·화보·비공식 SNS 등)로 4개를 채운다. 이미지 부족을 이유로 원고를 중단하지 않는다.
 4. `output/YYYY-MM-DD/{agency_slug}/[slug]_[제목].html`로 저장한다.
 5. 문장 끝 여백 후처리 스크립트를 실행한다 (아래 "줄바꿈 규칙" 섹션 참고).
-6. **이미지 업로드 스크립트를 실행한다** — 인물 원고에만 적용. 공식 SNS 또는 소속사/공식 프로필 페이지 이미지 URL을 Supabase(아카이브) + Vercel Blob(서빙)에 동시 업로드하고 HTML src를 교체한다.
+6. **이미지 업로드 스크립트를 실행한다** — 인물 원고에만 적용. 공식 SNS 또는 소속사/공식 프로필 페이지 이미지 URL을 Supabase 버킷에 업로드하고 HTML src를 교체한다.
 
    ```bash
    node scripts/upload-article-images.js "output/YYYY-MM-DD/{agency_slug}/파일명.html" 인물이름 ascii-slug
@@ -250,7 +250,7 @@ output/YYYY-MM-DD/{agency_slug}/[slug]_[원고제목].html
 <hr style="border:none; border-top:1px solid #e0e0e0; margin:20px 0;">
 
 <!-- 이미지 출처 표기 (가운데 정렬, 회색, 13px) -->
-<p align="center"><img src="[공식 SNS/소속사/공식 프로필 이미지 URL 또는 업로드 후 Vercel Blob URL]" width="544"></p>
+<p align="center"><img src="[공식 SNS/소속사/공식 프로필 이미지 URL 또는 업로드 후 Supabase 공개 URL]" width="544"></p>
 <p class="se-text-paragraph se-text-paragraph-align-center" style="" id="SE-srcN"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">출처 - [아티스트명] 공식 SNS</span></p>
 
 <!-- 유튜브 — iframe 임베드 (정확히 2개). raw URL 금지. -->
@@ -287,7 +287,7 @@ output/YYYY-MM-DD/{agency_slug}/[slug]_[원고제목].html
 - 최종 원고 저장 전 HTML에는 본문 이미지 `<img>`가 정확히 4개 있어야 한다. 명함 이미지, 카카오 링크 이미지, `business-card` 이미지는 본문 이미지 개수에 포함하지 않는다.
 - 보도자료를 제외한 어떤 소스에서든 본인이 나온 이미지 4개를 채운다. 정말로 사용 가능한 이미지를 4개도 못 구하는 예외적 경우에만 사용자에게 보고하고 진행 방향을 확인한다.
 - 출처 표기 4개만 있고 실제 `<img>` 4개가 없으면 실패다.
-- 업로드 스크립트 실행 후에는 외부 이미지 URL이 Vercel Blob URL로 교체됐는지 확인한다. 이미 깨끗한 Vercel Blob URL 4개가 들어 있는 경우만 `처리할 이미지가 없습니다`를 정상으로 본다.
+- 업로드 스크립트 실행 후에는 외부 이미지 URL이 Supabase 공개 URL로 교체됐는지 확인한다. 이미 깨끗한 Supabase 공개 URL 4개가 들어 있는 경우만 `처리할 이미지가 없습니다`를 정상으로 본다.
 
 ### 표(Table) — 시각적 통일성 유지
 
@@ -410,7 +410,7 @@ console.log('sentence spacing applied');
 - [ ] 본인이 나온 이미지임 (공식 인스타그램 우선, 부족 시 기타 이미지 허용)
 - [ ] 보도자료 이미지가 없음
 - [ ] 이미지 4개가 모두 CTA 이전 본문 안에 배치됨
-- [ ] 이미지 업로드 스크립트 실행 후 본문 이미지 src가 Vercel Blob URL로 교체됨
+- [ ] 이미지 업로드 스크립트 실행 후 본문 이미지 src가 Supabase 버킷 공개 URL로 교체됨 (Vercel Blob URL 잔존 시 `check:article` 하드 실패)
 - [ ] 유튜브 iframe 임베드 정확히 2개 (raw URL 금지)
 - [ ] 따옴표 인용구 1~2회 (도입부/핵심 메시지/마무리)
 - [ ] 명함 `<img>` 태그 본문에 없음

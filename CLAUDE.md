@@ -21,6 +21,7 @@
 ## 비협상 규칙 (자주 깨짐 — 반드시 지킬 것)
 
 - 인물 원고 본문 이미지 `<img>` **정확히 4개** + 출처 표기 4개 (한 세트, 명함 제외)
+- 이미지 호스팅은 **Supabase Storage 버킷(`article-images`)만** — Vercel Blob URL 금지
 - 본문 단락은 일반 `<p>` 금지 → **`se-text-paragraph` 클래스 구조 필수**
 - 모든 `<table>`에 **`table-layout:fixed`** + 첫 행 `width:%`
 - 유튜브는 **iframe 임베드 정확히 2개** (raw URL 금지)
