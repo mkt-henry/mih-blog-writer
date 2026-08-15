@@ -50,6 +50,12 @@ export function hasBrokenImageSrc(html) {
   return /<img\b[^>]*\bsrc\s*=\s*["'](?:data:image\/|[^"']*\bimage\.png\b)/i.test(html);
 }
 
+// Vercel Blob에 올린 이미지 개수 — 원고 이미지는 Supabase 버킷만 쓴다.
+export function countVercelBlobImages(html) {
+  const imgs = html.match(/<img\b[^>]*>/gi) || [];
+  return imgs.filter((t) => /\bsrc\s*=\s*["'][^"']*blob\.vercel-storage\.com/i.test(t)).length;
+}
+
 // 사진 placeholder 존재 여부
 export function hasPhotoPlaceholder(html) {
   return /📷\s*사진\s*\d+\s*삽입\s*위치/.test(html);
@@ -183,6 +189,15 @@ export function runPersonChecks(html, { title, personName } = {}) {
   if (badTables > 0) fail('table_layout', `table-layout:fixed 없는 <table> ${badTables}개`);
 
   if (hasBrokenImageSrc(html)) fail('broken_src', 'data: 또는 image.png 류 깨지는 img src 발견');
+
+  const blobImgs = countVercelBlobImages(html);
+  if (blobImgs > 0) {
+    fail(
+      'blob_image_src',
+      `Vercel Blob 이미지 ${blobImgs}개 (Supabase 버킷 URL만 허용) — ` +
+        `node scripts/upload-article-images.js "<html>" <인물이름> <ascii-slug> 로 옮기세요`
+    );
+  }
   if (hasPhotoPlaceholder(html)) fail('placeholder', '📷 사진 삽입 위치 placeholder 발견');
   if (hasBusinessCardImg(html)) fail('business_card', '본문에 명함 이미지(agency-card) 발견');
 

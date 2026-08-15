@@ -4,8 +4,8 @@
  * 사용법: node scripts/secrets-push.js
  *
  * SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 는 .env.local 또는 환경변수로 지정.
- * 저장 대상 키: APIFY_TOKEN, BLOB_READ_WRITE_TOKEN
- * (SUPABASE_* 는 게이트키퍼이므로 DB에 저장하지 않는다)
+ * 저장 대상 키: APIFY_TOKEN, SUPABASE_ACCESS_TOKEN
+ * (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 는 게이트키퍼이므로 DB에 저장하지 않는다)
  */
 
 import { readFileSync } from 'fs';
@@ -33,8 +33,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 // SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 는 게이트키퍼이므로 제외
 const SECRETS = [
   { key: 'APIFY_TOKEN',           description: 'Apify API 토큰 (Instagram 이미지 수집)' },
-  { key: 'BLOB_READ_WRITE_TOKEN',  description: 'Vercel Blob 읽기/쓰기 토큰 (이미지 서빙)' },
-  { key: 'SUPABASE_ACCESS_TOKEN',  description: 'Supabase personal access token (DB 마이그레이션용)' },
+  { key: 'SUPABASE_ACCESS_TOKEN', description: 'Supabase personal access token (DB 마이그레이션용)' },
 ];
 
 async function upsert(key, value, description) {

@@ -92,8 +92,12 @@ node scripts/kb.mjs brief --person="<인물명>"
 4. 이미지 4개를 확보한다.
 
 ```bash
-node scripts/collect-instagram-images.js <handle>
+node scripts/collect-instagram-images.js <handle> --upload <ascii-slug>
 ```
+
+   `--upload` 는 Supabase 버킷(`article-images`)에 바로 올린다. 인스타 외 소스에서 받은
+   로컬 파일은 `node scripts/upload-local-images.mjs <ascii-slug> <file1> ... <file4>` 로 올린다.
+   **이미지는 Supabase 버킷에만 올린다. Vercel Blob 은 쓰지 않는다.**
 
    수집한 이미지는 Read 로 본인·적합성을 눈으로 확인한 뒤 4개를 고른다. 인스타에 본인
    단독 사진이 부족하면 **보도자료를 제외한 기타 이미지**로 채운다 —

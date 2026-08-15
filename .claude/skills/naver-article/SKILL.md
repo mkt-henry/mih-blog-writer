@@ -49,6 +49,12 @@ node scripts/kb.mjs brief --person="<인물명>"
 (사용자가 대량 생산을 요청했을 때만). 건너뛰었으면 보고에 명시한다 —
 조용한 축소는 "다 했다"로 읽힌다.
 
+## 0-3. 이미지 호스팅 (비협상)
+
+이미지는 **Supabase Storage 버킷(`article-images`)에만** 올린다. Vercel Blob 은 쓰지 않는다.
+최종 src 형식:
+`https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/{ascii-slug}/img{N}.jpg`
+
 ## 실행 기록
 
 각 단계의 시작과 종료를 남긴다. **기록은 이 스킬만 남긴다** — 서브에이전트가 자기 실행을

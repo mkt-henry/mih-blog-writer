@@ -13,7 +13,11 @@ import {
   hasBusinessCardImg,
   kakaoUrlIssues,
   countHashtags,
+  countVercelBlobImages,
 } from '@/scripts/lib/article-checks.mjs';
+
+const SUPA = 'https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images';
+const BLOB = 'https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/article-images';
 
 const IMG = (src: string) => `<p align="center"><img src="${src}" width="544"></p>`;
 
@@ -88,6 +92,20 @@ describe('hasBrokenImageSrc', () => {
     expect(hasBrokenImageSrc('<img src="data:image/png;base64,xx">')).toBe(true);
     expect(hasBrokenImageSrc('<img src="image.png">')).toBe(true);
     expect(hasBrokenImageSrc('<img src="https://x/article-images/iu/img1.jpg">')).toBe(false);
+  });
+});
+
+describe('countVercelBlobImages', () => {
+  it('counts img src pointing at Vercel Blob', () => {
+    const html = IMG(`${BLOB}/iu/img1.jpg`) + IMG(`${SUPA}/iu/img2.jpg`);
+    expect(countVercelBlobImages(html)).toBe(1);
+  });
+  it('returns 0 when every image is on Supabase', () => {
+    const html = IMG(`${SUPA}/iu/img1.jpg`) + IMG(`${SUPA}/iu/img2.jpg`);
+    expect(countVercelBlobImages(html)).toBe(0);
+  });
+  it('ignores a Blob URL that is not an img src', () => {
+    expect(countVercelBlobImages(`<p>${BLOB}/iu/img1.jpg 참고</p>`)).toBe(0);
   });
 });
 
@@ -295,5 +313,15 @@ describe('runPersonChecks', () => {
   it('accepts an unbracketed title that names the person and 섭외', () => {
     const f = runPersonChecks(densityBody(8), { title: '걸그룹 레이샤 섭외 - 댄스팀', personName: '레이샤' });
     expect(f.find((x) => x.id?.startsWith('title'))).toBeUndefined();
+  });
+
+  it('fails when an image src is a Vercel Blob URL', () => {
+    const html = densityBody(16) + IMG(`${BLOB}/iu/img1.jpg`);
+    expect(runPersonChecks(html).find((f) => f.id === 'blob_image_src')?.level).toBe('fail');
+  });
+
+  it('does not flag blob_image_src when images live on Supabase', () => {
+    const html = densityBody(16) + IMG(`${SUPA}/iu/img1.jpg`);
+    expect(runPersonChecks(html).find((f) => f.id === 'blob_image_src')).toBeUndefined();
   });
 });
