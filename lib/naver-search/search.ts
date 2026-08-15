@@ -18,15 +18,25 @@ export function buildNaverSearchUrl(keyword: string, surface: Surface = 'pc-tota
     : `https://search.naver.com/search.naver?${q}`;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** 연속 요청이 빠르면 네이버가 403 으로 막는다(실측: 74건을 몰아쳤을 때 발생).
+ *  한 번 물러섰다 다시 시도한다 — 여기서 포기하면 그 원고의 그날 측정치가 영영 사라진다. */
+const RETRY_WAIT_MS = 5_000;
+
 export async function fetchNaverSearchHtml(
   keyword: string,
   surface: Surface = 'pc-total',
   timeoutMs = 12_000,
 ): Promise<string> {
-  const res = await fetch(buildNaverSearchUrl(keyword, surface), {
-    headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!res.ok) throw new Error(`naver search HTTP ${res.status}`);
-  return await res.text();
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const res = await fetch(buildNaverSearchUrl(keyword, surface), {
+      headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) return await res.text();
+    if (res.status !== 403 || attempt === 1) throw new Error(`naver search HTTP ${res.status}`);
+    await sleep(RETRY_WAIT_MS);
+  }
+  throw new Error('naver search: unreachable');
 }

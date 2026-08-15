@@ -22,11 +22,21 @@ export type JobSummary = {
   errors: string[];
 };
 
-/** maxDuration 300초 안에 끝내기 위한 동시 실행 수. 검색 1건은 1~2초다. */
-const CONCURRENCY = 3;
+/**
+ * 동시 실행 수와 배치 간 간격.
+ *
+ * 3동시 + 무간격으로 74건을 몰아쳤더니 네이버가 403 으로 막았다(2026-08-15 실측).
+ * 하루 대상은 그룹 40개 안팎 × 2개 검색면 = 80건 정도이고,
+ * 2동시 + 배치당 800ms 면 80 × (약 1초 + 0.8초) / 2 ≈ 75초로 maxDuration 300초 안에 들어온다.
+ */
+const CONCURRENCY = 2;
+const BATCH_GAP_MS = 800;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function inPool<T>(items: T[], fn: (item: T) => Promise<void>): Promise<void> {
   for (let i = 0; i < items.length; i += CONCURRENCY) {
+    if (i > 0) await sleep(BATCH_GAP_MS);
     await Promise.all(items.slice(i, i + CONCURRENCY).map(fn));
   }
 }
