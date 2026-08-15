@@ -74,11 +74,28 @@ export function countHashtags(html) {
 }
 
 // 제목 점검 — [이름 섭외] 대괄호 + 30~60자
-export function checkTitle(title) {
+/**
+ * 제목 검사.
+ *
+ * 2026-08-15 실측으로 기준을 바꿨다. 13개 키워드 × 상위 5건(문서쌍 104개)에서
+ * 네이버 순위를 얼마나 재현하는지 잰 결과:
+ *   제목에 `섭외` 포함     78.1%   ← 지금까지 잰 모든 신호 중 최고
+ *   제목에 인물명 포함     67.9%
+ *   제목 길이              50.0%   ← 무관. 1위 평균 39자, 2위 48자, 5위 35자
+ *   제목에 숫자            31.9%   ← 뒤집으면 68%. 숫자가 있으면 밀린다
+ *
+ * 반면 `[인물명 섭외]` 대괄호 형식을 지킨 1위 글은 13개 중 4개뿐이었다.
+ * 그래서 **대괄호 형식과 길이 제한을 풀고, 근거가 있는 두 가지(인물명·섭외 포함)만 남긴다.**
+ *
+ * personName 을 넘기지 않으면 인물명 검사는 건너뛴다.
+ */
+export function checkTitle(title, personName) {
   const t = (title || '').trim();
-  const hasBracket = /^\[[^\]]*섭외\]/.test(t);
+  const hasKeyword = t.includes('섭외');
+  const hasName = personName ? t.includes(String(personName).trim()) : true;
+  const hasDigit = /\d/.test(t);
   const len = [...t].length;
-  return { ok: hasBracket && len >= 30 && len <= 60, hasBracket, len };
+  return { ok: hasKeyword && hasName, hasKeyword, hasName, hasDigit, len };
 }
 
 // 본문 텍스트 글자수 (태그/공백 제거)
@@ -130,8 +147,20 @@ export function countHashtagsWithKeyword(html, keyword) {
   return tags.filter((t) => t.includes(keyword)).length;
 }
 
-// 인물 원고 종합 검증 → findings[] ({ level:'fail'|'warn', id, message })
-export function runPersonChecks(html, { title } = {}) {
+/**
+ * 인물 원고 종합 검증 → findings[] ({ level:'fail'|'warn', id, message })
+ *
+ * 규칙은 두 종류다. 섞으면 안 된다 (2026-08-15 정리).
+ *
+ * **[형식] 발행을 막는다(fail).** 원고가 네이버 에디터에서 제대로 보이는가, 링크·이미지가
+ * 살아 있는가를 본다. 순위와는 무관하지만 깨진 채로 나가면 사고다.
+ *
+ * **[순위] 실측 근거가 있는 것만 막는다.** 근거 없는 항목은 warn 으로 내렸다.
+ * 근거는 13개 키워드 × 상위 5건(문서쌍 104개)에서 네이버 순위 재현율을 잰 결과다.
+ * 하위권 글이 우리 규칙을 상위권만큼(어떤 항목은 더 잘) 지키고 있었고,
+ * **실제 1위 글 13개 중 종전 검사를 전부 통과하는 것은 3개뿐이었다.**
+ */
+export function runPersonChecks(html, { title, personName } = {}) {
   const findings = [];
   const fail = (id, message) => findings.push({ level: 'fail', id, message });
   const warn = (id, message) => findings.push({ level: 'warn', id, message });
@@ -160,29 +189,58 @@ export function runPersonChecks(html, { title } = {}) {
   const kakao = kakaoUrlIssues(html);
   if (kakao.bad.length > 0) fail('kakao_url', `허용되지 않은 카카오 URL: ${kakao.bad.join(', ')}`);
 
+  // [순위] 해시태그 개수 — 상위 42% / 하위 43% 로 판별력이 없었다. 발행을 막지 않는다.
   const tags = countHashtags(html);
-  if (tags < 20) fail('hashtags', `해시태그 ${tags}개 (20개 이상 필요)`);
+  if (tags < 20) warn('hashtags', `해시태그 ${tags}개 (20개 이상 권장 — 순위와의 관계는 확인되지 않음)`);
 
+  // [순위] 제목 — 지금까지 잰 신호 중 가장 강하다(섭외 포함 78.1%, 인물명 포함 67.9%).
+  // 대괄호 형식과 길이 제한은 근거가 없어 풀었다(§checkTitle 주석).
   if (title !== undefined) {
-    const tc = checkTitle(title);
-    if (!tc.ok) fail('title', `제목 형식/길이 위반 ([이름 섭외] + 30~60자, 현재 ${tc.len}자)`);
+    const tc = checkTitle(title, personName);
+    // 상위 69% / 하위 48% 로 갈린다. 유일하게 게이트로 세울 만한 순위 신호다.
+    if (!tc.hasKeyword) fail('title_keyword', '제목에 "섭외"가 없다 (상위 69% / 하위 48%로 갈리는 가장 강한 신호)');
+    // 상위 46% / 하위 38% 로 판별력이 약하고, 표기 변형에 오탐한다 —
+    // 실측에서 "전진" 1위 글 제목은 `[신화 섭외]`, "케이타이거즈"는 `K타이거즈`였다.
+    // 둘 다 맞는 글인데 단순 문자열 비교로는 걸린다. 그래서 경고까지만 한다.
+    if (!tc.hasName) warn('title_name', `제목에 인물명("${personName}")이 그대로 없다 (그룹명·약칭이면 무시해도 된다)`);
+    if (tc.hasDigit) warn('title_digit', '제목에 숫자가 있다 (숫자 있는 제목이 밀리는 경향 — 재현율 31.9%)');
   }
 
   // 본문 분량 — 해시태그를 뺀 서술 텍스트 기준.
-  // 상위 노출 문서 실측 3,883~5,823자에 맞춘다.
+  //
+  // 하한을 3,800자에서 1,500자로 내렸다(2026-08-15).
+  // 종전 근거였던 "상위 노출 문서 실측 3,883~5,823자"는 네이버 블로그 HTML 에서 본문을
+  // 분리하지 못해 사이트 UI 문구("안부글 작성횟수", "이웃추가", "블로그 마켓" 등)까지
+  // 길이에 포함한 값이었다. 본문(se-main-container)만 뽑아 다시 재니 전혀 다른 분포가 나왔다.
+  //
+  // 재측정: 발행 키워드 8종 × `"<인물명> 섭외"` 상위 3건 = 20개 문서
+  //   최소 640 / p25 1,361 / 중앙 2,117 / p75 3,831 / 최대 10,647 (평균 2,779)
+  // 즉 종전 하한 3,800자는 **실제로 상위에 오른 문서의 4분의 3을 발행 불가로 막는 값**이었다.
+  //
+  // 길이가 순위를 만든다는 뜻은 아니다(10,647자짜리도 상위에 있다). 확인된 것은
+  // "짧아서 못 오르는 것은 아니다" 뿐이라, 하한은 최소한의 정보량만 보장하는 선으로 두고
+  // 분량 판단은 작성자에게 맡긴다. 상한은 그대로 권장(warn)이다.
   const prose = bodyProseText(html).length;
-  if (prose < 3800) fail('prose_length', `본문 ${prose}자 (해시태그 제외 3,800자 이상 필요)`);
+  if (prose < 1500) fail('prose_length', `본문 ${prose}자 (해시태그 제외 1,500자 이상 필요)`);
   else if (prose > 6000) warn('prose_length', `본문 ${prose}자 (6,000자 이하 권장)`);
 
-  // "섭외" 밀도 — 같은 말 반복 대신 의미 범위를 넓히기 위한 상한.
-  // 상위 노출 문서 실측 3.4~6.0회/1000자.
+  // [순위] "섭외" 밀도 — 발행 게이트에서 내렸다(2026-08-15).
+  //
+  // 실측: 밀도 3.0 이상 준수율이 상위 46% / 하위 38%, 5.0 이하 준수율이 상위 73% / 하위 71%.
+  // **양쪽 다 판별력이 없다.** 실제 1위 글 중에 밀도 10.5(로꼬)·9.0(후디)도 있고
+  // 0.2(시옷시옷)·0.4(백은하)도 있다. 양극단이 모두 1위를 하고 있어 이 값으로는
+  // 아무것도 설명되지 않는다.
+  //
+  // 그래도 상한을 완전히 없애지는 않는다 — 관측된 최대가 10.5 였으므로 그보다 훨씬 높은
+  // 값은 정상 문서에서 나오지 않는 어뷰징이다. 게이트를 15 로 올리고, 5 초과는 경고로 남긴다.
   const density = keywordDensity(html, '섭외');
-  if (density > 5) fail('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 (5.0 이하 필요)`);
-  else if (density < 3) warn('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 (3.0 이상 권장)`);
+  if (density > 15) fail('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 — 어뷰징 수준 (관측된 상위 노출 문서 최대 10.5)`);
+  else if (density > 5) warn('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 (5.0 초과 — 순위와의 관계는 확인되지 않음)`);
 
-  // 해시태그에 키워드를 몰아넣는 것도 반복 신호다. 상위 노출 문서는 0~7개.
+  // [순위] 섭외 해시태그 개수 — 하위권이 오히려 더 잘 지켰다(상위 85% / 하위 100%).
+  // 발행을 막을 근거가 없다.
   const kwTags = countHashtagsWithKeyword(html, '섭외');
-  if (kwTags > 7) fail('hashtag_keyword', `"섭외" 포함 해시태그 ${kwTags}개 (7개 이하 필요)`);
+  if (kwTags > 7) warn('hashtag_keyword', `"섭외" 포함 해시태그 ${kwTags}개 (7개 이하 권장 — 순위와의 관계는 확인되지 않음)`);
 
   return findings;
 }

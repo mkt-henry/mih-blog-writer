@@ -40,7 +40,8 @@ if (type === 'category') {
   process.exit(0);
 }
 
-const findings = runPersonChecks(html, { title });
+// 파일명이 `[인물명]_[제목].html` 이라 앞부분이 인물명이다. 제목에 인물명이 들어갔는지 볼 때 쓴다.
+const findings = runPersonChecks(html, { title, personName: parsed?.slug });
 const fails = findings.filter((f) => f.level === 'fail');
 const warns = findings.filter((f) => f.level === 'warn');
 
