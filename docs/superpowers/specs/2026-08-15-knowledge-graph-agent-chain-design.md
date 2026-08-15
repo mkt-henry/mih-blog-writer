@@ -151,27 +151,38 @@
 
 ### 4.2 스키마
 
+구현된 형태는 `supabase/migrations/20260815000000_create_mih_serp_checks.sql` 이다.
+
 ```sql
 CREATE TABLE IF NOT EXISTS mih_serp_checks (
-  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  article_id   uuid REFERENCES articles(id) ON DELETE CASCADE,
-  query        text NOT NULL,              -- '<인물명> 섭외'
-  checked_at   timestamptz NOT NULL DEFAULT now(),
-  surface      text NOT NULL DEFAULT 'pc-total',  -- pc-total | mobile-total | blog-tab
-  indexed      boolean NOT NULL,
-  rank         smallint,                   -- 미노출이면 NULL
-  competitors  jsonb NOT NULL DEFAULT '[]',-- [{rank, url, title, publisher}] 상위 5건
-  screenshot   text,                       -- 스토리지 경로 (기존 크론 산출물 재사용)
-  note         text
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  article_id  uuid REFERENCES articles(id) ON DELETE CASCADE,
+  query       text NOT NULL,              -- '<인물명> 섭외'
+  checked_at  timestamptz NOT NULL DEFAULT now(),
+  checked_on  date NOT NULL DEFAULT ((now() AT TIME ZONE 'Asia/Seoul')::date),
+  surface     text NOT NULL DEFAULT 'pc-total',  -- blog-tab | pc-total
+  indexed     boolean NOT NULL,
+  rank        smallint,                   -- 미노출이면 NULL
+  competitors jsonb NOT NULL DEFAULT '[]',-- [{rank, url, slug}] 상위 5건
+  screenshot  text,
+  note        text                        -- 'no-blog-results' 등
 );
 
 CREATE INDEX IF NOT EXISTS mih_serp_checks_article_idx ON mih_serp_checks (article_id, checked_at DESC);
 CREATE INDEX IF NOT EXISTS mih_serp_checks_query_idx   ON mih_serp_checks (query, checked_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS mih_serp_checks_daily_idx
+  ON mih_serp_checks (article_id, surface, checked_on);
 ```
 
 - **미노출도 반드시 1행 남긴다** (`indexed=false, rank=null`). 현재 구조의 가장 큰 결함이 이것이다.
-- `competitors` 는 주간 SEO 분석(§9)의 입력이다. 이긴 글의 URL을 남겨야 나중에 열어볼 수 있다.
+- 한 검사에서 **검색면마다 1행**을 남긴다 — 원고 1건당 하루 2행(`blog-tab`, `pc-total`).
+- `checked_on` 은 크론 재실행·수동 실행의 중복을 막는 키다. `checked_at::date` 표현식 인덱스는
+  PostgREST 의 `on_conflict` 가 가리킬 수 없고, 생성 컬럼은 timestamptz→date 캐스트가
+  immutable 이 아니라 거부되므로 기본값을 가진 평범한 date 컬럼으로 둔다.
+- `competitors` 는 주간 SEO 분석(§8)의 입력이다. 이긴 글의 URL을 남겨야 나중에 열어볼 수 있다.
 - 발행 후 D+1, D+3, D+7, D+14, D+30 에 체크한다. 매일 전부 재검색하면 비용이 선형으로 는다.
+- **속도 제한:** 3동시·무간격으로 74건을 몰아치자 네이버가 403 을 반환했다. 2동시 +
+  배치당 800ms 로 낮추고 403 에 5초 후 1회 재시도한다. 실측 37그룹(74요청) 75초.
 
 ### 4.2.1 검색 물량 — 오해 방지
 
@@ -204,7 +215,7 @@ CREATE INDEX IF NOT EXISTS mih_serp_checks_query_idx   ON mih_serp_checks (query
 
 순위는 네이버 DOM 구조가 아니라 **HTML 등장 순서의 블로그 포스트 링크 목록**에서 센다.
 DOM 구조는 자주 바뀌지만 링크 형태는 안정적이고, 목적이 절대 순위가 아니라 추세 비교라
-이 정의로 충분하다. 링크가 하나도 안 잡히면 `note='parse-failed'` 로 남겨 조용히 삼키지 않는다.
+이 정의로 충분하다. 링크가 하나도 안 잡히면 `note='no-blog-results'` 로 남겨 조용히 삼키지 않는다.
 
 ---
 
