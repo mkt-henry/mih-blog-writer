@@ -1,6 +1,6 @@
 import { parseSerp } from './exposure';
 import { postScreenshotToDiscord } from './discord';
-import { fetchNaverSearchHtml, buildNaverSearchUrl } from './search';
+import { fetchNaverSearchHtml, buildNaverSearchUrl, SURFACES } from './search';
 import { fetchNaverSearchScreenshotPng } from './screenshot';
 import { targetDates, groupByQuery, kstDateMinus, type PublishedArticle } from './schedule';
 import { fetchArticlesPublishedOn, recordSerpChecks } from './serp-log';
@@ -12,7 +12,11 @@ export type JobSummary = {
   dates: string[];
   groups: number;
   articles: number;
-  indexed: number;
+  /** 블로그 탭에 잡힌 쿼리 수 = 색인은 됐다 */
+  indexedBlogTab: number;
+  /** 통합검색에 잡힌 쿼리 수 = 실제 노출 */
+  exposedTotal: number;
+  /** 양쪽 어디에도 없는 쿼리 수 */
   missed: number;
   posted: number;
   errors: string[];
@@ -48,21 +52,28 @@ export async function runDailyNaverScreenshotJob(args: {
   // D+1 그룹만 Discord 발송 대상이다. 나머지는 기록만 한다.
   const dPlus1Ids = new Set(articles.filter((a) => a.publish_date === dPlus1).map((a) => a.id));
 
-  let indexed = 0;
+  let indexedBlogTab = 0;
+  let exposedTotal = 0;
   let missed = 0;
   let posted = 0;
 
   await inPool(groups, async (g) => {
-    const searchUrl = buildNaverSearchUrl(g.query);
     try {
-      const result = parseSerp(await fetchNaverSearchHtml(g.query));
-      if (result.indexed) indexed += 1;
-      else missed += 1;
+      // 두 검색면을 각각 재서 각각 기록한다. 색인 실패와 통합검색 진입 실패는 원인이 다르다.
+      const hits: Record<string, boolean> = {};
+      for (const surface of SURFACES) {
+        const result = parseSerp(await fetchNaverSearchHtml(g.query, surface));
+        hits[surface] = result.indexed;
+        await recordSerpChecks({ articleIds: g.articleIds, query: g.query, surface, result });
+      }
+      if (hits['blog-tab']) indexedBlogTab += 1;
+      if (hits['pc-total']) exposedTotal += 1;
+      if (!hits['blog-tab'] && !hits['pc-total']) missed += 1;
 
-      await recordSerpChecks({ articleIds: g.articleIds, query: g.query, result });
-
+      // Discord 발송은 종전과 같다 — D+1 이면서 통합검색에 노출된 건에만 보낸다.
       const isDPlus1 = g.articleIds.some((id) => dPlus1Ids.has(id));
-      if (result.indexed && isDPlus1) {
+      if (hits['pc-total'] && isDPlus1) {
+        const searchUrl = buildNaverSearchUrl(g.query);
         const png = await fetchNaverSearchScreenshotPng(searchUrl);
         await postScreenshotToDiscord({
           webhookUrl: args.webhookUrl,
@@ -82,7 +93,8 @@ export async function runDailyNaverScreenshotJob(args: {
     dates,
     groups: groups.length,
     articles: articles.length,
-    indexed,
+    indexedBlogTab,
+    exposedTotal,
     missed,
     posted,
     errors,

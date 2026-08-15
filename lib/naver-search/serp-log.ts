@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import type { SerpResult } from './exposure';
 import type { PublishedArticle } from './schedule';
+import type { Surface } from './search';
 
 /** 지정한 발행일들에 발행 완료된 원고를 가져온다. published_at 이 null 인 대기 원고는 제외한다. */
 export async function fetchArticlesPublishedOn(dates: string[]): Promise<PublishedArticle[]> {
@@ -23,6 +24,7 @@ export async function fetchArticlesPublishedOn(dates: string[]): Promise<Publish
 export async function recordSerpChecks(args: {
   articleIds: string[];
   query: string;
+  surface: Surface;
   result: SerpResult;
   screenshot?: string | null;
 }): Promise<void> {
@@ -30,12 +32,14 @@ export async function recordSerpChecks(args: {
   const rows = args.articleIds.map((article_id) => ({
     article_id,
     query: args.query,
-    surface: 'pc-total',
+    surface: args.surface,
     indexed: args.result.indexed,
     rank: args.result.rank,
     competitors: args.result.competitors,
     screenshot: args.screenshot ?? null,
-    note: args.result.parseFailed ? 'parse-failed' : null,
+    // 블로그 링크가 하나도 없었다는 뜻. 블로그 탭에서는 응답이 막혔거나 파서가 고장난 것이고,
+    // 통합검색에서는 그 쿼리에 블로그 영역 자체가 없는 경우도 있다. 미노출과는 구분해서 남긴다.
+    note: args.result.parseFailed ? 'no-blog-results' : null,
   }));
   const { error } = await supabaseAdmin()
     .from('mih_serp_checks')
