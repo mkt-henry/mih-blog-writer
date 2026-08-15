@@ -158,16 +158,41 @@ import {
   runPersonChecks,
 } from '@/scripts/lib/article-checks.mjs';
 
+// 2026-08-15 개정: 근거가 확인된 두 가지(인물명·섭외 포함)만 본다.
+// 대괄호 형식과 길이 제한은 실측에서 순위와 무관해 풀었다.
 describe('checkTitle', () => {
-  it('accepts [이름 섭외] 30~60자 title', () => {
+  it('accepts a bracketed title', () => {
     const t = '[아이유 섭외] 청량 보이스의 국민 가수, 대학 축제 및 브랜드 행사 섭외';
-    expect(checkTitle(t).ok).toBe(true);
+    expect(checkTitle(t, '아이유').ok).toBe(true);
   });
-  it('rejects title without bracket', () => {
-    expect(checkTitle('아이유 섭외 대학 축제').ok).toBe(false);
+
+  it('accepts a title without brackets — real #1 posts mostly have none', () => {
+    expect(checkTitle('걸그룹 레이샤 섭외 - 독보적인 퍼포먼스의 댄스팀', '레이샤').ok).toBe(true);
   });
-  it('rejects too-short title', () => {
-    expect(checkTitle('[아이유 섭외]').ok).toBe(false);
+
+  it('accepts a short title — length did not predict rank at all', () => {
+    expect(checkTitle('[아이유 섭외]', '아이유').ok).toBe(true);
+  });
+
+  it('rejects a title with no 섭외', () => {
+    const r = checkTitle('아이유 대학 축제 무대', '아이유');
+    expect(r.ok).toBe(false);
+    expect(r.hasKeyword).toBe(false);
+  });
+
+  it('rejects a title missing the person name', () => {
+    const r = checkTitle('가수 섭외 대학 축제', '아이유');
+    expect(r.ok).toBe(false);
+    expect(r.hasName).toBe(false);
+  });
+
+  it('flags digits in the title without failing it', () => {
+    expect(checkTitle('[아이유 섭외] 2026년 대학 축제', '아이유').hasDigit).toBe(true);
+    expect(checkTitle('[아이유 섭외] 대학 축제', '아이유').hasDigit).toBe(false);
+  });
+
+  it('skips the name check when no person name is given', () => {
+    expect(checkTitle('가수 섭외 안내').ok).toBe(true);
   });
 });
 
@@ -230,29 +255,64 @@ describe('runPersonChecks', () => {
   // 밀도 경계 — 4.9 통과 / 5.0 통과 / 5.1 실패
   const densityBody = (kw: number) => `<p class="se-text-paragraph"><span>${'가'.repeat(4000 - kw * 2)}${'섭외'.repeat(kw)}</span></p>`;
 
-  it('passes density at 5.0 per 1000 chars', () => {
-    const findings = runPersonChecks(densityBody(20)); // 4000자에 20회 = 5.0
-    expect(findings.find((f) => f.id === 'keyword_density' && f.level === 'fail')).toBeUndefined();
-  });
-
-  it('fails density above 5.0 per 1000 chars', () => {
+  // 밀도는 발행 게이트에서 내렸다(2026-08-15).
+  // 실제 1위 글에 밀도 10.5·9.0 도 있고 0.2·0.4 도 있다 — 양극단이 모두 1위다.
+  it('does not block a density of 5.25 — real #1 posts go much higher', () => {
     const findings = runPersonChecks(densityBody(21)); // 4000자에 21회 = 5.25
-    expect(findings.find((f) => f.id === 'keyword_density')?.level).toBe('fail');
-  });
-
-  it('warns when density is below 3.0', () => {
-    const findings = runPersonChecks(densityBody(8)); // 4000자에 8회 = 2.0
     expect(findings.find((f) => f.id === 'keyword_density')?.level).toBe('warn');
   });
 
-  it('fails when prose is shorter than 3800 chars', () => {
-    const html = `<p class="se-text-paragraph"><span>${'가'.repeat(3000)}</span></p>`;
+  it('does not block a density of 10, which a real #1 post had', () => {
+    const findings = runPersonChecks(densityBody(40)); // 4000자에 40회 = 10.0
+    expect(findings.find((f) => f.id === 'keyword_density')?.level).toBe('warn');
+  });
+
+  it('still fails an abusive density above 15', () => {
+    const findings = runPersonChecks(densityBody(70)); // 4000자에 70회 = 17.5
+    expect(findings.find((f) => f.id === 'keyword_density')?.level).toBe('fail');
+  });
+
+  it('does not complain about a low density', () => {
+    const findings = runPersonChecks(densityBody(8)); // 4000자에 8회 = 2.0
+    expect(findings.find((f) => f.id === 'keyword_density')).toBeUndefined();
+  });
+
+  it('fails when prose is shorter than 1500 chars', () => {
+    const html = `<p class="se-text-paragraph"><span>${'가'.repeat(1200)}</span></p>`;
     expect(runPersonChecks(html).find((f) => f.id === 'prose_length')?.level).toBe('fail');
   });
 
-  it('fails when more than 7 hashtags contain the keyword', () => {
+  // 상위 노출 문서의 중앙값이 2,117자다. 그 대역이 막히면 안 된다.
+  it('accepts a 2000-char article, which is where ranking posts actually sit', () => {
+    const html = `<p class="se-text-paragraph"><span>${'가'.repeat(2000)}</span></p>`;
+    expect(runPersonChecks(html).find((f) => f.id === 'prose_length')).toBeUndefined();
+  });
+
+  // 해시태그 규칙은 하위권이 오히려 더 잘 지켰다(상위 85% / 하위 100%). 막을 근거가 없다.
+  it('only warns when more than 7 hashtags contain the keyword', () => {
     const html = densityBody(16) + '<p>' + '#가수섭외 '.repeat(8) + '</p>';
-    expect(runPersonChecks(html).find((f) => f.id === 'hashtag_keyword')?.level).toBe('fail');
+    expect(runPersonChecks(html).find((f) => f.id === 'hashtag_keyword')?.level).toBe('warn');
+  });
+
+  it('only warns when there are fewer than 20 hashtags', () => {
+    expect(runPersonChecks(densityBody(8)).find((f) => f.id === 'hashtags')?.level).toBe('warn');
+  });
+
+  // 제목: 근거가 확인된 두 가지만 막는다
+  it('fails a title with no 섭외', () => {
+    const f = runPersonChecks(densityBody(8), { title: '아이유 대학 축제', personName: '아이유' });
+    expect(f.find((x) => x.id === 'title_keyword')?.level).toBe('fail');
+  });
+
+  // 표기 변형(전진→[신화 섭외], 케이타이거즈→K타이거즈)에 오탐해서 경고까지만 한다
+  it('only warns when the title lacks the literal person name', () => {
+    const f = runPersonChecks(densityBody(8), { title: '가수 섭외 안내', personName: '아이유' });
+    expect(f.find((x) => x.id === 'title_name')?.level).toBe('warn');
+  });
+
+  it('accepts an unbracketed title that names the person and 섭외', () => {
+    const f = runPersonChecks(densityBody(8), { title: '걸그룹 레이샤 섭외 - 댄스팀', personName: '레이샤' });
+    expect(f.find((x) => x.id?.startsWith('title'))).toBeUndefined();
   });
 
   it('fails when an image src is a Vercel Blob URL', () => {
