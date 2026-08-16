@@ -1,18 +1,28 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import type { SerpResult } from './exposure';
-import type { PublishedArticle } from './schedule';
+import { kstDateOf, type PublishedArticle } from './schedule';
 import type { Surface } from './search';
 
-/** 지정한 발행일들에 발행 완료된 원고를 가져온다. published_at 이 null 인 대기 원고는 제외한다. */
+/**
+ * 지정한 발행일들에 실제로 올라간 원고를 가져온다. published_at 이 null 인 대기 원고는 제외한다.
+ *
+ * 기준은 `publish_date`(예정일)가 아니라 `published_at`(실제 발행 시각)의 KST 날짜다.
+ * 예약 발행이 다음날 아침으로 밀리는 일이 잦아 둘이 어긋나고, 예정일로 D+1 을 재면
+ * 발행 두세 시간 만에 검색하게 된다(2026-08-16 실측: 08-15 예정 다수가 08-16 08~09시 발행).
+ */
 export async function fetchArticlesPublishedOn(dates: string[]): Promise<PublishedArticle[]> {
   if (dates.length === 0) return [];
+  const since = `${[...dates].sort()[0]}T00:00:00+09:00`;
   const { data, error } = await supabaseAdmin()
     .from('articles')
-    .select('id, person_name, title, publish_date')
-    .in('publish_date', dates)
-    .not('published_at', 'is', null);
+    .select('id, person_name, title, published_at')
+    .not('published_at', 'is', null)
+    .gte('published_at', since);
   if (error) throw new Error(`fetchArticlesPublishedOn: ${error.message}`);
-  return (data ?? []) as PublishedArticle[];
+  const wanted = new Set(dates);
+  return (data ?? [])
+    .map((a) => ({ ...a, publish_date: kstDateOf(a.published_at as string) }) as PublishedArticle)
+    .filter((a) => wanted.has(a.publish_date));
 }
 
 /**

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CHECK_OFFSETS,
   kstDateMinus,
+  kstDateOf,
   targetDates,
   articleQuery,
   groupByQuery,
@@ -44,6 +45,15 @@ describe('kstDateMinus', () => {
   it('subtracts days in KST', () => {
     expect(kstDateMinus(1, NOW)).toBe('2026-08-14');
     expect(kstDateMinus(30, NOW)).toBe('2026-07-16');
+  });
+});
+
+describe('kstDateOf', () => {
+  it('maps a timestamp to its KST calendar date', () => {
+    // 예약 발행이 다음날 아침으로 밀린 케이스 — 예정일이 아니라 이 날짜로 D+N 을 재야 한다.
+    expect(kstDateOf('2026-08-16T00:00:00Z')).toBe('2026-08-16'); // KST 09:00
+    expect(kstDateOf('2026-08-15T15:30:00Z')).toBe('2026-08-16'); // KST 00:30, 날짜 넘어감
+    expect(kstDateOf('2026-08-15T14:59:00Z')).toBe('2026-08-15'); // KST 23:59
   });
 });
 

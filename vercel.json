@@ -12,6 +12,6 @@
     "app/api/cron/naver-search-screenshots/route.ts": { "maxDuration": 300 }
   },
   "crons": [
-    { "path": "/api/cron/naver-search-screenshots", "schedule": "0 1 * * *" }
+    { "path": "/api/cron/naver-search-screenshots", "schedule": "30 0 * * *" }
   ]
 }

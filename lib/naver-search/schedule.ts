@@ -24,6 +24,11 @@ export function kstDateMinus(days: number, now: Date = new Date()): string {
   return new Date(now.getTime() + KST_OFFSET_MS - days * DAY_MS).toISOString().slice(0, 10);
 }
 
+/** timestamptz 문자열의 KST 달력 날짜. 실제 발행 시각으로 D+N 을 재는 데 쓴다. */
+export function kstDateOf(iso: string): string {
+  return new Date(new Date(iso).getTime() + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
 export function targetDates(now: Date = new Date()): string[] {
   return CHECK_OFFSETS.map((d) => kstDateMinus(d, now));
 }
