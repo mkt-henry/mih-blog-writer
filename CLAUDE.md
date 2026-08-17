@@ -21,6 +21,9 @@
    `node scripts/check-keyword.mjs "<인물명>"` 을 돌려 `✅`를 확인한다. `⛔`면 그 인물은 쓰지 않는다.
    (표기 변형 `팬타곤 키노`↔`키노` 까지 잡는다. 현황 감사는 `node scripts/diag-keyword-dupe.mjs`)
 4. 작성 후 **`npm run check:article "<html-path>"` 통과 전에는 publish(`npm run publish`/`npm run upload`)하지 않는다.**
+5. `npm run publish` 는 발행 직전에 중복을 한 번 더 막는다(같은 인물 원고가 이미 있으면 거부).
+   3번을 건너뛰어도 여기서 걸리지만, 원고를 다 쓰고 나서 막히는 건 낭비다 — 3번은 그대로 지킨다.
+   의도적으로 같은 인물을 다시 발행할 때만 `--force` 를 붙인다.
 
 ## 비협상 규칙 (자주 깨짐 — 반드시 지킬 것)
 

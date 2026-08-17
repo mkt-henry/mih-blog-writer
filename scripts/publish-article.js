@@ -11,19 +11,24 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import { createClient } from '@supabase/supabase-js';
 import { loadEnv } from './lib/env.js';
 import { parseArticlePath } from './lib/parse-article-path.js';
 import { supabaseUpsert } from './lib/supabase-rest.js';
+import { namesOf, excludeReason, buildNameIndex, fetchAll } from '../lib/name-match.mjs';
 
 loadEnv();
 
 // --instagram <url> / --ig <url> 플래그 분리 (positional 경로 인자는 그대로 유지)
 const rawArgs = process.argv.slice(2);
 let instagramUrl = null;
+let force = false;
 const positional = [];
 for (let i = 0; i < rawArgs.length; i++) {
   const a = rawArgs[i];
-  if (a === '--instagram' || a === '--ig') {
+  if (a === '--force') {
+    force = true;
+  } else if (a === '--instagram' || a === '--ig') {
     instagramUrl = rawArgs[++i] || null;
   } else if (a.startsWith('--instagram=') || a.startsWith('--ig=')) {
     instagramUrl = a.slice(a.indexOf('=') + 1) || null;
@@ -51,6 +56,36 @@ if (!parsed) {
     `입력: ${argPath}`
   );
   process.exit(1);
+}
+
+// 발행 직전 중복 게이트.
+// check-keyword.mjs 는 "작성 착수 전"에만 도는 수동 절차라, 두 대에서 같은 인물을
+// 각자 쓰거나 절차를 건너뛰면 그대로 발행까지 새어 나갔다(2026-08 정리에서 11건 확인).
+// 실제로 발행되는 지점은 여기 한 곳뿐이므로 여기서 한 번 더 막는다.
+// 자기 자신(같은 publish_date+agency+slug 재발행)은 제외한다. 의도적 중복은 --force.
+if (!force) {
+  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const rows = await fetchAll(
+    sb,
+    'articles',
+    'person_name,title,agency,publish_date,slug,published_at,published_url'
+  );
+  const others = rows.filter(
+    (r) =>
+      !(r.publish_date === parsed.publishDate && r.agency === parsed.agency && r.slug === parsed.slug)
+  );
+  const { written, published } = buildNameIndex(others);
+  const hit = namesOf({ person_name: parsed.personName, title: parsed.title })
+    .map((n) => excludeReason(n, written))
+    .find(Boolean);
+  if (hit) {
+    const prev = others.find((r) => namesOf(r).includes(hit.matched));
+    const state = published.has(hit.matched) ? '발행 완료' : '원고 있음(발행 대기)';
+    console.error(`✗ 중복 — "${hit.matched}" 원고가 이미 있습니다 (${hit.via}).`);
+    if (prev) console.error(`  기존: ${prev.publish_date}/${prev.agency} · ${state} · ${prev.title}`);
+    console.error('  같은 인물을 일부러 한 번 더 발행하려면 --force 를 붙이세요.');
+    process.exit(1);
+  }
 }
 
 const html = readFileSync(fullPath, 'utf8');
