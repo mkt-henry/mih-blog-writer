@@ -12,7 +12,7 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
   mih_speaker: {
     name: "MIH Speaker",
     short: "mih_speaker",
-    blogSlug: "mih_speaker",
+    blogSlug: "gdfdhzgfgfhgdj",
     businessCardImageUrl:
       "https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/mih_speaker/business-card.jpg",
     businessCardWidth: 544,

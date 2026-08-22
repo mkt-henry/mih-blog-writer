@@ -3,7 +3,7 @@ import { isMihExposed, MIH_BLOG_SLUGS, parseSerp } from '@/lib/naver-search/expo
 
 describe('MIH_BLOG_SLUGS', () => {
   it('contains the agency blog slugs', () => {
-    expect(MIH_BLOG_SLUGS).toEqual(['mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303']);
+    expect(MIH_BLOG_SLUGS).toEqual(['gdfdhzgfgfhgdj', 'mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303']);
   });
 });
 

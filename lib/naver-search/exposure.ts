@@ -1,4 +1,4 @@
-export const MIH_BLOG_SLUGS = ['mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303'] as const;
+export const MIH_BLOG_SLUGS = ['gdfdhzgfgfhgdj', 'mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303'] as const;
 
 export function isMihExposed(html: string): boolean {
   if (!html) return false;

@@ -9,7 +9,7 @@ loadEnv();
 
 const SLUGS = ['mih_speaker', 'mih_casting', 'mih_agency', 'other'];
 const BLOG_SLUGS = {
-  mih_speaker: 'mih_speaker',
+  mih_speaker: 'gdfdhzgfgfhgdj',
   mih_casting: 'mih_casting',
   mih_agency: 'mih_agency',
   other: 'kyh620303',

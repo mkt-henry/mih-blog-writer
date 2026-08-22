@@ -14,7 +14,7 @@ const URL_ = process.env.SUPABASE_URL;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const headers = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 const SLUGS = ['mih_speaker', 'mih_casting', 'mih_agency', 'other'];
-const BLOG = { mih_speaker: 'mih_speaker', mih_casting: 'mih_casting', mih_agency: 'mih_agency', other: 'kyh620303' };
+const BLOG = { mih_speaker: 'gdfdhzgfgfhgdj', mih_casting: 'mih_casting', mih_agency: 'mih_agency', other: 'kyh620303' };
 const TARGET = { mih_agency: 100, mih_casting: 103, mih_speaker: 100, other: 21 };
 
 async function selectAll(table, columns) {

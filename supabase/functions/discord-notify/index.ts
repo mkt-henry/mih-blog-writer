@@ -29,7 +29,7 @@ const AGENCIES = {
 type AgencySlug = keyof typeof AGENCIES;
 const SLUGS = Object.keys(AGENCIES) as AgencySlug[];
 const BLOG_SLUGS: Record<AgencySlug, string> = {
-  mih_speaker: "mih_speaker",
+  mih_speaker: "gdfdhzgfgfhgdj",
   mih_casting: "mih_casting",
   mih_agency: "mih_agency",
   other: "kyh620303",

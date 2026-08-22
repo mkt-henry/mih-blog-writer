@@ -14,7 +14,7 @@ const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 type AgencySlug = 'mih_speaker' | 'mih_casting' | 'mih_agency' | 'other';
 const SLUGS: AgencySlug[] = ['mih_speaker', 'mih_casting', 'mih_agency', 'other'];
 const BLOG_SLUGS: Record<AgencySlug, string> = {
-  mih_speaker: 'mih_speaker',
+  mih_speaker: 'gdfdhzgfgfhgdj',
   mih_casting: 'mih_casting',
   mih_agency: 'mih_agency',
   other: 'kyh620303',

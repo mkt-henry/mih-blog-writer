@@ -22,7 +22,7 @@ const AGENCIES = {
   mih_speaker: {
     name: "메이드인헤븐 스피커",
     short: "mih_speaker",
-    blogSlug: "mih_speaker",
+    blogSlug: "gdfdhzgfgfhgdj",
     businessCardImageUrl:
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_speaker/business-card.png",
     businessCardWidth: 544,
