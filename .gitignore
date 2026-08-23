@@ -25,3 +25,10 @@ supabase/.temp/
 # Brainstorming visual companion
 .superpowers/
 .opencode/
+
+# 로컬 임베딩 모델 캐시 (수백 MB)
+.models/
+
+# 수집 파이프라인 진행 상태·로그
+.pipeline-state.json
+.pipeline.log
