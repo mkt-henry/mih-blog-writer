@@ -173,12 +173,26 @@ Deno.serve(async () => {
   }
   const candidates = (unpub || []) as Candidate[];
 
-  // 이미 published_url이 설정된 원고의 링크 목록 — 재매칭 방지용
-  const { data: pubLinks } = await sb
-    .from('articles')
-    .select('published_url')
-    .not('published_url', 'is', null);
-  const publishedUrls = new Set((pubLinks || []).map((r: { published_url: string }) => r.published_url));
+  // 이미 published_url이 설정된 원고의 링크 목록 — 재매칭 방지용.
+  //
+  // ⚠ 페이지네이션 필수. PostgREST 는 한 번에 1,000행만 준다.
+  // 발행이 1,000건을 넘긴 뒤로 앞의 1,000건만 집합에 들어가고 **최근 글이 통째로 빠져**,
+  // 아래 "누적 등록" 분기가 같은 링크를 매시간 다시 insert 했다.
+  // 2026-08-22 기준 유령 행 300건(207그룹), 최근에는 하루 8~12건씩 늘고 있었다.
+  // 노출 KPI 크론도 같은 글을 두 번씩 네이버에 검색했다.
+  // range() 는 정렬이 없으면 페이지 경계가 흔들린다 — id 로 고정한다.
+  const publishedUrls = new Set<string>();
+  for (let from = 0; ; from += 1000) {
+    const { data: page, error: pgErr } = await sb
+      .from('articles')
+      .select('published_url')
+      .not('published_url', 'is', null)
+      .order('id', { ascending: true })
+      .range(from, from + 999);
+    if (pgErr || !page?.length) break;
+    for (const r of page as Array<{ published_url: string }>) publishedUrls.add(r.published_url);
+    if (page.length < 1000) break;
+  }
 
   // 발행 확정 시 keywords.published_url 도 함께 찍기 위한 조회(정규화 매칭용).
   const kwMap = await loadKeywordMap(sb);
