@@ -17,9 +17,12 @@ tools: Read, Bash, Glob, Grep
 
 ```bash
 npm run check:article "<html 경로>"
+node scripts/kb.mjs audit --person="<인물명>" --html="<html 경로>"
 ```
 
 하드 실패가 하나라도 있으면 그 항목을 그대로 지시에 넣는다. 코드 이름을 바꾸지 않는다.
+`dup_table_echo`·`dup_sentence` 경고와 `audit` 의 `unbacked_years` 도 지시에 넣는다 —
+작성자가 스스로 돌리게 돼 있으므로, 여기서 나온다는 것은 그 단계를 건너뛰었다는 뜻이다.
 
 2. **검토 지침.** `docs/지침/03_원고_검토_지침.md` 를 Read 로 읽고 항목별로 확인한다.
 
@@ -42,10 +45,24 @@ node scripts/kb.mjs brief --person="<인물명>"
 5. **차별성.** 섹션 3·4·6 에 **다른 인물 원고에 그대로 옮겨도 말이 되는 문장**만 있으면
    `kb:일반론` 으로 지시한다. 이 인물에게만 해당하는 사실이 그 자리에 들어가야 한다.
 
-## 지시 코드
+## 지시 코드 — 아래 목록 밖의 코드를 쓰지 않는다
 
-`check:article` 이 쓰는 코드를 **그대로** 쓴다. 새 체계를 만들지 않는다.
-그것이 못 잡는 것만 접두어를 붙인다 — `kb:미근거`, `kb:미검증`, `kb:금지표현`, `kb:일반론`.
+`metrics.issues` 에 넣을 수 있는 값은 이것이 전부다. **한글 자유 서술을 코드 자리에 넣지 않는다.**
+
+체인 첫 주에 같은 결함이 `프로필 표 리스트 본문 반복 나열`·`03지침:프로필표_반복나열`·
+`지침:프로필표_중복나열`·`프로필표 중복 나열` 네 가지 이름으로 기록됐다. 집계가 이 이름에
+의존하므로 무엇이 제일 자주 깨지는지 셀 수 없게 된다.
+**어떻게 고칠지는 `지시:` 문장에 쓰고, `issues` 의 코드는 아래에서 고른다.**
+
+| 출처 | 코드 |
+| --- | --- |
+| `check:article` | `body_images` `source_captions` `youtube_iframe` `youtube_raw` `bare_paragraph` `table_layout` `broken_src` `blob_image_src` `placeholder` `business_card` `kakao_url` `hashtags` `title_keyword` `title_name` `title_digit` `prose_length` `keyword_density` `hashtag_keyword` `dup_table_echo` `dup_sentence` |
+| 검수 전용 | `kb:미근거` `kb:미검증` `kb:금지표현` `kb:일반론` `kb:영상제목` `kb:이미지텍스트` |
+
+- `kb:영상제목` — 유튜브 임베드의 카드 제목·채널이 rejected/conflict 사실이나 마케팅 카피를
+  그대로 노출한다. 본문에 안 써도 플레이어가 띄운다. **oEmbed 로 제목·채널을 매번 확인한다.**
+- `kb:이미지텍스트` — 이미지에 수상 라우렐·별점·매체 로고·QR·조회수 배지 같은 텍스트가
+  박혀 있거나, 인물이 한 픽셀도 없는 표지 슬라이드다. **이미지 4장을 Read 로 매번 육안 확인한다.**
 
 ## 돌려줄 것
 

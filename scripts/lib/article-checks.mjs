@@ -153,6 +153,83 @@ export function countHashtagsWithKeyword(html, keyword) {
   return tags.filter((t) => t.includes(keyword)).length;
 }
 
+// ── 중복 서술 검사 ────────────────────────────────────────────────────────
+//
+// 왜 기계 검사로 올렸나 (2026-08-22 실측):
+// 체인 첫 주 98편에서 검수를 1회에 통과한 것은 3편뿐이었고, 74%가 "중복 서술"로 needs-fix 를
+// 받았다(프로필 표 반복 나열 · 섹션 간 내용 겹침). 검수 에이전트만 잡고 있었기 때문에
+// 매편 작성→검수 라운드를 한 번씩 더 태우고 있었다. 아래 둘은 결정적으로 잴 수 있다.
+
+const stripTags = (h) =>
+  h.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
+
+// 표를 뺀 순수 산문(해시태그 제외). 표 자체는 반복의 "원본"이라 세는 대상에서 뺀다.
+export function proseWithoutTables(html) {
+  return stripTags(html.replace(/<table[\s\S]*?<\/table>/gi, ' ').replace(/#[^\s#<]+/g, ' '));
+}
+
+// 표 셀에서 작품·프로그램·수상명을 뽑는다. 따옴표·홑화살괄호로 감싼 토큰만 본다 —
+// 일반 명사까지 세면 오탐이 폭발한다.
+export function tableItems(html) {
+  const cells = [];
+  for (const tbl of html.match(/<table[\s\S]*?<\/table>/gi) || [])
+    for (const td of tbl.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/gi) || []) cells.push(stripTags(td));
+  const out = new Set();
+  for (const cell of cells)
+    for (const m of cell.match(/['‘“"〈《「]([^'’”"〉》」]{2,30})['’”"〉》」]/g) || []) {
+      const t = m.slice(1, -1).trim();
+      if (t.length >= 2) out.add(t);
+    }
+  return [...out];
+}
+
+/**
+ * 표에 있는 작품명이 본문에서 몇 번 되풀이되는지 — [{ item, count }] (많은 순).
+ * 인물명 자체는 뺀다(원고 전체에서 반복되는 것이 정상이다).
+ */
+export function tableItemEchoes(html, personName) {
+  const prose = proseWithoutTables(html);
+  const name = String(personName || '').trim();
+  return tableItems(html)
+    .filter((it) => !name || (!name.includes(it) && !it.includes(name)))
+    .map((item) => ({ item, count: prose.split(item).length - 1 }))
+    .filter((x) => x.count > 0)
+    .sort((a, b) => b.count - a.count);
+}
+
+// 한국어 종결어미(다./요.) 기준 문장 분해. 마침표만 쓰면 'Circus D.' 같은 데서 쪼개진다.
+export function proseSentences(html) {
+  return proseWithoutTables(html)
+    .split(/(?<=[다요])\.\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 20);
+}
+
+/**
+ * 같은 말을 두 번 한 문장쌍 — [{ a, b, overlap }].
+ * 짧은 쪽 기준 포함률로 잰다(한 문장이 다른 문장을 통째로 삼킨 경우를 잡기 위해).
+ */
+export function duplicateSentencePairs(html, threshold = 0.6) {
+  const K = 8;
+  const shingle = (t) => {
+    const c = t.replace(/[\s,·\-–—()"'’‘“”[\]]/g, '');
+    const s = new Set();
+    for (let i = 0; i + K <= c.length; i++) s.add(c.slice(i, i + K));
+    return s;
+  };
+  const sents = proseSentences(html).map((s) => ({ s, g: shingle(s) })).filter((x) => x.g.size >= 10);
+  const pairs = [];
+  for (let i = 0; i < sents.length; i++)
+    for (let j = i + 1; j < sents.length; j++) {
+      const [S, L] = sents[i].g.size < sents[j].g.size ? [sents[i].g, sents[j].g] : [sents[j].g, sents[i].g];
+      let n = 0;
+      for (const g of S) if (L.has(g)) n++;
+      const overlap = n / S.size;
+      if (overlap >= threshold) pairs.push({ a: sents[i].s, b: sents[j].s, overlap });
+    }
+  return pairs.sort((x, y) => y.overlap - x.overlap);
+}
+
 /**
  * 인물 원고 종합 검증 → findings[] ({ level:'fail'|'warn', id, message })
  *
@@ -256,6 +333,25 @@ export function runPersonChecks(html, { title, personName } = {}) {
   // 발행을 막을 근거가 없다.
   const kwTags = countHashtagsWithKeyword(html, '섭외');
   if (kwTags > 7) warn('hashtag_keyword', `"섭외" 포함 해시태그 ${kwTags}개 (7개 이하 권장 — 순위와의 관계는 확인되지 않음)`);
+
+  // 중복 서술 — 체인 첫 주 검수 지적 1위(98편 중 74%)를 결정적 검사로 옮긴 것.
+  // 임계는 발행분 91편 실측으로 잡았다: 같은 항목 3회 이상 33%, 5회 이상 8%.
+  // 3회는 경고(작성자가 스스로 걷어내는 선), 5회는 발행을 막는다(정상 원고에서 안 나온다).
+  const echoes = tableItemEchoes(html, personName);
+  const heavy = echoes.filter((e) => e.count >= 5);
+  const some = echoes.filter((e) => e.count >= 3);
+  const fmt = (list) => list.slice(0, 5).map((e) => `${e.item}×${e.count}`).join(', ');
+  if (heavy.length > 0)
+    fail('dup_table_echo', `프로필 표 항목을 본문이 5회 이상 되풀이 — ${fmt(heavy)} (표에 있는 항목은 본문에서 한 번만 풀어쓴다)`);
+  else if (some.length > 0)
+    warn('dup_table_echo', `프로필 표 항목을 본문이 3회 이상 되풀이 — ${fmt(some)}`);
+
+  const dupPairs = duplicateSentencePairs(html);
+  if (dupPairs.length > 0)
+    warn(
+      'dup_sentence',
+      `같은 내용을 두 번 쓴 문장 ${dupPairs.length}쌍 — 예: "${dupPairs[0].a.slice(0, 40)}…" / "${dupPairs[0].b.slice(0, 40)}…"`
+    );
 
   return findings;
 }

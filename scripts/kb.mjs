@@ -1,6 +1,7 @@
 // 지식 그래프 접근 창구. 에이전트는 DB 에 직접 붙지 않고 이 하나만 쓴다.
 //
 //   node scripts/kb.mjs brief --person="아이유"
+//   node scripts/kb.mjs audit --person="아이유" --html="output/.../아이유_....html"
 //   node scripts/kb.mjs put < payload.json
 //   node scripts/kb.mjs status < updates.json
 //   node scripts/kb.mjs stale [--person=이름]
@@ -52,7 +53,11 @@ async function personEntity(name) {
   if (!kw) return { kw: null, entity: null };
   const { data } = await db.from('mih_kb_entities').select('*')
     .eq('kind', 'person').eq('keyword_id', kw.id).limit(1);
-  return { kw, entity: data?.[0] ?? null };
+  if (data?.[0]) return { kw, entity: data[0] };
+  // 키워드가 개인이 아닌 경우(공연팀·앙상블 등)도 체인이 돌아야 한다
+  const { data: any } = await db.from('mih_kb_entities').select('*')
+    .eq('keyword_id', kw.id).limit(1);
+  return { kw, entity: any?.[0] ?? null };
 }
 
 async function main() {
@@ -69,7 +74,7 @@ async function main() {
     });
   }
   const { data: claims } = await db.from('mih_kb_claims')
-    .select('id, claim, status, kind, quote, expires_on, mih_kb_sources(url, tier)')
+    .select('id, claim, status, kind, quote, note, confidence, expires_on, mih_kb_sources(url, tier)')
     .eq('entity_id', entity.id);
   const { data: signals } = await db.from('mih_kb_signals')
     .select('metric, value, unit, observed_at').eq('entity_id', entity.id)
@@ -85,13 +90,60 @@ async function main() {
       conflict: (claims ?? []).filter((c) => c.status === 'conflict').length,
     },
     verified: verified.map((c) => ({
-      claim: c.claim, kind: c.kind,
+      claim: c.claim, kind: c.kind, note: c.note, confidence: c.confidence,
       source: c.mih_kb_sources?.url, tier: c.mih_kb_sources?.tier,
     })),
     edges: (edges ?? []).map((e) => ({
       rel: e.rel, target: e.mih_kb_entities?.name, kind: e.mih_kb_entities?.kind, note: e.note,
     })),
     signals: signals ?? [],
+  });
+} else if (cmd === 'audit') {
+  // 원고 HTML 의 사실 진술이 verified 근거로 뒷받침되는지 기계적으로 대조한다.
+  //
+  // 왜 만들었나 (2026-08-22): 체인 첫 주 98편 중 검수를 1회에 통과한 것은 3편뿐이었고,
+  // `kb:미근거` 가 지적 1위(94건)였다. 매번 검수 에이전트가 원고 전문을 다시 읽어야
+  // 잡히던 것이라 작성→검수 라운드를 한 번씩 더 태우고 있었다.
+  //
+  // 전부는 못 잡는다 — 연도처럼 확실히 대조되는 것만 본다. 발행 91편 실측에서
+  // 연도 256건 중 근거 없는 것이 3건(1%)이라 오탐이 거의 없다.
+  // 나머지 사실 주장의 근거 대조는 여전히 검수 에이전트의 몫이다.
+  const name = arg('person') ?? fail('--person=이름 이 필요하다');
+  const file = arg('html') ?? fail('--html=경로 가 필요하다');
+  const html = readFileSync(file, 'utf8');
+  const prose = html
+    .replace(/<table[\s\S]*?<\/table>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/#[^\s#<]+/g, ' ')
+    .replace(/&[a-z]+;/gi, ' ')
+    .replace(/\s+/g, ' ');
+
+  const { kw, entity } = await personEntity(name);
+  if (!kw || !entity) return out({ person: name, found: false, note: 'KB 근거가 없다 — 대조 불가' });
+
+  // 근거 뭉치: 이 인물의 verified 사실 + 원고에 이름이 등장하는 다른 엔티티의 verified 사실
+  //           (소속 그룹·앨범·프로그램 엔티티에 붙은 연도가 인물 원고에 정당하게 들어간다)
+  const { data: ents } = await db.from('mih_kb_entities').select('id, name');
+  const related = (ents ?? []).filter((e) => e.id === entity.id || prose.includes(e.name));
+  const { data: claims } = await db.from('mih_kb_claims')
+    .select('claim, quote, status, entity_id')
+    .in('entity_id', related.map((e) => e.id));
+  const evidence = (claims ?? [])
+    .filter((c) => c.status === 'verified')
+    .map((c) => `${c.claim} ${c.quote ?? ''}`)
+    .join(' ');
+
+  const years = [...new Set(prose.match(/(?:19|20)\d{2}/g) ?? [])];
+  const unbacked = years.filter((y) => !evidence.includes(y));
+  return out({
+    person: name, html: file,
+    verified: (claims ?? []).filter((c) => c.status === 'verified').length,
+    years: years.length,
+    unbacked_years: unbacked,
+    ok: unbacked.length === 0,
+    note: unbacked.length
+      ? `verified 근거에 없는 연도 ${unbacked.length}건 — 근거를 찾아 붙이거나 본문에서 빼라`
+      : '연도 대조 통과 (다른 사실 주장은 검수 에이전트가 본다)',
   });
 } else if (cmd === 'put') {
   const payload = await readStdin();
@@ -189,8 +241,10 @@ async function main() {
     if (u.quote) patch.quote = u.quote;
     if (u.note) patch.note = u.note;
     if (u.expires_on) patch.expires_on = u.expires_on;
-    const { error } = await db.from('mih_kb_claims').update(patch).eq('id', u.id);
+    const { data: hit, error } = await db.from('mih_kb_claims')
+      .update(patch).eq('id', u.id).select('id');
     if (error) fail(`상태 전이 실패 (${u.id}): ${error.message}`);
+    if (!hit?.length) fail(`상태 전이 실패 (${u.id}): 해당 claim 이 없다`);
     done.push({ id: u.id, status: u.status });
   }
   const counts = {};
@@ -261,7 +315,7 @@ async function main() {
     return out({ ok: true, run: runId, step: data.id });
   }
 } else {
-  fail('명령: brief | put | status | stale | conflicts | run-put');
+  fail('명령: brief | audit | put | status | stale | conflicts | run-put');
  }
 }
 

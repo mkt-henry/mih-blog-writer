@@ -325,3 +325,64 @@ describe('runPersonChecks', () => {
     expect(runPersonChecks(html).find((f) => f.id === 'blob_image_src')).toBeUndefined();
   });
 });
+
+import {
+  tableItems,
+  tableItemEchoes,
+  proseSentences,
+  duplicateSentencePairs,
+} from '@/scripts/lib/article-checks.mjs';
+
+const TABLE = `<table style="table-layout:fixed"><tbody><tr><th>대표곡</th>
+  <td>'인생은 한번뿐', '한 잔 마시자'</td></tr><tr><th>출연</th>
+  <td>'미스터트롯3', '불타는 트롯맨'</td></tr></tbody></table>`;
+const P = (t: string) => `<p class="se-text-paragraph"><span>${t}</span></p>`;
+
+describe('tableItems', () => {
+  it('작은따옴표로 감싼 표 항목만 뽑는다', () => {
+    expect(tableItems(TABLE).sort()).toEqual(
+      ['인생은 한번뿐', '한 잔 마시자', '미스터트롯3', '불타는 트롯맨'].sort()
+    );
+  });
+  it('표가 없으면 빈 배열', () => {
+    expect(tableItems(P('표 없는 본문입니다'))).toEqual([]);
+  });
+});
+
+describe('tableItemEchoes', () => {
+  it('표 항목이 본문에 되풀이된 횟수를 센다', () => {
+    const html = TABLE + P('미스터트롯3 출연 이후 미스터트롯3 무대가 화제였고 미스터트롯3 팬이 늘었습니다');
+    const hit = tableItemEchoes(html, '강민수').find((e) => e.item === '미스터트롯3');
+    expect(hit?.count).toBe(3);
+  });
+  it('표 안에서만 반복된 것은 세지 않는다', () => {
+    expect(tableItemEchoes(TABLE, '강민수')).toEqual([]);
+  });
+  it('인물명과 겹치는 항목은 제외한다', () => {
+    const html = `<table style="table-layout:fixed"><tr><td>'강민수'</td></tr></table>` +
+      P('강민수 섭외는 강민수 무대를 원하는 행사에 맞습니다');
+    expect(tableItemEchoes(html, '강민수')).toEqual([]);
+  });
+});
+
+describe('proseSentences', () => {
+  it('한국어 종결어미로 나누고 약어 마침표에서는 쪼개지 않는다', () => {
+    const html = P('서커스 디 캬바레(Circus D. Cabaret)는 넌버벌 공연입니다. 무대는 60분 길이로 구성되며 관객 참여 순서가 중간에 들어갑니다.');
+    expect(proseSentences(html).length).toBe(2);
+  });
+});
+
+describe('duplicateSentencePairs', () => {
+  it('같은 말을 두 번 한 문장쌍을 잡는다', () => {
+    const html = P(
+      '지역 축제와 기관 기념행사, 복지관 문화센터 실내 행사처럼 성인가요 레퍼토리가 맞는 자리에 적합합니다. ' +
+      '섭외 문의는 오픈채팅으로 받습니다. ' +
+      '지역 축제와 기관 기념행사, 복지관 문화센터 실내 행사가 대표적입니다.'
+    );
+    expect(duplicateSentencePairs(html).length).toBe(1);
+  });
+  it('서로 다른 문장만 있으면 빈 배열', () => {
+    const html = P('첫 번째 문장은 데뷔 시점을 설명하는 서술입니다. 두 번째는 무대 구성과 진행 방식을 다룹니다.');
+    expect(duplicateSentencePairs(html)).toEqual([]);
+  });
+});
