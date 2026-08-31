@@ -29,7 +29,8 @@
     "rank:learn": "node scripts/rank-learn.mjs",
     "serp:harvest": "node scripts/serp-harvest.mjs",
     "serp:pipeline": "node scripts/serp-pipeline.mjs",
-    "serp:status": "node scripts/serp-pipeline.mjs --status"
+    "serp:status": "node scripts/serp-pipeline.mjs --status",
+    "retention": "node scripts/retention.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

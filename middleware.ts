@@ -20,7 +20,11 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   // /login, /api/auth/*, /api/feed/*(공개 피드 토글), 정적 자산, 계정별 공개 피드(OpenClaw 발행용) 제외 전부 보호
+  //
+  // 설치형 앱(PWA) 파일도 열어 둬야 한다 — 매니페스트·아이콘·서비스워커가 /login 으로 리다이렉트되면
+  // 브라우저가 "앱 설치"를 띄우지 않고 서비스워커 등록도 실패한다(스크립트 대신 HTML 이 온다).
+  // 이 파일들에는 로그인해야 볼 데이터가 없다(앱 이름·색·아이콘 경로뿐).
   matcher: [
-    "/((?!login|share|mih_speaker|mih_casting|mih_agency|mih_other|kyh620303|api/auth|api/cron|api/feed|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|share|mih_speaker|mih_casting|mih_agency|mih_other|kyh620303|api/auth|api/cron|api/feed|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/).*)",
   ],
 };

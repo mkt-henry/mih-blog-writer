@@ -74,7 +74,13 @@ const stripOurs = (h) => h
   .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/gi, ' ')
   .replace(/\s+/g, ' ').trim();
 
-let ok = 0, dead = 0, fail = 0, local = 0;
+// 삭제된 글·본문 없는 글은 다시 받아 봐야 결과가 같다 — 기록하고 끝낸다.
+// 반대로 차단·타임아웃 같은 **일시적** 실패를 기록해 버리면 그 글은 목록에서 영영 빠진다
+// (목록은 `mih_serp_docs` 에 없는 것만 고른다). 그래서 일시적 실패는 저장하지 않는다.
+const SETTLED = new Set(['noPost', 'no-container', 'bad-url']);
+const ABORT_AFTER_FAILS = 20;
+
+let ok = 0, dead = 0, fail = 0, local = 0, failStreak = 0;
 for (let i = 0; i < targets.length; i++) {
   const url = targets[i];
   const isOurs = ourUrls.has(url);
@@ -89,9 +95,20 @@ for (let i = 0; i < targets.length; i++) {
     title: r.title ?? null, body: r.text ?? null, char_len: r.text?.length ?? null,
     fetched_at: new Date().toISOString(),
   };
-  const { error } = await db.from('mih_serp_docs').upsert(row, { onConflict: 'url' });
-  if (error) console.error(`  upsert 실패 ${url}: ${error.message}`);
+  const transient = !r.ok && !SETTLED.has(r.note);
+  if (!transient) {
+    const { error } = await db.from('mih_serp_docs').upsert(row, { onConflict: 'url' });
+    if (error) console.error(`  upsert 실패 ${url}: ${error.message}`);
+  }
   if (r.ok) ok++; else if (r.note === 'noPost') dead++; else fail++;
+
+  // 연속으로 계속 실패하면 우리가 막힌 것이다. 밀어붙이면 차단만 길어지므로 라운드를 접는다.
+  failStreak = transient ? failStreak + 1 : 0;
+  if (failStreak >= ABORT_AFTER_FAILS) {
+    console.error(`
+⛔ ${failStreak}건 연속 실패 — 차단으로 보고 접는다. 다시 돌리면 남은 것부터 이어간다.`);
+    break;
+  }
   if ((i + 1) % 50 === 0 || i === targets.length - 1)
     console.log(`  ${i + 1}/${targets.length} — 본문 ${ok}(로컬 ${local}) · 삭제 ${dead} · 실패 ${fail}`);
   if (!(localHtml && localHtml.length > 500)) await sleep(jittered());   // 네트워크를 안 탔으면 기다릴 이유가 없다

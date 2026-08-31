@@ -22,7 +22,21 @@ for (const line of readFileSync('.env.local', 'utf8').split('\n')) {
 
 const STATE = './.pipeline-state.json';
 const LOG = './.pipeline.log';
+const LOCK = './.pipeline.lock';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ── 중복 실행 방지 ─────────────────────────────────────────────────────────
+// 이 스크립트는 15분마다 자동 재실행되도록 등록해 둔다(윈도우 예약 작업).
+// 그래야 프로세스가 조용히 죽어도 스스로 살아난다 — 실제로 한 번 죽어서 6시간을 날렸다.
+// 다만 그러려면 **이미 돌고 있을 때는 즉시 물러나야** 한다. 두 개가 겹치면
+// 같은 IP 에서 요청이 두 배가 되어 차단만 앞당긴다.
+function alreadyRunning() {
+  if (!existsSync(LOCK)) return false;
+  const pid = Number(readFileSync(LOCK, 'utf8').trim());
+  if (!pid) return false;
+  try { process.kill(pid, 0); return true; }   // 신호 0 = 살아 있는지만 확인
+  catch { return false; }                       // 죽은 PID 가 남은 것 — 우리가 이어받는다
+}
 
 function log(msg) {
   const line = `[${new Date().toISOString().slice(0, 19).replace('T', ' ')}] ${msg}`;
@@ -68,7 +82,13 @@ async function remaining() {
   };
   const kws = await page('keywords', 'keyword,is_active');
   const done = new Set((await page('mih_serp_checks', 'query')).map((r) => r.query));
-  const queriesLeft = kws.filter((k) => k.is_active !== false && k.keyword && !done.has(`${k.keyword} 섭외`)).length;
+  // 수집기와 **같은 규칙**으로 세야 한다. 수집기는 괄호를 뗀 이름으로 검색·저장하는데
+  // 여기서 원본 이름으로만 세면 남은 개수가 영영 0 이 되지 않아 본문 단계로 못 넘어간다.
+  const clean = (k) => k.replace(/[（(][^）)]*[）)]/g, ' ').replace(/\s+/g, ' ').trim();
+  const queriesLeft = new Set(kws
+    .filter((k) => k.is_active !== false && k.keyword && clean(k.keyword))
+    .filter((k) => !done.has(`${k.keyword} 섭외`) && !done.has(`${clean(k.keyword)} 섭외`))
+    .map((k) => clean(k.keyword))).size;
 
   const canonical = (u) => String(u).split('?')[0].replace(/\/$/, '');
   const wanted = new Set();
@@ -89,7 +109,23 @@ if (process.argv.includes('--status')) {
   process.exit(0);
 }
 
-log('===== 파이프라인 시작 =====');
+// 다 끝난 뒤에도 15분마다 도는 예약 작업이 계속 깨운다. 그때마다 재평가를 다시 돌리면
+// CPU 만 태운다 — 남은 일이 정말 없으면 조용히 나간다.
+if (readState().stage === 'done' && !process.argv.includes('--force')) {
+  const r = await remaining();
+  if (r.queriesLeft === 0 && r.docsLeft === 0) process.exit(0);
+}
+
+if (alreadyRunning()) {
+  // 조용히 나간다 — 15분마다 도는 감시 작업이 매번 로그를 더럽히면 안 된다.
+  process.exit(0);
+}
+writeFileSync(LOCK, String(process.pid));
+for (const sig of ['exit', 'SIGINT', 'SIGTERM']) {
+  process.on(sig, () => { try { if (existsSync(LOCK)) writeFileSync(LOCK, ''); } catch {} });
+}
+
+log(`===== 파이프라인 시작 (PID ${process.pid}) =====`);
 let state = readState();
 
 // 막혀 있는지 한 번만 두드려 본다. 막힌 채로 라운드를 시작하면 403 을 세 번 더 맞고
@@ -194,12 +230,21 @@ while (true) {
 // ── 3단계: 재평가 ─────────────────────────────────────────────────────────
 // 임베딩은 새로 계산하지 않는다 — 5만 건이면 CPU 로 며칠이다.
 // 먼저 어휘 특징만으로 커진 표본에서 결론이 바뀌는지 본다. 그게 다음 결정의 근거다.
-state.stage = 'evaluate';
-writeState(state);
-log('재평가 — 순위 재현율');
-await run('scripts/rank-eval.mjs');
-log('재평가 — 학습 실험');
-await run('scripts/rank-learn.mjs');
+// 매일 노출 측정이 경쟁 글을 몇 건씩 새로 물어온다. 그때마다 깨어나 재평가를 통째로
+// 다시 돌리면(문서 3건 때문에 4분) CPU 만 태운다 — 표본이 의미 있게 늘었을 때만 다시 잰다.
+const EVAL_MIN_NEW = 200;
+const docsNow = (await remaining()).docsHave;
+if (state.docsAtEval && docsNow - state.docsAtEval < EVAL_MIN_NEW) {
+  log(`재평가 건너뜀 — 지난 평가 이후 문서 ${docsNow - state.docsAtEval}건 증가(${EVAL_MIN_NEW}건 미만)`);
+} else {
+  state.stage = 'evaluate';
+  writeState(state);
+  log('재평가 — 순위 재현율');
+  await run('scripts/rank-eval.mjs');
+  log('재평가 — 학습 실험');
+  await run('scripts/rank-learn.mjs');
+  state.docsAtEval = docsNow;
+}
 
 state.stage = 'done';
 state.finishedAt = new Date().toISOString();

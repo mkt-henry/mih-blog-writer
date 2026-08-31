@@ -13,6 +13,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
 import { normalizePayload } from './lib/kb.mjs';
+import { fetchAll } from '../lib/name-match.mjs';
 
 // dotenv 를 쓰지 않고 직접 읽는 이유: 그 패키지가 stdout 에 배너를 찍어 JSON 출력을 깨뜨린다.
 // 이 CLI 의 stdout 은 에이전트가 그대로 파싱하는 값이라 한 글자도 섞이면 안 된다.
@@ -123,8 +124,10 @@ async function main() {
 
   // 근거 뭉치: 이 인물의 verified 사실 + 원고에 이름이 등장하는 다른 엔티티의 verified 사실
   //           (소속 그룹·앨범·프로그램 엔티티에 붙은 연도가 인물 원고에 정당하게 들어간다)
-  const { data: ents } = await db.from('mih_kb_entities').select('id, name');
-  const related = (ents ?? []).filter((e) => e.id === entity.id || prose.includes(e.name));
+  // PostgREST 는 한 번에 1,000행만 돌려준다. 엔티티가 그보다 많아지면 인물 본인 엔티티가
+  // 잘려 나가 자기 verified 근거로 자기 연도를 못 찾는 오탐이 난다 (2026-08-24, DJ IAMMOOD).
+  const ents = await fetchAll(db, 'mih_kb_entities', 'id, name');
+  const related = ents.filter((e) => e.id === entity.id || prose.includes(e.name));
   const { data: claims } = await db.from('mih_kb_claims')
     .select('claim, quote, status, entity_id')
     .in('entity_id', related.map((e) => e.id));

@@ -36,6 +36,7 @@ export default function NavBar({ isAdmin, keywordOnly }: Props) {
           <>
             {link("/", "모아보기")}
             {link("/rss", "발행 현황")}
+            {link("/competitors", "경쟁 글")}
             {link("/keywords", "키워드")}
             {isAdmin && link("/admin/users", "사용자 관리")}
           </>

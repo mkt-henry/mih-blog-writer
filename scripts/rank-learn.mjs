@@ -82,9 +82,11 @@ for (const t of tally.values()) {
   if (!dHi.body.includes(p) || !dLo.body.includes(p)) continue;
   // 모델 점수를 쓰려면 문서 두 개와 **쿼리 두 종(원본·확장)** 이 전부 캐시에 있어야 한다.
   // 새로 수집한 검색어는 아직 임베딩 전이라 여기서 걸러진다.
-  const emb = EMB.has(`c:${hi}`) && EMB.has(`c:${lo}`) && EMB.has(`q:${t.q}`) && EMB.has(`x:${t.q}`)
-    && RR.has(`${t.q}|${hi}`) && RR.has(`${t.q}|${lo}`);
-  pairs.push({ query: t.q, hi: dHi, lo: dLo, emb });
+  const emb = EMB.has(`c:${hi}`) && EMB.has(`c:${lo}`) && EMB.has(`q:${t.q}`) && EMB.has(`x:${t.q}`);
+  // 재순위(교차 인코더)는 임베딩보다도 느려서 캐시가 훨씬 작다. 둘을 한 조건으로 묶으면
+  // 임베딩이 있는 쌍까지 재순위 캐시 크기로 깎여 표본이 7배 줄어든다 — 따로 센다.
+  const rr = emb && RR.has(`${t.q}|${hi}`) && RR.has(`${t.q}|${lo}`);
+  pairs.push({ query: t.q, hi: dHi, lo: dLo, emb, rr });
 }
 
 // ── 특징 ───────────────────────────────────────────────────────────────────
@@ -253,9 +255,15 @@ function report(label, set, subset) {
   return { bests, text, all };
 }
 
+// 임베딩만 쓰는 벌 — 재순위 캐시에 발목 잡히지 않는 큰 표본이 여기다.
+const EMB_ONLY = makeSet({ ...LEX_FEATURES, ...Object.fromEntries(
+  Object.entries(MODEL_FEATURES).filter(([k]) => k.startsWith('임베딩'))) });
+
 const embPairs = pairs.filter((p) => p.emb);
+const rrPairs = pairs.filter((p) => p.rr);
 const lexResult = report('전체 · 어휘 특징만', LEX, pairs);
-const fullResult = report('임베딩 확보분 · 어휘+모델', FULL, embPairs);
+report('임베딩 확보분 · 어휘+임베딩', EMB_ONLY, embPairs);
+const fullResult = report('재순위 확보분 · 어휘+임베딩+재순위', FULL, rrPairs);
 const all = fullResult?.all ?? lexResult?.all;
 
 // ── 라벨 잡음 천장 ─────────────────────────────────────────────────────────

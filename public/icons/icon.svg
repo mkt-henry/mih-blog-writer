@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1565C0"/>
+  <text x="256" y="258" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="150"
+        font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central"
+        letter-spacing="4">MIH</text>
+  <rect x="150" y="336" width="212" height="14" rx="7" fill="#fff" opacity="0.55"/>
+  <rect x="150" y="368" width="150" height="14" rx="7" fill="#fff" opacity="0.32"/>
+</svg>

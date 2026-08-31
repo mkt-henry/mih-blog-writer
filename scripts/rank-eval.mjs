@@ -125,12 +125,26 @@ const SCORERS = {
 const MODEL = opt('model', null);
 if (MODEL) {
   const cache = openCache(`./.models/cache-${MODEL.replace(/[^\w.-]/g, '_')}.json`);
+
+  // 임베딩은 문서당 ~14초다(bge-m3, CPU). 3만 건을 다 돌리면 3일이라 결정을 못 기다린다.
+  // 통계적으로는 전부 필요하지도 않다 — 검색어를 무작위로 N개만 뽑아도
+  // 쌍이 2만 개면 오차 ±0.7%p 라 계정(65.7%)과 비교하기에 충분하다.
+  // `--emb-queries=0` 이면 전부 돈다.
+  const EMB_Q = Number(opt('emb-queries', 0));
+  let embPairs = pairs;
+  if (EMB_Q > 0) {
+    const qs = [...new Set(pairs.map((p) => p.query))].sort();   // 실행마다 같은 표본
+    const pick = new Set(qs.filter((_, i) => i % Math.ceil(qs.length / EMB_Q) === 0));
+    embPairs = pairs.filter((p) => pick.has(p.query));
+    console.log(`[embed] 표본 — 검색어 ${pick.size}/${qs.length}개 · 쌍 ${embPairs.length}/${pairs.length}개`);
+  }
+
   const need = new Set();
-  for (const p of pairs) { need.add(p.hi.url); need.add(p.lo.url); }
+  for (const p of embPairs) { need.add(p.hi.url); need.add(p.lo.url); }
   // 저장 키와 같은 접두어로 확인해야 한다. `d:` 로 물으면 언제나 없다고 나와
   // 캐시가 있어도 매번 전부 다시 계산한다(실제로 그 사고가 났다).
   const missDocs = [...need].filter((u) => !cache.has(`c:${u}`));
-  const queries = [...new Set(pairs.map((p) => p.query))];
+  const queries = [...new Set(embPairs.map((p) => p.query))];
   const missQ = queries.filter((q) => !cache.has(`q:${q}`));
 
   // 쿼리 확장 — `"OOO 섭외"` 는 2어절이라 임베딩이 불안정하다.
@@ -225,14 +239,23 @@ if (RERANKER) {
 }
 
 // 동점은 반반으로 센다 — 안 그러면 0/1 짜리 이진 지표가 부당하게 유리해진다.
+// 임베딩을 일부 표본에만 계산했으면, 벡터가 없는 쌍에서 점수가 NaN 이 되거나 예외가 난다.
+// 그걸 0 으로 세면 그 지표만 부당하게 깎인다 — **잴 수 있는 쌍에서만** 재고, 몇 쌍인지 같이 적는다.
+const safe = (fn, q, d) => {
+  try { const v = fn(q, d); return Number.isFinite(v) ? v : NaN; }
+  catch { return NaN; }
+};
+
 function evaluate(fn) {
-  let win = 0, tie = 0;
+  let win = 0, tie = 0, n = 0;
   for (const p of pairs) {
-    const a = fn(p.query, p.hi), b = fn(p.query, p.lo);
+    const a = safe(fn, p.query, p.hi), b = safe(fn, p.query, p.lo);
+    if (Number.isNaN(a) || Number.isNaN(b)) continue;
+    n++;
     if (a === b) tie++;
     else if (a > b) win++;
   }
-  return { acc: (win + tie / 2) / pairs.length, tiePct: tie / pairs.length };
+  return { acc: n ? (win + tie / 2) / n : 0.5, tiePct: n ? tie / n : 0, n };
 }
 
 // 블로그 정체성만으로 얼마나 맞히나 — "문서가 아니라 계정이 순위를 만드는가"의 답.
@@ -267,19 +290,21 @@ for (const p of pairs) {
 const gap = (p) => Math.abs(blogScore(p, 'hi') - blogScore(p, 'lo'));
 const evenPairs = pairs.filter((p) => gap(p) <= 0.15);
 function evaluateOn(subset, fn) {
-  let win = 0, tie = 0;
+  let win = 0, tie = 0, n = 0;
   for (const p of subset) {
-    const a = fn(p.query, p.hi), b = fn(p.query, p.lo);
+    const a = safe(fn, p.query, p.hi), b = safe(fn, p.query, p.lo);
+    if (Number.isNaN(a) || Number.isNaN(b)) continue;
+    n++;
     if (a === b) tie++;
     else if (a > b) win++;
   }
-  return (win + tie / 2) / subset.length;
+  return n ? (win + tie / 2) / n : 0.5;
 }
 
 const nq = new Set(pairs.map((p) => p.query)).size;
 console.log(`\n순위 재현율 — ${SURFACE} · 문서쌍 ${pairs.length}개 · 쿼리 ${nq}개`);
 console.log(`(순서가 흔들려 버린 쌍 ${dropUnstable} · 검색어와 무관해 버린 쌍 ${dropOfftopic} · 본문 확보 ${docs.size}건)\n`);
-console.log('  지표'.padEnd(22) + '재현율   동점   읽는 법');
+console.log('  지표'.padEnd(22) + '재현율   동점   쌍     읽는 법');
 const rows = Object.entries(SCORERS)
   .map(([name, fn]) => ({ name, ...evaluate(fn) }))
   .sort((a, b) => Math.abs(b.acc - 0.5) - Math.abs(a.acc - 0.5));
@@ -287,7 +312,7 @@ for (const r of rows) {
   const read = Math.abs(r.acc - 0.5) < 0.03
     ? '판별 못 함'
     : r.acc >= 0.5 ? '높을수록 상위' : '낮을수록 상위';
-  console.log(`  ${r.name.padEnd(20)}${(r.acc * 100).toFixed(1)}%   ${(r.tiePct * 100).toFixed(0)}%    ${read}`);
+  console.log(`  ${r.name.padEnd(20)}${(r.acc * 100).toFixed(1)}%   ${String((r.tiePct * 100).toFixed(0)).padStart(2)}%   ${String(r.n).padStart(6)}  ${read}`);
 }
 console.log(`\n  ${'[블로그 정체성만]'.padEnd(20)}${(((bWin + bTie / 2) / pairs.length) * 100).toFixed(1)}%   ${((bTie / pairs.length) * 100).toFixed(0)}%    문서를 안 보고 계정만으로`);
 console.log(`\n  표본 ${pairs.length}쌍의 통계 오차는 대략 ±${(100 / Math.sqrt(pairs.length)).toFixed(1)}%p.`);
@@ -308,10 +333,16 @@ if (evenPairs.length >= 100) {
 // 새 모델이 기존 최고를 실제로 넘었는지는 반드시 이 칸으로 판단한다.
 function pairedDiff(subset, fnA, fnB, iters = 2000) {
   const s = (fn, p) => {
-    const a = fn(p.query, p.hi), b = fn(p.query, p.lo);
+    const a = safe(fn, p.query, p.hi), b = safe(fn, p.query, p.lo);
+    if (Number.isNaN(a) || Number.isNaN(b)) return null;
     return a === b ? 0.5 : a > b ? 1 : 0;
   };
-  const d = subset.map((p) => s(fnA, p) - s(fnB, p));
+  // 임베딩이 표본에만 있으면 벡터 없는 쌍은 잴 수 없다 — 둘 다 잴 수 있는 쌍만 남긴다.
+  const d = subset
+    .map((p) => [s(fnA, p), s(fnB, p)])
+    .filter(([a, b]) => a !== null && b !== null)
+    .map(([a, b]) => a - b);
+  if (!d.length) return { mean: 0, lo: 0, hi: 0, n: 0 };
   const mean = d.reduce((x, y) => x + y, 0) / d.length;
   const boots = [];
   for (let i = 0; i < iters; i++) {

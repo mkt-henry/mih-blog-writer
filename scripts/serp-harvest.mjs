@@ -65,12 +65,19 @@ async function fetchSerp(query, surface) {
   const url = surface === 'blog-tab'
     ? `https://search.naver.com/search.naver?ssc=tab.blog.all&${q}`
     : `https://search.naver.com/search.naver?${q}`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
-    signal: AbortSignal.timeout(12_000),
-  });
-  if (!res.ok) return { blocked: res.status === 403, status: res.status, entries: [] };
-  const html = await res.text();
+  // 타임아웃·DNS 끊김은 예외로 던져진다. 잡지 않으면 프로세스가 통째로 죽고
+  // 그 라운드에서 아직 저장 안 한 결과까지 날아간다 — 빈 결과로 넘기고 계속 간다.
+  let res, html;
+  try {
+    res = await fetch(url, {
+      headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!res.ok) return { blocked: res.status === 403, status: res.status, entries: [] };
+    html = await res.text();
+  } catch (e) {
+    return { blocked: false, status: 0, entries: [], error: e.name || String(e) };
+  }
   const entries = [], seen = new Set();
   for (const m of html.matchAll(POST_LINK)) {
     const u = `https://blog.naver.com/${m[1]}/${m[2]}`;
@@ -81,11 +88,18 @@ async function fetchSerp(query, surface) {
   return { blocked: false, status: 200, entries };
 }
 
+// 등록된 이름에는 설명이 괄호로 붙어 있는 경우가 많다("이세영 (무니)").
+// 네이버는 이걸 그대로 넣으면 결과를 0건으로 돌려준다 — 실제로 "이세영 (무니) 섭외" 0건,
+// "이세영 섭외" 10건이었다. 괄호를 떼고 검색한다.
+const clean = (k) => k.replace(/[（(][^）)]*[）)]/g, ' ').replace(/\s+/g, ' ').trim();
+
 const kws = await page('keywords', 'id,keyword,category,is_active');
 const done = new Set((await page('mih_serp_checks', 'query')).map((r) => r.query));
-const todo = kws
-  .filter((k) => k.is_active !== false && k.keyword && !done.has(`${k.keyword} 섭외`))
-  .map((k) => `${k.keyword} 섭외`);
+const todo = [...new Set(kws
+  .filter((k) => k.is_active !== false && k.keyword && clean(k.keyword))
+  // 옛 행은 괄호가 붙은 원본으로 저장돼 있다. 둘 중 하나라도 있으면 이미 한 것이다.
+  .filter((k) => !done.has(`${k.keyword} 섭외`) && !done.has(`${clean(k.keyword)} 섭외`))
+  .map((k) => `${clean(k.keyword)} 섭외`))];
 
 if (args.includes('--stats')) {
   const docs = await page('mih_serp_docs', 'url');
@@ -104,6 +118,18 @@ const t0 = Date.now();
 let ok = 0, blocked = 0, empty = 0, blockStreak = 0;
 const urls = new Set();
 const rows = [];
+const emptyRows = [];   // 대조 검색을 통과해야 저장한다
+
+// 결과가 확실히 나오는 검색어로 한 번 두드려 본다. 여기서도 0건이면 우리가 막힌 것이지
+// 검색어가 없는 게 아니다 — 그 구간의 빈 결과는 버린다(다음 라운드에 다시 해 본다).
+async function settleEmpties() {
+  if (!emptyRows.length) return true;
+  const probe = await fetchSerp('아이유 섭외', 'pc-total');
+  if (!probe.entries.length) { emptyRows.length = 0; return false; }
+  const { error } = await db.from('mih_serp_checks').insert(emptyRows.splice(0, emptyRows.length));
+  if (error) console.error('  빈결과 저장 실패:', error.message);
+  return true;
+}
 
 for (let i = 0; i < targets.length; i++) {
   const query = targets[i];
@@ -123,8 +149,16 @@ for (let i = 0; i < targets.length; i++) {
     continue;
   }
   blockStreak = 0;
-  if (!r.entries.length) { empty++; }
-  else {
+  if (!r.entries.length) {
+    // 빈 결과를 기록하지 않으면 그 검색어는 라운드마다 영원히 다시 돌아온다.
+    // 다만 네이버가 200 을 주면서 결과만 비우는 **소프트 차단**도 똑같이 빈 결과로 보인다.
+    // 그래서 바로 저장하지 않고 모아 뒀다가, 휴식 때 대조 검색으로 멀쩡한지 확인되면 저장한다.
+    empty++;
+    emptyRows.push({
+      article_id: null, query, surface: 'pc-total',
+      indexed: false, rank: null, note: 'harvest', competitors: [],
+    });
+  } else {
     ok++;
     for (const e of r.entries) urls.add(e.url);
     rows.push({
@@ -143,11 +177,16 @@ for (let i = 0; i < targets.length; i++) {
   if (BREAK_EVERY && (i + 1) % BREAK_EVERY === 0 && i < targets.length - 1) {
     const rest = 120_000 + Math.random() * 180_000;
     await flush();
+    if (!(await settleEmpties())) {
+      console.error('\n⛔ 대조 검색도 0건 — 소프트 차단으로 보고 오늘은 접는다.');
+      break;
+    }
     console.log(`  … ${Math.round(rest / 60000)}분 휴식`);
     await sleep(rest);
   }
 }
 await flush();
+await settleEmpties();
 
 async function flush() {
   if (!rows.length) return;

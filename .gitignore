@@ -32,3 +32,5 @@ supabase/.temp/
 # 수집 파이프라인 진행 상태·로그
 .pipeline-state.json
 .pipeline.log
+.pipeline.lock
+.embed-eval.log
