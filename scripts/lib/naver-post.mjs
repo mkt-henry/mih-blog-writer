@@ -48,7 +48,7 @@ const BODY_END = /<div[^>]*(?:id="floating_bottom|id="area_sympathy|class="[^"]*
  * 본문 컨테이너만 잘라 텍스트로. 컨테이너를 못 찾으면 null —
  * 페이지 전체를 본문으로 쓰느니 그 글을 버리는 편이 낫다(UI 문구가 길이를 부풀린다).
  */
-export function extractPostText(html) {
+function bodyHtml(html) {
   let start = -1;
   for (const re of CONTAINERS) {
     const i = html.search(re);
@@ -58,8 +58,44 @@ export function extractPostText(html) {
   // 닫는 태그 짝을 세지 않고 다음 섹션 경계까지 자른다 — 텍스트만 쓰므로 충분하다.
   const rest = html.slice(start);
   const end = rest.search(BODY_END);
-  const text = stripTags(end > 0 ? rest.slice(0, end) : rest);
+  return end > 0 ? rest.slice(0, end) : rest;
+}
+
+export function extractPostText(html) {
+  const b = bodyHtml(html);
+  if (b === null) return null;
+  const text = stripTags(b);
   return text.length >= 200 ? text : null;
+}
+
+// 본문의 **구성**을 센다. 텍스트만 저장하던 시절에는 잴 수 없던 것 —
+// "원고 품질이 순위와 무관하다"를 말하려면 길이·키워드 말고 이쪽을 재야 한다.
+//
+// 클래스 등장 횟수를 세면 안 된다. SE3 모듈은 자식 요소마다 같은 접두어를 달아서
+// (`se-module-image` 가 이미지 1장에 두세 번 나온다) 숫자가 통째로 부푼다.
+// **`se-component se-<종류>` 컨테이너만** 센다. 우리 발행글 1건으로 맞춰 본 값:
+// 이미지 5(본문 4 + 명함) · 영상 2 — 정답과 일치한다.
+//
+// 유튜브는 `<iframe>` 이 아니라 `se-oembed` 자리표시자로 저장되고 iframe 은 화면에서
+// 만들어진다. iframe 만 세면 영상이 **0개로 나온다**(실제로 그렇게 나왔다).
+//
+// se-* 가 없는 옛 에디터 글에는 원시 태그 수로 떨어진다.
+export function extractStructure(html) {
+  let b = bodyHtml(html);
+  if (b === null) return null;
+  b = b.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ');
+  const n = (re) => (b.match(re) ?? []).length;
+  const comp = (t) => n(new RegExp(`class="[^"]*\bse-component\b[^"]*\bse-${t}\b`, 'gi'));
+  return {
+    img: comp('image') + comp('imageStrip') || n(/<img\b(?![^>]*(?:sticker|emoticon))/gi),
+    video: comp('oembed') + comp('video') || n(/<iframe\b/gi),
+    table: comp('table') || n(/<table\b/gi),
+    heading: comp('sectionTitle') + comp('documentTitle') || n(/<h[1-4]\b/gi),
+    quote: comp('quotation'),
+    link: comp('oglink'),
+    map: comp('placesMap') + comp('map'),
+    para: n(/<p[^>]*class="[^"]*\bse-text-paragraph\b/gi) || n(/<p\b/gi),
+  };
 }
 
 export function extractTitle(html) {
@@ -85,7 +121,7 @@ export async function fetchPost(rawUrl, { maxRetry = 4 } = {}) {
         return { ok: false, status: res.status, note: 'noPost' };
       if (res.status === 200) {
         const text = extractPostText(html);
-        if (text) return { ok: true, status: 200, title: extractTitle(html), text, blogId: m.blogId, logNo: m.logNo };
+        if (text) return { ok: true, status: 200, title: extractTitle(html), text, struct: extractStructure(html), blogId: m.blogId, logNo: m.logNo };
         // 정상 페이지인데 컨테이너만 못 찾았다면 재시도해도 같은 결과다.
         // 그대로 기록하고 넘어간다 — 4회 백오프(최대 40초)를 태울 이유가 없다.
         if (/blog\.naver|se_component|post_ct|__clipContent/.test(html))

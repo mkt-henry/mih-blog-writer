@@ -16,7 +16,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
-import { fetchPost, sleep } from './lib/naver-post.mjs';
+import { fetchPost, sleep, extractStructure } from './lib/naver-post.mjs';
 
 for (const line of readFileSync('.env.local', 'utf8').split('\n')) {
   const m = line.match(/^([^#=\s][^=]*)=["']?(.+?)["']?\s*$/);
@@ -51,12 +51,40 @@ const ours = await page('articles', 'published_url,html_content', (q) => q.not('
 const ourUrls = new Map();
 for (const a of ours) ourUrls.set(canonical(a.published_url), a.html_content ?? '');
 
-const have = new Set((await page('mih_serp_docs', 'url')).map((r) => r.url));
-const todo = [...new Set([...wanted.keys(), ...ourUrls.keys()])].filter((u) => !have.has(u));
+const rows = await page('mih_serp_docs', 'url,body,struct');
+const have = new Set(rows.map((r) => r.url));
+
+// ── 구성 보충 모드 (`--struct`) ─────────────────────────────────────────────
+// 본문은 이미 다 받았지만 **구성**(이미지·영상·표·소제목 개수)은 없다 —
+// 처음 받을 때 HTML 을 버리고 텍스트만 저장했기 때문이다. 그래서 다시 받는다.
+//
+// 문서를 아무거나 고르면 안 된다. 순위 평가는 **같은 검색어 안의 두 글을 비교**하므로
+// 한쪽만 구성이 있으면 그 쌍은 못 쓴다. 검색어 단위로, 문서가 많이 걸린 검색어부터
+// 통째로 채운다 — 문서 k개를 받으면 쌍은 약 k²/2개가 생기니 큰 검색어가 압도적으로 싸다.
+const STRUCT = args.includes('--struct');
+const needStruct = new Set(rows.filter((r) => r.body && !r.struct).map((r) => r.url));
+let structTodo = [];
+if (STRUCT) {
+  const byQuery = new Map();
+  for (const c of checks) {
+    const urls = (c.competitors ?? []).map((k) => k?.url).filter(Boolean).map(canonical)
+      .filter((u) => have.has(u));
+    if (urls.length >= 2) byQuery.set(c.query, new Set([...(byQuery.get(c.query) ?? []), ...urls]));
+  }
+  const seen = new Set();
+  for (const [, urls] of [...byQuery].sort((a, b) => b[1].size - a[1].size))
+    for (const u of urls)
+      if (needStruct.has(u) && !seen.has(u)) { seen.add(u); structTodo.push(u); }
+}
+
+const todo = STRUCT
+  ? structTodo
+  : [...new Set([...wanted.keys(), ...ourUrls.keys()])].filter((u) => !have.has(u));
 
 if (args.includes('--stats')) {
   console.log(JSON.stringify({
     경쟁문서: wanted.size, 우리글: ourUrls.size, 이미받음: have.size, 남음: todo.length,
+    구성없음: needStruct.size, 구성있음: rows.filter((r) => r.struct).length,
   }, null, 2));
   process.exit(0);
 }
@@ -66,7 +94,7 @@ const limit = num('limit', todo.length);
 const BASE_GAP = num('gap', 1500);
 const jittered = () => Math.round(BASE_GAP * (1 + (Math.random() * 2 - 1) * 0.5));
 const targets = todo.slice(0, limit);
-console.log(`[serp-corpus] 대상 ${targets.length}건 (전체 미수집 ${todo.length})`);
+console.log(`[serp-corpus]${STRUCT ? ' 구성 보충 —' : ''} 대상 ${targets.length}건 (전체 남음 ${todo.length})`);
 
 // 우리 글은 네이버에서 다시 받지 않는다 — DB 에 원본 HTML 이 있다.
 const stripOurs = (h) => h
@@ -86,17 +114,21 @@ for (let i = 0; i < targets.length; i++) {
   const isOurs = ourUrls.has(url);
   const localHtml = isOurs ? ourUrls.get(url) : '';
   const r = localHtml && localHtml.length > 500
-    ? { ok: true, status: 200, title: null, text: stripOurs(localHtml) }
+    ? { ok: true, status: 200, title: null, text: stripOurs(localHtml), struct: extractStructure(`<div class="se-main-container">${localHtml}</div>`) }
     : await fetchPost(url);
   if (localHtml && localHtml.length > 500) local++;
-  const row = {
-    url, is_ours: isOurs, status: r.status, note: r.note ?? null,
-    blog_id: r.blogId ?? null, log_no: r.logNo ?? null,
-    title: r.title ?? null, body: r.text ?? null, char_len: r.text?.length ?? null,
-    fetched_at: new Date().toISOString(),
-  };
+  // 구성 보충 모드는 struct 만 갱신한다 — 본문·제목을 덮어쓰면
+  // 이미 평가에 쓰고 있는 텍스트가 조용히 달라진다.
+  const row = STRUCT
+    ? { url, struct: r.struct ?? null }
+    : {
+        url, is_ours: isOurs, status: r.status, note: r.note ?? null,
+        blog_id: r.blogId ?? null, log_no: r.logNo ?? null,
+        title: r.title ?? null, body: r.text ?? null, char_len: r.text?.length ?? null,
+        fetched_at: new Date().toISOString(),
+      };
   const transient = !r.ok && !SETTLED.has(r.note);
-  if (!transient) {
+  if (!transient && !(STRUCT && !r.struct)) {
     const { error } = await db.from('mih_serp_docs').upsert(row, { onConflict: 'url' });
     if (error) console.error(`  upsert 실패 ${url}: ${error.message}`);
   }

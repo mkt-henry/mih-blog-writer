@@ -121,6 +121,37 @@ export function countKeyword(html, keyword) {
   return (text.match(new RegExp(esc, 'g')) || []).length;
 }
 
+// 인물명 반복 횟수 — 관문에서 가장 강한 신호다(2026-09-02 실측).
+//
+// 세는 대상이 까다롭다. 파일명 슬러그는 등록명(`DJ PLUMM`)이지만, 원고 본문은
+// **한글 독음**(`플럼`)으로 부른다 — 검색자가 한글로 치기 때문이다. 슬러그로만 세면
+// 0회가 나와 규칙이 영영 작동하지 않는다. 그래서 제목 대괄호 안의 이름까지 후보로
+// 넣고, 괄호 안팎을 갈라 **가장 많이 등장한 표기**를 그 원고의 인물명 반복으로 본다.
+export function personNameCandidates(personName, title) {
+  const out = new Set();
+  const add = (v) => { const t = String(v ?? '').trim(); if (t.length >= 2) out.add(t); };
+  const split = (v) => {
+    add(v);
+    const m = String(v ?? '').match(/^(.*?)[（(]([^）)]*)[）)]/);
+    if (m) { add(m[1]); add(m[2]); }
+  };
+  split(personName);
+  const bracket = String(title ?? '').match(/^\s*\[([^\]]+)\]/)?.[1];
+  if (bracket) split(bracket.replace(/\s*섭외\s*$/, ''));
+  return [...out];
+}
+
+export function personNameRepeats(html, personName, title) {
+  const text = bodyProseText(html);
+  let best = 0, form = null;
+  for (const v of personNameCandidates(personName, title)) {
+    const esc = v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const n = (text.match(new RegExp(esc, 'g')) || []).length;
+    if (n > best) { best = n; form = v; }
+  }
+  return { count: best, form };
+}
+
 // 밀도 계산용 본문 — 태그·해시태그를 걷어내고 공백을 단일화한 순수 서술 텍스트.
 // bodyTextLength는 공백을 전부 제거하므로 값이 다르다. 상위 노출 문서와 같은
 // 방식으로 재기 위해(해시태그 20여 개가 밀도를 부풀린다) 별도로 둔다.
@@ -325,6 +356,25 @@ export function runPersonChecks(html, { title, personName } = {}) {
   //
   // 그래도 상한을 완전히 없애지는 않는다 — 관측된 최대가 10.5 였으므로 그보다 훨씬 높은
   // 값은 정상 문서에서 나오지 않는 어뷰징이다. 게이트를 15 로 올리고, 5 초과는 경고로 남긴다.
+  // [순위] 인물명 반복 — 지금까지 잰 신호 중 관문에서 가장 강하다 (2026-09-02).
+  //
+  //   우리 발행분 101편: 18회 미만 노출률 65% / 18회 이상 26%.
+  //   1페이지에 오른 경쟁 글 15,784건: 인물명 반복 중앙값 8회, 18회 넘는 글은 21%뿐.
+  //   같은 경쟁 글을 순위별로 보면 1위 7회 → 9~10위 12회로 아래로 갈수록 늘어난다.
+  //
+  // 두 표본이 같은 방향을 가리키는 유일한 항목이라 **발행을 막는다.**
+  // (제목 길이·본문 길이도 우리 발행분에서는 갈렸지만 경쟁 글 분포가 기각했다.)
+  const rep = personNameRepeats(html, personName, title);
+  if (rep.count >= 22)
+    fail('person_name_repeat', `인물명("${rep.form}") ${rep.count}회 반복 — 22회 이상은 발행 불가 (1페이지 글 중앙값 8회, 권장 14회 이하)`);
+  else if (rep.count >= 18)
+    warn('person_name_repeat', `인물명("${rep.form}") ${rep.count}회 반복 (18회 이상 — 노출률이 65%에서 26%로 떨어지는 구간, 14회 이하 권장)`);
+
+  // [순위] "섭외" 총 횟수 — 인물명과 같은 원인으로 보이나 단독으로는 경계선이라 경고만.
+  const seobCount = (bodyProseText(html).match(/섭외/g) || []).length;
+  if (seobCount >= 18)
+    warn('keyword_count', `"섭외" ${seobCount}회 (18회 이상 — 인물명 반복과 같이 줄인다)`);
+
   const density = keywordDensity(html, '섭외');
   if (density > 15) fail('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 — 어뷰징 수준 (관측된 상위 노출 문서 최대 10.5)`);
   else if (density > 5) warn('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 (5.0 초과 — 순위와의 관계는 확인되지 않음)`);

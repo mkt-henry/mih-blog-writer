@@ -1,7 +1,16 @@
+// 공용 판정 모듈은 scripts(.mjs)와 app(.ts)이 함께 쓰므로 .mjs 로 둔다.
+import { searchName } from "@/lib/name-match.mjs";
+
 /** `"<인물명> 섭외"` 로 만든다. 이미 `섭외` 로 끝나면 덧붙이지 않는다.
- *  index.ts 에 있던 것을 옮겨왔다 — index.ts 가 이 파일을 import 하므로 반대 방향은 순환이다. */
+ *  index.ts 에 있던 것을 옮겨왔다 — index.ts 가 이 파일을 import 하므로 반대 방향은 순환이다.
+ *
+ *  **한글 표기로 검색한다 (2026-09-02).** 등록명이 `2NE1 (투애니원)` 이면 그대로 검색해선 안 된다 —
+ *  괄호까지 붙은 문자열은 아무도 치지 않고, 실제로 결과 0건을 만든 적이 있다.
+ *  우리가 겨루는 것은 한글 검색 순위 하나뿐이므로 `투애니원 섭외` 로 잰다.
+ *  규칙은 `lib/name-match.mjs` 의 `searchName` 하나에만 둔다 — 수집기와 어긋나면
+ *  같은 인물이 두 개의 검색어로 기록되어 집계가 갈라진다. */
 export function toSearchQuery(baseKeyword: string): string {
-  const trimmed = baseKeyword.trim();
+  const trimmed = (searchName(baseKeyword) as string).trim();
   return /섭외$/.test(trimmed) ? trimmed : `${trimmed} 섭외`;
 }
 

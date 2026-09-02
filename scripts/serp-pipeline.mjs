@@ -14,6 +14,7 @@
 
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { searchName } from '../lib/name-match.mjs';
 
 for (const line of readFileSync('.env.local', 'utf8').split('\n')) {
   const m = line.match(/^([^#=\s][^=]*)=["']?(.+?)["']?\s*$/);
@@ -84,7 +85,7 @@ async function remaining() {
   const done = new Set((await page('mih_serp_checks', 'query')).map((r) => r.query));
   // 수집기와 **같은 규칙**으로 세야 한다. 수집기는 괄호를 뗀 이름으로 검색·저장하는데
   // 여기서 원본 이름으로만 세면 남은 개수가 영영 0 이 되지 않아 본문 단계로 못 넘어간다.
-  const clean = (k) => k.replace(/[（(][^）)]*[）)]/g, ' ').replace(/\s+/g, ' ').trim();
+  const clean = (k) => searchName(k);
   const queriesLeft = new Set(kws
     .filter((k) => k.is_active !== false && k.keyword && clean(k.keyword))
     .filter((k) => !done.has(`${k.keyword} 섭외`) && !done.has(`${clean(k.keyword)} 섭외`))
@@ -96,10 +97,14 @@ async function remaining() {
     for (const k of c.competitors ?? []) if (k?.url) wanted.add(canonical(k.url));
   for (const a of await page('articles', 'published_url', (q) => q.not('published_url', 'is', null)))
     wanted.add(canonical(a.published_url));
-  const have = new Set((await page('mih_serp_docs', 'url')).map((r) => r.url));
+  const rows = await page('mih_serp_docs', 'url,body,struct');
+  const have = new Set(rows.map((r) => r.url));
   let docsLeft = 0;
   for (const u of wanted) if (!have.has(u)) docsLeft++;
-  return { queriesLeft, docsLeft, docsHave: have.size };
+  // 본문은 있는데 구성(이미지·영상·표 개수)이 없는 문서. 처음 받을 때 HTML 을 버려서
+  // 텍스트만 남았고, 그 탓에 "원고 품질"을 재본 적이 없다. 그 공백을 메우는 일감이다.
+  const structLeft = rows.filter((r) => r.body && !r.struct).length;
+  return { queriesLeft, docsLeft, docsHave: have.size, structLeft, structHave: rows.length - structLeft };
 }
 
 if (process.argv.includes('--status')) {
@@ -113,7 +118,7 @@ if (process.argv.includes('--status')) {
 // CPU 만 태운다 — 남은 일이 정말 없으면 조용히 나간다.
 if (readState().stage === 'done' && !process.argv.includes('--force')) {
   const r = await remaining();
-  if (r.queriesLeft === 0 && r.docsLeft === 0) process.exit(0);
+  if (r.queriesLeft === 0 && r.docsLeft === 0 && r.structLeft === 0) process.exit(0);
 }
 
 if (alreadyRunning()) {
@@ -227,14 +232,44 @@ while (true) {
   cooldown = Math.min(cooldown * 1.5, 2 * 3600_000);
 }
 
+// ── 2.5단계: 구성 보충 ─────────────────────────────────────────────────────
+// 본문은 이미 다 있지만 이미지·영상·표 개수가 없다. 같은 글을 한 번 더 받아 개수만 센다.
+// 본문 수집과 요청 성격이 같으므로 같은 예절·같은 재시도 규칙을 쓴다.
+cooldown = 20 * 60_000;
+noProgress = 0;
+while (true) {
+  const before = await remaining();
+  if (before.structLeft === 0) { log(`구성 보충 완료 — ${before.structHave}건`); break; }
+  log(`구성 보충 — 남은 문서 ${before.structLeft}건 (완료 ${before.structHave}건)`);
+  state.stage = 'struct';
+  state.rounds.struct = (state.rounds.struct ?? 0) + 1;
+  writeState(state);
+
+  await run('scripts/serp-corpus.mjs', ['--struct']);
+
+  const after = await remaining();
+  const did = before.structLeft - after.structLeft;
+  log(`이번 라운드 ${did}건 처리 · 남음 ${after.structLeft}건`);
+  if (after.structLeft === 0) { log(`구성 보충 완료 — ${after.structHave}건`); break; }
+
+  if (did <= 0) {
+    noProgress++;
+    if (noProgress >= 3) { log('⛔ 세 라운드 연속 진전 없음 — 구성 보충을 여기서 멈춘다.'); break; }
+  } else { noProgress = 0; cooldown = 20 * 60_000; }
+
+  log(`${Math.round(cooldown / 60000)}분 쉬고 다시 시작한다`);
+  await sleep(cooldown);
+  cooldown = Math.min(cooldown * 1.5, 2 * 3600_000);
+}
+
 // ── 3단계: 재평가 ─────────────────────────────────────────────────────────
 // 임베딩은 새로 계산하지 않는다 — 5만 건이면 CPU 로 며칠이다.
 // 먼저 어휘 특징만으로 커진 표본에서 결론이 바뀌는지 본다. 그게 다음 결정의 근거다.
 // 매일 노출 측정이 경쟁 글을 몇 건씩 새로 물어온다. 그때마다 깨어나 재평가를 통째로
 // 다시 돌리면(문서 3건 때문에 4분) CPU 만 태운다 — 표본이 의미 있게 늘었을 때만 다시 잰다.
 const EVAL_MIN_NEW = 200;
-const docsNow = (await remaining()).docsHave;
-if (state.docsAtEval && docsNow - state.docsAtEval < EVAL_MIN_NEW) {
+const { docsHave: docsNow, structHave: structNow } = await remaining();
+if (state.docsAtEval && docsNow - state.docsAtEval < EVAL_MIN_NEW && structNow === state.structAtEval) {
   log(`재평가 건너뜀 — 지난 평가 이후 문서 ${docsNow - state.docsAtEval}건 증가(${EVAL_MIN_NEW}건 미만)`);
 } else {
   state.stage = 'evaluate';
@@ -244,6 +279,7 @@ if (state.docsAtEval && docsNow - state.docsAtEval < EVAL_MIN_NEW) {
   log('재평가 — 학습 실험');
   await run('scripts/rank-learn.mjs');
   state.docsAtEval = docsNow;
+  state.structAtEval = structNow;
 }
 
 state.stage = 'done';
