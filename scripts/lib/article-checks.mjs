@@ -364,7 +364,13 @@ export function runPersonChecks(html, { title, personName } = {}) {
   //
   // 두 표본이 같은 방향을 가리키는 유일한 항목이라 **발행을 막는다.**
   // (제목 길이·본문 길이도 우리 발행분에서는 갈렸지만 경쟁 글 분포가 기각했다.)
-  const rep = personNameRepeats(html, personName, title);
+  //
+  // 카테고리 원고는 빼야 한다. 타입 판별이 "이미지가 있으면 인물 원고"라서
+  // 이미지를 넣은 카테고리 원고(`강연섭외`, `행사섭외` 등)가 인물 원고로 넘어온다.
+  // 그런 글은 카테고리 키워드를 반복하는 것이 정상이라 이 규칙으로 막으면 안 된다.
+  // 등록명에 `섭외`가 들어 있으면 인물이 아니다 — 사람 이름에는 절대 안 들어간다.
+  const isCategory = /섭외/.test(String(personName ?? ''));
+  const rep = isCategory ? { count: 0, form: null } : personNameRepeats(html, personName, title);
   if (rep.count >= 22)
     fail('person_name_repeat', `인물명("${rep.form}") ${rep.count}회 반복 — 22회 이상은 발행 불가 (1페이지 글 중앙값 8회, 권장 14회 이하)`);
   else if (rep.count >= 18)
