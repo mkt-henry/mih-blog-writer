@@ -16,6 +16,7 @@
 // 결과는 `mih_serp_checks` 에 `note='harvest'` 로 들어간다 — 노출 KPI 집계와 섞이지 않게
 // article_id 는 비운다. 본문은 `npm run serp:corpus` 가 이어서 받는다.
 
+import { searchName } from '../lib/name-match.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
 
@@ -91,7 +92,7 @@ async function fetchSerp(query, surface) {
 // 등록된 이름에는 설명이 괄호로 붙어 있는 경우가 많다("이세영 (무니)").
 // 네이버는 이걸 그대로 넣으면 결과를 0건으로 돌려준다 — 실제로 "이세영 (무니) 섭외" 0건,
 // "이세영 섭외" 10건이었다. 괄호를 떼고 검색한다.
-const clean = (k) => k.replace(/[（(][^）)]*[）)]/g, ' ').replace(/\s+/g, ' ').trim();
+const clean = (k) => searchName(k);
 
 const kws = await page('keywords', 'id,keyword,category,is_active');
 const done = new Set((await page('mih_serp_checks', 'query')).map((r) => r.query));

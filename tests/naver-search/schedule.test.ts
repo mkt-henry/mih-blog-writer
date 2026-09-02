@@ -39,6 +39,23 @@ describe('toSearchQuery', () => {
   it('trims surrounding whitespace', () => {
     expect(toSearchQuery('  박효신 ')).toBe('박효신 섭외');
   });
+
+  // 한글 검색으로 잰다 (2026-09-02). 등록명을 그대로 검색하면 아무도 치지 않는
+  // 문자열을 재게 되고, 괄호가 붙은 검색어는 실제로 결과 0건을 만든 적이 있다.
+  it('searches the Korean form when the name is English with a Korean gloss', () => {
+    expect(toSearchQuery('2NE1 (투애니원)')).toBe('투애니원 섭외');
+    expect(toSearchQuery('Cool Jazz Band (쿨 재즈밴드)')).toBe('쿨 재즈밴드 섭외');
+    expect(toSearchQuery('KCM(케이씨엠)')).toBe('케이씨엠 섭외');
+  });
+
+  it('drops the parenthetical when the outside is already Korean', () => {
+    expect(toSearchQuery('이세영 (무니)')).toBe('이세영 섭외');
+  });
+
+  it('keeps the original when there is no Korean form at all', () => {
+    expect(toSearchQuery('SF9')).toBe('SF9 섭외');
+    expect(toSearchQuery('Danny Cho')).toBe('Danny Cho 섭외');
+  });
 });
 
 describe('kstDateMinus', () => {

@@ -53,7 +53,7 @@ const SURFACE = opt('surface', 'pc-total');
 const MIN_AGREE = Number(opt('min-agree', 0.7));
 
 const docs = new Map(
-  (await page('mih_serp_docs', 'url,blog_id,title,body,char_len,is_ours'))
+  (await page('mih_serp_docs', 'url,blog_id,log_no,title,body,char_len,is_ours,struct'))
     .filter((d) => d.body)
     .map((d) => [d.url, d])
 );
@@ -101,6 +101,7 @@ if (pairs.length === 0) {
 // 후보 지표. 새 모델은 여기에 한 줄 추가하고 아래 표에서 비교한다.
 const count = (s, sub) => (sub ? s.split(sub).length - 1 : 0);
 const SCORERS = {
+  '최신성(log_no)': (q, d) => Number(d.log_no),
   '본문 길이': (q, d) => d.char_len,
   '"섭외" 횟수': (q, d) => count(d.body, '섭외'),
   '"섭외" 밀도': (q, d) => (count(d.body, '섭외') / Math.max(d.char_len, 1)) * 1000,
@@ -110,6 +111,36 @@ const SCORERS = {
   '제목에 인물명': (q, d) => ((d.title ?? '').includes(personOf(q)) ? 1 : 0),
   '제목 길이': (q, d) => (d.title ?? '').length,
   '제목에 숫자 없음': (q, d) => (/\d/.test(d.title ?? '') ? 0 : 1),
+  // ── 내용 충실도 후보 (본문 텍스트만으로 잴 수 있는 것) ────────────────
+  // "원고 품질은 무관"이 정말인지 보려고 넣는다. 지금까지의 지표는 전부
+  // 길이·키워드 횟수라 품질을 잰 적이 없다.
+  '어휘 다양성': (q, d) => {
+    const t = d.body.split(/\s+/).filter(Boolean);
+    return t.length ? new Set(t).size / t.length : 0;
+  },
+  '문장 수': (q, d) => (d.body.match(/[.!?]|다\s|요\s/g) ?? []).length,
+  '평균 문장 길이': (q, d) => {
+    const n = (d.body.match(/[.!?]|다\s|요\s/g) ?? []).length;
+    return n ? d.char_len / n : d.char_len;
+  },
+  '숫자 밀도': (q, d) => ((d.body.match(/\d/g) ?? []).length / Math.max(d.char_len, 1)) * 1000,
+  '실무정보어': (q, d) => ['비용', '견적', '문의', '일정', '출연료', '섭외료', '예산', '계약', '진행 절차', '섭외 문의']
+    .reduce((a, w) => a + count(d.body, w), 0),
+  '고유명사 다양성': (q, d) => new Set((d.body.match(/[가-힣]{2,}/g) ?? [])).size,
+
+  // ── 구성 지표 (`--struct` 보충분이 있어야 잰다) ──────────────────────────
+  // 이미지·영상·표는 "원고 품질"에서 사람이 실제로 보는 부분이다. 지금까지는
+  // 코퍼스가 텍스트만 담고 있어 아예 잴 수가 없었다. 구성이 없는 문서는 NaN 이
+  // 되어 자동으로 빠지므로, 보충이 절반만 끝난 상태에서 돌려도 결과는 정직하다.
+  '이미지 수': (q, d) => d.struct?.img ?? NaN,
+  '이미지 밀도': (q, d) => (d.struct ? (d.struct.img / Math.max(d.char_len, 1)) * 1000 : NaN),
+  '영상 있음': (q, d) => (d.struct ? (d.struct.video > 0 ? 1 : 0) : NaN),
+  '표 수': (q, d) => d.struct?.table ?? NaN,
+  '소제목 수': (q, d) => d.struct?.heading ?? NaN,
+  '인용구 수': (q, d) => d.struct?.quote ?? NaN,
+  '외부링크 수': (q, d) => d.struct?.link ?? NaN,
+  '문단 수': (q, d) => d.struct?.para ?? NaN,
+  '문단당 글자수': (q, d) => (d.struct?.para ? d.char_len / d.struct.para : NaN),
 };
 
 // ── 임베딩 지표 (선택) ─────────────────────────────────────────────────────
