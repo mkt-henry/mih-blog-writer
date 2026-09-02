@@ -141,6 +141,35 @@ export function personNameCandidates(personName, title) {
   return [...out];
 }
 
+// 제목·본문에 남은 영문명 — 한글 검색만 겨루므로 영문 표기는 원고에 있을 이유가 없다.
+//
+// 등록명에 한글과 영문이 **둘 다** 있는 경우(`2NE1 (투애니원)`, `첸(CHEN)`)만 잡는다.
+// 그때는 어느 쪽이 한글 표기인지 확실히 알 수 있다. 영문만 등록된 이름
+// (`SF9`, `2PM`, `10CM`, `god`)은 통용 한글 표기가 있는지를 기계가 알 수 없고,
+// 실제로 사람들도 로마자로 검색하므로 건드리지 않는다.
+export function foreignNameForm(personName) {
+  const raw = String(personName ?? '').trim();
+  const m = raw.match(/^([^（(]*)[（(]([^）)]*)[）)](.*)$/);
+  if (!m) return null;
+  const outside = `${m[1]} ${m[3]}`.replace(/\s+/g, ' ').trim();
+  const inside = m[2].trim();
+  const kor = (t) => /[가-힣]/.test(t);
+  const lat = (t) => /[A-Za-z]/.test(t);
+  if (kor(inside) && lat(outside) && !kor(outside)) return { latin: outside, korean: inside };
+  if (kor(outside) && lat(inside) && !kor(inside)) return { latin: inside, korean: outside };
+  return null;
+}
+
+export function foreignNameLeaks(html, personName, title) {
+  const form = foreignNameForm(personName);
+  if (!form) return null;
+  const esc = form.latin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(esc, 'gi');
+  const inTitle = re.test(String(title ?? ''));
+  const inBody = (bodyProseText(html).match(re) || []).length;
+  return inTitle || inBody ? { ...form, inTitle, inBody } : null;
+}
+
 export function personNameRepeats(html, personName, title) {
   const text = bodyProseText(html);
   let best = 0, form = null;
@@ -369,6 +398,12 @@ export function runPersonChecks(html, { title, personName } = {}) {
   // 이미지를 넣은 카테고리 원고(`강연섭외`, `행사섭외` 등)가 인물 원고로 넘어온다.
   // 그런 글은 카테고리 키워드를 반복하는 것이 정상이라 이 규칙으로 막으면 안 된다.
   // 등록명에 `섭외`가 들어 있으면 인물이 아니다 — 사람 이름에는 절대 안 들어간다.
+  // [순위] 제목·본문의 영문명 — 한글 검색만 겨룬다(2026-09-02).
+  // 병기를 늘려도 한글 검색 순위는 달라지지 않는다. 영문 표기는 원고에 있을 이유가 없다.
+  const leak = foreignNameLeaks(html, personName, title);
+  if (leak)
+    fail('foreign_name_in_text', `제목·본문에 영문명("${leak.latin}")이 있다 — 한글 표기("${leak.korean}")만 쓴다 (제목 ${leak.inTitle ? '있음' : '없음'} · 본문 ${leak.inBody}회)`);
+
   const isCategory = /섭외/.test(String(personName ?? ''));
   const rep = isCategory ? { count: 0, form: null } : personNameRepeats(html, personName, title);
   if (rep.count >= 22)
