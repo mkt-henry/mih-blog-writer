@@ -411,14 +411,17 @@ export function runPersonChecks(html, { title, personName } = {}) {
   else if (rep.count >= 18)
     warn('person_name_repeat', `인물명("${rep.form}") ${rep.count}회 반복 (18회 이상 — 노출률이 65%에서 26%로 떨어지는 구간, 14회 이하 권장)`);
 
-  // [순위] "섭외" 총 횟수 — 인물명과 같은 원인으로 보이나 단독으로는 경계선이라 경고만.
+  // [노출] "섭외" 밀도 — 관문을 가른다(2026-09-05, 발행분 329편). 해시태그 제외 본문 1000자당:
+  //   뜬 글 중앙값 1.5 · 못 뜬 글 3.3. 3.0 이하 노출률 41% vs 초과 20%. 4.0 초과는 12%(과거 원고의 8%).
+  //   특히 블로그탭 1~3위인데 통합검색에 없는 글 59편이 가장 높았다 — 통합검색 블록이 따로 걸러 낸다.
+  // 경쟁 글 3만 건은 중앙값 4.0 으로 이 선을 넘지만 그 글들은 길이가 절반이다(2,600자·9회).
+  // 우리 템플릿(6,000자)에서는 우리 자료가 기준이다. 다음 30편으로 검증한다.
+  // 카테고리 원고는 키워드 자체에 `섭외`가 들어 있어 밀도가 높은 것이 정상 — 경고까지만.
   const seobCount = (bodyProseText(html).match(/섭외/g) || []).length;
-  if (seobCount >= 18)
-    warn('keyword_count', `"섭외" ${seobCount}회 (18회 이상 — 인물명 반복과 같이 줄인다)`);
-
   const density = keywordDensity(html, '섭외');
-  if (density > 15) fail('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 — 어뷰징 수준 (관측된 상위 노출 문서 최대 10.5)`);
-  else if (density > 5) warn('keyword_density', `"섭외" 밀도 ${density.toFixed(1)}회/1000자 (5.0 초과 — 순위와의 관계는 확인되지 않음)`);
+  const dens = `"섭외" ${seobCount}회 · 밀도 ${density.toFixed(1)}회/1000자`;
+  if (density > 4 && !isCategory) fail('keyword_density', `${dens} — 4.0 초과는 발행 불가 (노출률 12%. 뜬 글 중앙값 1.5, 2.0 이하 권장)`);
+  else if (density > 3) warn('keyword_density', `${dens} (3.0 초과 — 노출률이 41%에서 20%로 떨어지는 구간, 2.0 이하 권장)`);
 
   // [순위] 섭외 해시태그 개수 — 하위권이 오히려 더 잘 지켰다(상위 85% / 하위 100%).
   // 발행을 막을 근거가 없다.
