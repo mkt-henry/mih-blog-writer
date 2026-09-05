@@ -55,6 +55,8 @@ const MIN_AGREE = Number(opt('min-agree', 0.7));
 const docs = new Map(
   (await page('mih_serp_docs', 'url,blog_id,log_no,title,body,char_len,is_ours,struct'))
     .filter((d) => d.body)
+    // {unavailable:true} 는 "재수집 불가" 표식이지 실제 구성 0건이 아니다 — 구성 특징에서 뺀다.
+    .map((d) => (d.struct?.unavailable ? { ...d, struct: null } : d))
     .map((d) => [d.url, d])
 );
 const checks = (await page('mih_serp_checks', 'query,checked_on,surface,competitors'))
