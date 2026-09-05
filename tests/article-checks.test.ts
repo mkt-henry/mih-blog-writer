@@ -252,29 +252,29 @@ describe('runPersonChecks', () => {
     expect(imgFinding.level).toBe('fail');
   });
 
-  // 밀도 경계 — 4.9 통과 / 5.0 통과 / 5.1 실패
   const densityBody = (kw: number) => `<p class="se-text-paragraph"><span>${'가'.repeat(4000 - kw * 2)}${'섭외'.repeat(kw)}</span></p>`;
 
-  // 밀도는 발행 게이트에서 내렸다(2026-08-15).
-  // 실제 1위 글에 밀도 10.5·9.0 도 있고 0.2·0.4 도 있다 — 양극단이 모두 1위다.
-  it('does not block a density of 5.25 — real #1 posts go much higher', () => {
-    const findings = runPersonChecks(densityBody(21)); // 4000자에 21회 = 5.25
+  // 밀도가 관문을 가른다(2026-09-05, 발행분 329편): 3.0 이하 노출률 41% vs 초과 20%, 4.0 초과 12%.
+  // 경계 — 3.0 통과 / 3.25 경고 / 4.0 통과(경고) / 4.25 발행 불가
+  it('does not complain about a density of 3.0 or below', () => {
+    expect(runPersonChecks(densityBody(12)).find((f) => f.id === 'keyword_density')).toBeUndefined(); // 4000자에 12회 = 3.0
+    expect(runPersonChecks(densityBody(8)).find((f) => f.id === 'keyword_density')).toBeUndefined();  // 2.0
+  });
+
+  it('warns above 3.0 but does not block up to 4.0', () => {
+    expect(runPersonChecks(densityBody(13)).find((f) => f.id === 'keyword_density')?.level).toBe('warn'); // 3.25
+    expect(runPersonChecks(densityBody(16)).find((f) => f.id === 'keyword_density')?.level).toBe('warn'); // 4.0
+  });
+
+  it('blocks a density above 4.0 — exposure falls to 12% there', () => {
+    expect(runPersonChecks(densityBody(17)).find((f) => f.id === 'keyword_density')?.level).toBe('fail'); // 4.25
+    expect(runPersonChecks(densityBody(40)).find((f) => f.id === 'keyword_density')?.level).toBe('fail'); // 10.0
+  });
+
+  // 카테고리 원고(`강연섭외` 등)는 키워드 자체에 섭외가 들어 있어 밀도가 높은 것이 정상 — 경고까지만.
+  it('only warns a category article whose keyword itself contains 섭외', () => {
+    const findings = runPersonChecks(densityBody(40), { personName: '강연섭외', title: '[강연섭외] 기업 행사 강연자 섭외 안내' });
     expect(findings.find((f) => f.id === 'keyword_density')?.level).toBe('warn');
-  });
-
-  it('does not block a density of 10, which a real #1 post had', () => {
-    const findings = runPersonChecks(densityBody(40)); // 4000자에 40회 = 10.0
-    expect(findings.find((f) => f.id === 'keyword_density')?.level).toBe('warn');
-  });
-
-  it('still fails an abusive density above 15', () => {
-    const findings = runPersonChecks(densityBody(70)); // 4000자에 70회 = 17.5
-    expect(findings.find((f) => f.id === 'keyword_density')?.level).toBe('fail');
-  });
-
-  it('does not complain about a low density', () => {
-    const findings = runPersonChecks(densityBody(8)); // 4000자에 8회 = 2.0
-    expect(findings.find((f) => f.id === 'keyword_density')).toBeUndefined();
   });
 
   it('fails when prose is shorter than 1500 chars', () => {
