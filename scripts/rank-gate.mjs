@@ -22,6 +22,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
 import { extractStructure } from './lib/naver-post.mjs';
+import { FEATURES, strip } from './lib/gate-features.mjs';
 
 for (const line of readFileSync('.env.local', 'utf8').split('\n')) {
   const m = line.match(/^([^#=\s][^=]*)=["']?(.+?)["']?\s*$/);
@@ -47,24 +48,6 @@ async function page(t, c, mod = (q) => q) {
   }
   return rows;
 }
-
-// 인물명은 표기가 여러 개다 — `클럽소울 (Club Soul)`, `유자 왕 (Yuja Wang)` 처럼
-// 등록명 전체가 본문에 그대로 나오는 일은 거의 없다. 등록명으로만 세면 반복 횟수가
-// 0~2회로 잡혀, 실제로는 평범한 원고가 "반복이 적은 글"로 분류된다(17편이 그랬다).
-// 괄호 안팎을 각각 세어 큰 값을 쓴다.
-const nameVariants = (n) => {
-  const s = String(n ?? '').trim();
-  const m = s.match(/^(.*?)[（(]([^）)]*)[）)]/);
-  const v = m ? [s, m[1].trim(), m[2].trim()] : [s];
-  return v.filter((x) => x.length >= 2);
-};
-const nameCount = (body, person) =>
-  Math.max(0, ...nameVariants(person).map((v) => body.split(v).length - 1));
-
-const strip = (h) => h
-  .replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
-  .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/gi, ' ')
-  .replace(/\s+/g, ' ').trim();
 
 const arts = new Map(
   (await page('articles', 'id,agency,person_name,title,published_at,html_content'))
@@ -110,20 +93,9 @@ if (pairs.length < 30) {
   process.exit(0);
 }
 
-const count = (s, sub) => (sub ? s.split(sub).length - 1 : 0);
 const SCORERS = {
   '최신성(발행일)': (d) => d.t,
-  '본문 길이': (d) => d.len,
-  '"섭외" 밀도': (d) => (count(d.body, '섭외') / Math.max(d.len, 1)) * 1000,
-  '"섭외" 횟수': (d) => count(d.body, '섭외'),
-  '인물명 밀도': (d) => (nameCount(d.body, d.person_name) / Math.max(d.len, 1)) * 1000,
-  '인물명 횟수': (d) => nameCount(d.body, d.person_name),
-  '실무정보어': (d) => ['비용', '견적', '문의', '일정', '출연료', '섭외료', '예산', '계약']
-    .reduce((x, w) => x + count(d.body, w), 0),
-  '어휘 다양성': (d) => { const t = d.body.split(/\s+/).filter(Boolean); return t.length ? new Set(t).size / t.length : 0; },
-  '고유명사 다양성': (d) => new Set(d.body.match(/[가-힣]{2,}/g) ?? []).size,
-  '숫자 밀도': (d) => ((d.body.match(/\d/g) ?? []).length / Math.max(d.len, 1)) * 1000,
-  '제목 길이': (d) => (d.title ?? '').length,
+  ...FEATURES,
   '이미지 수': (d) => d.struct.img ?? NaN,
   '영상 수': (d) => d.struct.video ?? NaN,
   '표 수': (d) => d.struct.table ?? NaN,

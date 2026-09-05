@@ -119,16 +119,20 @@ for (let i = 0; i < targets.length; i++) {
   if (localHtml && localHtml.length > 500) local++;
   // 구성 보충 모드는 struct 만 갱신한다 — 본문·제목을 덮어쓰면
   // 이미 평가에 쓰고 있는 텍스트가 조용히 달라진다.
+  const transient = !r.ok && !SETTLED.has(r.note);
+  // 확정 실패(비공개·삭제·컨테이너 없음)도 struct 를 채워야 한다 — 안 그러면
+  // needStruct 에서 절대 안 빠져서 매 라운드 같은 문서를 영원히 다시 시도한다.
+  // {unavailable:true} 는 "다시 받아도 안 됨" 표식이지 실제 0건이 아니다 —
+  // rank-eval.mjs 가 이걸 null 로 되돌려 통계에서 뺀다.
   const row = STRUCT
-    ? { url, struct: r.struct ?? null }
+    ? { url, struct: r.struct ?? (transient ? null : { unavailable: true }) }
     : {
         url, is_ours: isOurs, status: r.status, note: r.note ?? null,
         blog_id: r.blogId ?? null, log_no: r.logNo ?? null,
         title: r.title ?? null, body: r.text ?? null, char_len: r.text?.length ?? null,
         fetched_at: new Date().toISOString(),
       };
-  const transient = !r.ok && !SETTLED.has(r.note);
-  if (!transient && !(STRUCT && !r.struct)) {
+  if (!transient) {
     const { error } = await db.from('mih_serp_docs').upsert(row, { onConflict: 'url' });
     if (error) console.error(`  upsert 실패 ${url}: ${error.message}`);
   }

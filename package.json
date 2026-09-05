@@ -27,6 +27,7 @@
     "serp:corpus": "node scripts/serp-corpus.mjs",
     "rank:eval": "node scripts/rank-eval.mjs",
     "rank:learn": "node scripts/rank-learn.mjs",
+    "gate:model": "node scripts/gate-model.mjs",
     "serp:harvest": "node scripts/serp-harvest.mjs",
     "serp:pipeline": "node scripts/serp-pipeline.mjs",
     "serp:status": "node scripts/serp-pipeline.mjs --status",
