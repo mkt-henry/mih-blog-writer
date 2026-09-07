@@ -103,7 +103,26 @@ async function r2() {
   return s3;
 }
 
+/** R2 무료 범위(10GB-월) 안에서만 쓴다. 넘기 직전이면 업로드를 멈추고 알린다. 프로세스당 한 번만 센다. */
+const R2_CAP_BYTES = 9.5 * 1024 ** 3;
+let r2UsageChecked = false;
+export async function assertR2Capacity() {
+  if (r2UsageChecked) return;
+  const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+  let total = 0, token;
+  do {
+    const page = await (await r2()).send(new ListObjectsV2Command({ Bucket: env('R2_BUCKET'), ContinuationToken: token }));
+    for (const o of page.Contents ?? []) total += o.Size ?? 0;
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (token);
+  if (total >= R2_CAP_BYTES) {
+    throw new Error(`R2 저장 용량 ${(total / 1024 ** 3).toFixed(2)}GB — 무료 한도(10GB) 직전이라 업로드를 멈췄다. 비용이 발생하기 전에 사용자에게 알릴 것.`);
+  }
+  r2UsageChecked = true;
+}
+
 export async function putR2(path, buffer, contentType = 'image/jpeg') {
+  await assertR2Capacity();
   const { PutObjectCommand } = await import('@aws-sdk/client-s3');
   await (await r2()).send(new PutObjectCommand({
     Bucket: env('R2_BUCKET'), Key: path, Body: buffer, ContentType: contentType,
