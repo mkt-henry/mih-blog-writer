@@ -126,7 +126,8 @@ export async function putR2(path, buffer, contentType = 'image/jpeg') {
   const { PutObjectCommand } = await import('@aws-sdk/client-s3');
   await (await r2()).send(new PutObjectCommand({
     Bucket: env('R2_BUCKET'), Key: path, Body: buffer, ContentType: contentType,
-    CacheControl: 'public, max-age=31536000, immutable',
+    // 검수 중 같은 경로로 이미지를 교체하는 일이 있어 하루만 캐시한다 (R2 전송량은 무료라 길게 잡을 이유가 없다)
+    CacheControl: 'public, max-age=86400',
   }));
 }
 
