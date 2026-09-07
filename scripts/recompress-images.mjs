@@ -16,7 +16,8 @@
  * ⚠ 저장소가 402(전송량 한도 초과)로 막혀 있으면 아무것도 못 한다 — 플랜 복구 뒤 실행.
  *    전체 처리는 원본 812MB 를 한 번 내려받으므로 그만큼 전송량을 쓴다.
  */
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname } from 'path';
 import { loadEnv, listSupabase, getSupabase, putSupabase, shrink } from './lib/image-store.mjs';
 
 loadEnv();
@@ -33,6 +34,7 @@ const WIDTH        = Number(opt('width', 800));
 const QUALITY      = Number(opt('quality', 80));
 const CONCURRENCY  = Number(opt('concurrency', 4));
 const LEDGER       = 'output/.recompress-ledger.json';
+const BACKUP_DIR   = 'output/.image-originals';
 
 const ledger = existsSync(LEDGER) ? JSON.parse(readFileSync(LEDGER, 'utf8')) : {};
 const saveLedger = () => writeFileSync(LEDGER, JSON.stringify(ledger, null, 1));
@@ -69,7 +71,12 @@ async function one(path) {
     const smaller = out.length < src.length * 0.9;
     before += src.length;
     after  += smaller ? out.length : src.length;
-    if (smaller && !DRY) await putSupabase(path, out);
+    if (smaller && !DRY) {
+      // 덮어쓰기는 되돌릴 수 없으니 원본을 로컬에 남긴다 (output/.image-originals/, git 제외)
+      mkdirSync(dirname(`${BACKUP_DIR}/${path}`), { recursive: true });
+      writeFileSync(`${BACKUP_DIR}/${path}`, src);
+      await putSupabase(path, out);
+    }
     if (!DRY) { ledger[path] = { before: src.length, after: smaller ? out.length : src.length, at: new Date().toISOString() }; saveLedger(); }
     smaller ? done++ : kept++;
     console.log(`${smaller ? (DRY ? '·' : '✓') : '='} ${path}  ${(src.length / 1024).toFixed(0)}KB → ${(out.length / 1024).toFixed(0)}KB`);
