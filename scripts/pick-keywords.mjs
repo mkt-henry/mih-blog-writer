@@ -30,6 +30,10 @@ import { aliasesOf, excludeReason, buildNameIndex, fileNames, fetchAll } from ".
 config({ path: ".env.local" });
 
 const VALID_AGENCIES = ["mih_speaker", "mih_casting", "mih_agency", "other"];
+// 표시 이름 → 내부 슬러그. `mih_speaker` 계정의 표시 이름은 2026-09-07 부로 `influence` 다
+// (블로그 gdfdhzgfgfhgdj). 내부 슬러그는 DB·이력 호환 때문에 그대로 둔다 — lib/agencies.ts
+const AGENCY_ALIASES = { influence: "mih_speaker", gdfdhzgfgfhgdj: "mih_speaker", kyh620303: "other" };
+const resolveAgency = (a) => AGENCY_ALIASES[a] ?? a;
 
 // --- 인자 파싱: "agency=count" 쌍 또는 "agency count" 단일 ---
 function parseArgs(argv) {
@@ -39,7 +43,7 @@ function parseArgs(argv) {
     return reqs;
   }
   for (const a of argv) {
-    const m = a.match(/^([a-z_]+)=(\d+)$/i);
+    const m = a.match(/^([a-z0-9_]+)=(\d+)$/i);
     if (!m) {
       console.error(`인자 형식 오류: "${a}" — agency=count 형식이어야 합니다.`);
       process.exit(1);
@@ -126,9 +130,10 @@ async function main() {
   const usedThisRun = new Set();
   const result = {};
 
-  for (const { agency, count } of reqs) {
+  for (const { agency: requested, count } of reqs) {
+    const agency = resolveAgency(requested);
     if (!VALID_AGENCIES.includes(agency)) {
-      console.error(`알 수 없는 계정: ${agency} (${VALID_AGENCIES.join("/")})`);
+      console.error(`알 수 없는 계정: ${requested} (${VALID_AGENCIES.join("/")} / influence)`);
       process.exit(1);
     }
     const pool = shuffle(
@@ -148,9 +153,11 @@ async function main() {
   console.log(
     `전체 키워드 ${(kw || []).length} / 원고 ${arts.length}건 / 제외 인물명 ${excluded.size}종(발행 ${published.size}종) / 미작성 후보 ${available.length}\n`,
   );
-  for (const { agency, count } of reqs) {
+  for (const { agency: requested, count } of reqs) {
+    const agency = resolveAgency(requested);
     const r = result[agency];
-    console.log(`■ ${agency}  (가용 ${r.poolSize}개 중 ${count}개 요청)`);
+    const shown = agency === requested ? agency : `${requested} (내부 슬러그 ${agency})`;
+    console.log(`■ ${shown}  (가용 ${r.poolSize}개 중 ${count}개 요청)`);
     if (r.picked.length < count) {
       console.log(`  ⚠ 가용 후보가 부족해 ${r.picked.length}개만 추출됨`);
     }

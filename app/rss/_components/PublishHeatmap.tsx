@@ -21,7 +21,7 @@ export default function PublishHeatmap({ daily }: Props) {
         return (
           <div
             key={d.date}
-            title={`${d.date} - ${total} posts (S:${d.mih_speaker} / C:${d.mih_casting} / A:${d.mih_agency} / K:${d.other})`}
+            title={`${d.date} - ${total} posts (I:${d.mih_speaker} / C:${d.mih_casting} / A:${d.mih_agency} / K:${d.other})`}
             className={`aspect-square rounded text-[9px] flex items-center justify-center ${cls} ${total >= 5 ? "text-white" : "text-gray-600"}`}
           >
             {total}

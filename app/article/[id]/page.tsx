@@ -46,7 +46,7 @@ hr { border:none; border-top:1px solid #e0e0e0; margin:20px 0; }
         <div className="flex-1 min-w-0">
           <h1 className="text-sm font-bold truncate">{article.title}</h1>
           <div className="text-xs text-[color:var(--color-text-muted)]">
-            {AGENCIES[article.agency as AgencySlug].blogSlug} · {article.publish_date}
+            {AGENCIES[article.agency as AgencySlug].short} · {article.publish_date}
             {article.published_at ? ` · ${article.published_at.slice(0, 16).replace('T', ' ')} 발행` : ' · 미발행'}
           </div>
         </div>

@@ -20,8 +20,8 @@ const HTML_WITH_MANIFEST_PATHS = [
 
 const AGENCIES = {
   mih_speaker: {
-    name: "메이드인헤븐 스피커",
-    short: "mih_speaker",
+    name: "influence",
+    short: "influence",
     blogSlug: "gdfdhzgfgfhgdj",
     businessCardImageUrl:
       "https://un1nlrbeiyjhkrdj.public.blob.vercel-storage.com/agency/mih_speaker/business-card.png",

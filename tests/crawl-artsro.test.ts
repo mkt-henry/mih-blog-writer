@@ -33,26 +33,27 @@ describe('norm/stripParen', () => {
 
 describe('classify', () => {
   it('maps speaker group to 강연자/mih_speaker (no split)', () => {
-    expect(classify(87)).toEqual({ category: '강연자', agency: 'mih_speaker', split: false });
-    expect(classify(96)).toEqual({ category: '강연자', agency: 'mih_speaker', split: false }); // 스포츠
+    expect(classify(87)).toEqual({ category: '강연자', label: '명사', agency: 'mih_speaker', split: false });
+    expect(classify(96)).toEqual({ category: '강연자', label: '스포츠', agency: 'mih_speaker', split: false });
   });
   it('maps 개그맨 / 방송인 with split', () => {
-    expect(classify(85)).toEqual({ category: '개그맨', agency: null, split: true });
-    expect(classify(89)).toEqual({ category: '방송인', agency: null, split: true });
-    expect(classify(114)).toEqual({ category: '방송인', agency: null, split: true });
+    expect(classify(85)).toEqual({ category: '개그맨', label: '개그맨 MC 남자', agency: null, split: true });
+    expect(classify(89)).toEqual({ category: '방송인', label: '방송인', agency: null, split: true });
+    expect(classify(114)).toEqual({ category: '방송인', label: '아나운서', agency: null, split: true });
   });
-  it('defaults all other CatNos to 가수 with split', () => {
-    expect(classify(74)).toEqual({ category: '가수', agency: null, split: true }); // 아이돌
-    expect(classify(40)).toEqual({ category: '가수', agency: null, split: true }); // 댄스
-    expect(classify(58)).toEqual({ category: '가수', agency: null, split: true }); // 오케스트라
+  // 2026-09-05 정정: 노래하는 인물만 '가수'다. 댄스·클래식 등은 각자의 분류를 갖는다.
+  it('gives each performance group its own category, not a blanket 가수', () => {
+    expect(classify(74)).toEqual({ category: '가수', label: '아이돌', agency: null, split: true });
+    expect(classify(40)).toEqual({ category: '댄스', label: '댄스', agency: null, split: true });
+    expect(classify(58)).toEqual({ category: '클래식', label: '오케스트라', agency: null, split: true });
   });
 });
 
 describe('makeSplitter', () => {
-  it('round-robins the three entertainer accounts', () => {
+  it('round-robins the four entertainer accounts', () => {
     const next = makeSplitter();
-    expect([next(), next(), next(), next()]).toEqual(
-      ['mih_casting', 'mih_agency', 'other', 'mih_casting'],
+    expect([next(), next(), next(), next(), next()]).toEqual(
+      ['mih_casting', 'mih_agency', 'other', 'mih_speaker', 'mih_casting'],
     );
   });
 });
@@ -115,7 +116,7 @@ describe('buildRow', () => {
     const row = buildRow({ goIdx: '10', name: '홍길동', desc: '', catNo: 40 }, 'other');
     expect(row.notes).toBe('');
     expect(row.source).toBe('https://www.artsro.com/right/enter_view.html?GoIdx=10&CatNo=40');
-    expect(row.category).toBe('가수');
+    expect(row.category).toBe('댄스');
   });
 });
 

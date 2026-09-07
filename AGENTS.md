@@ -95,7 +95,7 @@ mih-blog-writer/
 output/YYYY-MM-DD/{agency_slug}/[slug]_[원고제목].html
 ```
 
-- `{agency_slug}`: `mih_speaker` (스피커, 블로그 gdfdhzgfgfhgdj), `mih_casting` (캐스팅), `mih_agency` (에이전시), `other` (kyh620303)
+- `{agency_slug}`: `mih_speaker` (표시 이름 **influence**, 블로그 gdfdhzgfgfhgdj), `mih_casting` (캐스팅), `mih_agency` (에이전시), `other` (kyh620303)
 - `[slug]`: 인물 원고는 아티스트명, 카테고리 원고는 메인 키워드
 - `[원고제목]`: 본문에 사용한 **최종 확정 제목 전체**(대괄호 포함)
 - Windows 금지 문자(`\ / : * ? " < > |`)는 공백 또는 `-` 로 치환 (대괄호 `[]`, 쉼표 `,` 는 그대로 유지)
@@ -435,11 +435,13 @@ console.log('sentence spacing applied');
 # 에이전시 고정 정보
 
 - **에이전시명:** 메이드인헤븐
-- **활성 발행 계정 (4개, `lib/agencies.ts`가 단일 출처):** `mih_speaker` (스피커, 블로그 gdfdhzgfgfhgdj), `mih_casting` (캐스팅), `mih_agency` (에이전시), `other` (kyh620303)
+- **활성 발행 계정 (4개, `lib/agencies.ts`가 단일 출처):** `influence` (내부 슬러그 `mih_speaker`, 블로그 gdfdhzgfgfhgdj), `mih_casting` (캐스팅), `mih_agency` (에이전시), `other` (블로그 kyh620303)
+  - **2026-09-07: 스피커 계정은 `influence` 로 개칭했다.** 발행 블로그는 `gdfdhzgfgfhgdj`, 예전 블로그 `blog.naver.com/mih_speaker` 는 운영 종료(검색 노출 집계 `lib/naver-search/exposure.ts` 에만 남긴다).
+  - **내부 슬러그 `mih_speaker` 는 바꾸지 않는다** — `articles.agency` CHECK 제약, 과거 발행 331건, `keywords` 3,008건, `output/` 경로, 공개 피드 URL `/mih_speaker`, 배포된 엣지 함수(`rss-sync`/`discord-notify`)가 전부 이 값에 묶여 있다. 사용자에게는 `influence` 로, 코드·경로·명령에는 `mih_speaker` 로 쓴다. `pick-keywords` 는 `influence=` 인자도 받는다.
   - **`계정별로 N개씩` 같은 전체 계정 요청은 이 4개 전부를 포함한다. `other`를 빠뜨리지 않는다.**
-- **계정 배정 기준:**
-  - 강연·강사·스피커 관련 원고 → `mih_speaker`
-  - 가수·아이돌·뮤지션 관련 원고 → `mih_casting` / `mih_agency` / `other` 골고루 배분 (별도 기준 없음)
+- **계정 배정 기준 (2026-09-07 개정 — 전용 강연 계정은 없다):**
+  - 강연·강사·스피커 관련 원고 → `influence`(`mih_speaker`)
+  - 가수·아이돌·뮤지션 관련 원고 → 4계정(`mih_casting` / `mih_agency` / `other` / `influence`) 골고루 배분 (별도 기준 없음)
 - **카카오 오픈채팅 URL (모든 계정 공통):** `https://open.kakao.com/o/snG6VXti`
 - **명함 이미지 URL** (모아보기가 자동으로 합성하므로 원고에 직접 넣지 않음):
   - `mih_speaker`: `https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/agency/mih_speaker/business-card.jpg`

@@ -1,4 +1,4 @@
-import type { AgencySlug } from "@/lib/agencies";
+import { AGENCIES, type AgencySlug } from "@/lib/agencies";
 
 type Article = {
   person_name: string;
@@ -13,13 +13,6 @@ const BADGE: Record<AgencySlug, string> = {
   mih_casting: "bg-purple-50 text-purple-800",
   mih_agency: "bg-green-50 text-green-800",
   other: "bg-orange-50 text-orange-800",
-};
-
-const LABEL: Record<AgencySlug, string> = {
-  mih_speaker: "speaker",
-  mih_casting: "casting",
-  mih_agency: "agency",
-  other: "kyh620303",
 };
 
 function toKSTDate(iso: string): string {
@@ -64,7 +57,7 @@ export default function PublishedArticleList({ articles }: { articles: Article[]
               className="flex items-baseline gap-2 px-4 py-2 hover:bg-gray-50 border-b border-gray-50 group"
             >
               <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${BADGE[a.agency]}`}>
-                {LABEL[a.agency]}
+                {AGENCIES[a.agency].short}
               </span>
               <span className="text-xs font-semibold text-gray-700 shrink-0 min-w-[52px]">
                 {a.person_name}

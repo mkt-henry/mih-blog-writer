@@ -1,3 +1,6 @@
+// 우리 블로그 슬러그. `mih_speaker` 는 2026-08-22 로 발행을 끊은 예전 스피커 블로그이고,
+// 지금 운영하는 블로그는 `gdfdhzgfgfhgdj` 다. 예전 글이 아직 검색에 남아 있어
+// 노출 집계에서는 계속 우리 글로 센다(발행 대상은 아니다 — lib/agencies.ts).
 export const MIH_BLOG_SLUGS = ['gdfdhzgfgfhgdj', 'mih_speaker', 'mih_casting', 'mih_agency', 'kyh620303'] as const;
 
 export function isMihExposed(html: string): boolean {

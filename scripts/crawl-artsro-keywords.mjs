@@ -19,33 +19,15 @@ loadEnv();
 export { stripParen, norm, isExcluded as isDuplicate } from '../lib/name-match.mjs';
 
 // ── CatNo → category/agency 매핑 ────────────────────────────────────────────
-const SPEAKER = new Set([87, 88, 90, 95, 97, 129, 91, 92, 93, 94, 96]);
-const GAGMAN = new Set([85, 86]);
-const BROADCAST = new Set([89, 83, 84, 114, 69, 71, 72, 73]);
+// 판정은 lib/artsro-categories.mjs 단일 구현을 쓴다. 여기서 재수출한다.
+//
+// 예전에는 "강연자/개그맨/방송인이 아니면 전부 가수"였다. 그 탓에 마술사(43)·
+// 마임팀(44)·국악팀(64)·댄스팀·기획공연이 모두 `가수` 로 저장돼 원고 체인이
+// 가수 프레임으로 원고를 잡을 뻔했다. 분류를 지어내지 말고 CatNo 를 그대로 따른다.
+import { ALL_CAT_NOS, classifyCatNo, ENTERTAINER_ACCOUNTS } from '../lib/artsro-categories.mjs';
 
-// 그 외 전부(가수) — 순회 대상 전체 목록. 사이트 네비 트리에서 추출.
-const SINGER = [
-  74, 75, 76, 77, 78, 79, 80, 81, 82,            // 연예인 가수 세부
-  17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, // 음악
-  33, 34, 35, 36, 37, 38, 39, 40,                // 댄스
-  41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, // 퍼포먼스
-  58, 59, 60, 61, 103, 104,                      // 클래식
-  62, 63, 64, 65, 66, 67, 68,                    // 전통
-  107, 108, 109, 110, 111, 112, 133, 113,        // 기획공연
-  116, 117, 118, 119, 120,                       // 외국인
-];
-
-export const ALL_CAT_NOS = [
-  ...SPEAKER, ...GAGMAN, ...BROADCAST, ...SINGER,
-];
-
-export function classify(catNo) {
-  const n = Number(catNo);
-  if (SPEAKER.has(n)) return { category: '강연자', agency: 'mih_speaker', split: false };
-  if (GAGMAN.has(n)) return { category: '개그맨', agency: null, split: true };
-  if (BROADCAST.has(n)) return { category: '방송인', agency: null, split: true };
-  return { category: '가수', agency: null, split: true };
-}
+export { ALL_CAT_NOS };
+export const classify = classifyCatNo;
 
 export function parseListPage(html) {
   const re =
@@ -85,10 +67,9 @@ export async function crawlCategory(catNo, fetchPage) {
   return acc;
 }
 
-const ENT_ACCOUNTS = ['mih_casting', 'mih_agency', 'other'];
 export function makeSplitter() {
   let i = 0;
-  return () => ENT_ACCOUNTS[i++ % ENT_ACCOUNTS.length];
+  return () => ENTERTAINER_ACCOUNTS[i++ % ENTERTAINER_ACCOUNTS.length];
 }
 
 // Fisher-Yates 셔플 (assign-keyword-agency.mjs와 동일)

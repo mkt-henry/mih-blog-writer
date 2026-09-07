@@ -8,13 +8,6 @@ import KanbanColumn from "./KanbanColumn";
 
 type Props = { groups: KanbanGroups; onOpen: (id: string) => void; perms: UserPermissions };
 
-const TAB_LABELS: Record<AgencySlug, string> = {
-  mih_speaker: "speaker",
-  mih_casting: "casting",
-  mih_agency: "agency",
-  other: "kyh620303",
-};
-
 const TAB_COLORS: Record<AgencySlug, string> = {
   mih_speaker: "var(--color-speaker)",
   mih_casting: "var(--color-casting)",
@@ -47,7 +40,7 @@ export default function KanbanBoard({ groups, onOpen, perms }: Props) {
                   className="inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle"
                   style={{ backgroundColor: TAB_COLORS[slug] }}
                 />
-                {TAB_LABELS[slug] ?? AGENCIES[slug].blogSlug}
+                {AGENCIES[slug].short}
                 <span className="ml-1 text-[10px] text-gray-400">{count}</span>
               </button>
             );

@@ -75,7 +75,7 @@ export default function NewUserModal({ onClose, onCreated }: Props) {
           <div className="space-y-1">
             {AGENCY_SLUGS.map((a) => (
               <div key={a} className="flex items-center gap-2 text-sm">
-                <div className="w-24">{AGENCIES[a].blogSlug}</div>
+                <div className="w-24">{AGENCIES[a].short}</div>
                 <select
                   value={perms[a]}
                   onChange={(e) =>

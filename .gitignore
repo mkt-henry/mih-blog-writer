@@ -39,3 +39,7 @@ supabase/.temp/
 output/.recompress-ledger.json
 output/.image-originals/
 output/.recompress-run.log
+
+# 로컬 스크래치 (수집 중간 산출물·이미지 덤프) — 283MB, 커밋 제외
+tmp/
+tmp*.jpg

@@ -48,7 +48,7 @@ export default function KanbanColumn({ agency, agencyInfo, group, onOpen }: Prop
         <div>
           <div className="flex items-center gap-1.5 text-sm font-bold">
             <span className={`w-2 h-2 rounded-full ${AGENCY_COLOR[agency]}`} />
-            {agencyInfo.blogSlug}
+            {agencyInfo.short}
           </div>
           <div className="flex gap-0.5 mt-1">
             {(["oldest", "newest", "name"] as Sort[]).map((s) => (

@@ -104,7 +104,7 @@ export default function UsersTable({ initialUsers, currentUserId }: Props) {
           <tr>
             <th className="text-left px-3 py-2">username</th>
             {AGENCY_SLUGS.map((a) => (
-              <th key={a} className="text-left px-3 py-2">{AGENCIES[a].blogSlug}</th>
+              <th key={a} className="text-left px-3 py-2">{AGENCIES[a].short}</th>
             ))}
             <th className="text-left px-3 py-2 w-24">키워드 전용</th>
             <th className="text-left px-3 py-2 w-24">작업</th>

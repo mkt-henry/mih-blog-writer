@@ -89,7 +89,7 @@ async function sendContent(content) {
 
 // ── 메인 ─────────────────────────────────────────────────────────────────────
 const AGENCY_LABEL = {
-  mih_speaker: '스피커',
+  mih_speaker: 'influence',
   mih_casting: '캐스팅',
   mih_agency:  '에이전시',
   other:       'other',

@@ -1,6 +1,6 @@
 // MIH 발행 현황 Discord 알림 (Supabase Edge Function)
 //
-// 4개 블로그(mih_speaker / mih_casting / mih_agency / kyh620303)의 네이버 RSS를 동시에 fetch해서
+// 4개 블로그(gdfdhzgfgfhgdj=influence / mih_casting / mih_agency / kyh620303)의 네이버 RSS를 동시에 fetch해서
 // KST 기준으로 두 채널에 메시지를 보낸다.
 //   1) 발행현황 채널 — 당일 발행 현황 (임베드 + 키워드/블로그 URL)
 //   2) 검색노출 채널 — 전일 발행 키워드의 네이버 블로그 검색 쿼리 URL
@@ -22,7 +22,7 @@ const WEBHOOK_SEARCH =
   "https://discordapp.com/api/webhooks/1508364799757783040/3SGZMQrStbeUjeFm7Y7dSOkNKgrEOuPzuXAtvfEfzIyFEIYeNVz9Cc0SmlVl18wfDWX-";
 
 const AGENCIES = {
-  mih_speaker: { label: "스피커", color: 0x1565c0 },
+  mih_speaker: { label: "influence", color: 0x1565c0 },
   mih_casting: { label: "캐스팅", color: 0x7b1fa2 },
   mih_agency:  { label: "에이전시", color: 0x2e7d32 },
   other: { label: "kyh620303", color: 0xe65100 },

@@ -1,6 +1,6 @@
 "use client";
 
-import { AGENCY_SLUGS, type AgencySlug } from "@/lib/agencies";
+import { AGENCIES, AGENCY_SLUGS, type AgencySlug } from "@/lib/agencies";
 import type { DailyBucket } from "@/lib/rss-stats";
 
 type Props = { daily: DailyBucket[] };
@@ -62,7 +62,7 @@ export default function AgencyChart({ daily }: Props) {
         {AGENCY_SLUGS.map((k) => (
           <span key={k} className="inline-flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full" style={{ background: COLORS[k] }} />
-            {k === "other" ? "kyh620303" : k}
+            {AGENCIES[k].short}
           </span>
         ))}
       </div>

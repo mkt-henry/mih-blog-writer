@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
 import { normalizePayload } from './lib/kb.mjs';
 import { fetchAll } from '../lib/name-match.mjs';
+import { genreOfKeyword } from '../lib/artsro-categories.mjs';
 
 // dotenv 를 쓰지 않고 직접 읽는 이유: 그 패키지가 stdout 에 배너를 찍어 JSON 출력을 깨뜨린다.
 // 이 CLI 의 stdout 은 에이전트가 그대로 파싱하는 값이라 한 글자도 섞이면 안 된다.
@@ -43,7 +44,9 @@ async function readStdin() {
 
 /** 인물 이름 → keywords 행. 그래프의 인물 노드는 여기에 매달린다. */
 async function findKeyword(name) {
-  const { data, error } = await db.from('keywords').select('id, keyword, category, is_active')
+  // source 는 artsro CatNo 를 담고 있어 세부 장르(마술쇼·퓨전국악 등)를 여기서 뽑는다.
+  // 굵은 category 만 보면 원고 체인이 마술사를 가수로 잡는다.
+  const { data, error } = await db.from('keywords').select('id, keyword, category, source, is_active')
     .eq('keyword', name.trim()).limit(1);
   if (error) fail(`keywords 조회 실패: ${error.message}`);
   return data?.[0] ?? null;
@@ -68,7 +71,7 @@ async function main() {
   if (!kw) return out({ person: name, found: false, note: 'keywords 에 없는 인물' });
   if (!entity) {
     return out({
-      person: name, found: true, keyword_id: kw.id, category: kw.category,
+      person: name, found: true, keyword_id: kw.id, category: kw.category, genre: genreOfKeyword(kw),
       entity_id: null, counts: { verified: 0, draft: 0, conflict: 0 },
       verified: [], edges: [], signals: [],
       note: '아직 수집된 지식이 없다',
@@ -84,7 +87,8 @@ async function main() {
     .select('rel, note, mih_kb_entities!mih_kb_edges_dst_fkey(kind, name)').eq('src', entity.id);
   const verified = (claims ?? []).filter((c) => c.status === 'verified');
   return out({
-    person: name, found: true, keyword_id: kw.id, category: kw.category, entity_id: entity.id,
+    person: name, found: true, keyword_id: kw.id, category: kw.category, genre: genreOfKeyword(kw),
+    entity_id: entity.id,
     counts: {
       verified: verified.length,
       draft: (claims ?? []).filter((c) => c.status === 'draft').length,

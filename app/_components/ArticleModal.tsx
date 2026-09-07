@@ -113,7 +113,7 @@ export default function ArticleModal({ articleId, onClose, onNeighbor, positionL
             <header className="flex items-center gap-2 px-3 py-2 border-b flex-shrink-0">
               <div className="flex-1 min-w-0">
                 <div className="text-[10px] text-gray-400 leading-none mb-0.5">
-                  {AGENCIES[article.agency].blogSlug} · {article.publish_date}
+                  {AGENCIES[article.agency].short} · {article.publish_date}
                   {positionLabel && <> · {positionLabel}</>}
                 </div>
                 <h2 className="text-xs sm:text-sm font-bold truncate leading-snug">{article.title}</h2>
