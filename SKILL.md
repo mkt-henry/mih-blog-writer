@@ -70,13 +70,13 @@ description: 네이버 스마트에디터(SE3) HTML 복붙용 원고 작성 스�
 ## 5. 이미지 삽입과 출처 표기
 
 ```html
-<p align="center"><img src="[공식 이미지 URL 또는 업로드 후 Vercel Blob URL]" width="544"></p>
+<p align="center"><img src="[업로드 스크립트가 돌려준 이미지 URL]" width="544"></p>
 <p class="se-text-paragraph se-text-paragraph-align-center" style="" id="SE-src1"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">출처 - [아티스트명] 공식 SNS</span></p>
 ```
 
 인물 원고는 실제 본문 이미지 `<img>` 4개와 출처 표기 4개를 한 세트로 넣는다. 출처 표기는 본문 근거 출처가 아니라 바로 위 이미지의 출처를 뜻한다. `📷 사진 N 삽입 위치` 같은 placeholder 텍스트는 넣지 않는다.
 
-- 이미지 src는 자료 수집 단계에서 확보한 이미지 URL을 먼저 넣고, 저장 후 `scripts/upload-article-images.js`로 Vercel Blob URL로 교체한다. 공식 인스타그램 우선, 부족하면 보도자료를 제외한 기타 이미지(본인이 나온 일상·화보·비공식 SNS 등)로 채운다.
+- 이미지 src는 자료 수집 단계에서 확보한 이미지 URL을 먼저 넣고, 저장 후 `scripts/upload-article-images.js`로 저장소 공개 URL(R2 또는 Supabase)로 교체한다. 공식 인스타그램 우선, 부족하면 보도자료를 제외한 기타 이미지(본인이 나온 일상·화보·비공식 SNS 등)로 채운다.
 - **보도자료 이미지만 인물 원고에 사용하지 않는다.** 그 외 본인이 나온 이미지는 사용할 수 있다.
 - 이미지 출처는 실제 소스와 무관하게 러프하게 표기한다 (기본 `출처 - [아티스트명] 공식 SNS`, 공식 자료 성격이면 `출처 - [아티스트명] 공식 자료`).
 - 출처 표기만 있고 실제 `<img>`가 없는 인물 원고는 실패다.

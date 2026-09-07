@@ -284,12 +284,11 @@ HTML 패턴:
 - 권장 배치: ① 도입부 뒤 ② 프로필 표 뒤 ③ "3가지 이유" 뒤 ④ FAQ 뒤(유튜브 직전)
 - 이미지 소스: 공식 인스타그램 → 기타 공식 SNS/홈페이지 → 기타 이미지(보도자료 제외)
 - 출처 문구: `출처 - [아티스트명] 공식 SNS` (소속사 공식 자료면 `출처 - [아티스트명] 공식 자료`)
-- **호스팅은 Supabase Storage 버킷(`article-images`)만 쓴다.** `src`는 아래 형식이어야 한다:
-  `https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/{ascii-slug}/img{N}.jpg`
+- **호스팅은 업로드 스크립트가 돌려준 URL 만 쓴다.** R2(`R2_*` env 설정 시 `https://img.bp-studio.com/{ascii-slug}/img{N}.jpg`) 아니면 Supabase 버킷 공개 URL. 손으로 URL 을 만들지 않는다.
 
 HTML 패턴:
 ```html
-<p align="center"><img src="https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/[ascii-slug]/img1.jpg" width="544"></p>
+<p align="center"><img src="[업로드 스크립트가 돌려준 URL]" width="544"></p>
 <p class="se-text-paragraph se-text-paragraph-align-center" style="" id="SE-srcN"><span style="color:#999999;" class="se-fs-fs13 se-ff- ">출처 - [아티스트명] 공식 SNS</span></p>
 ```
 

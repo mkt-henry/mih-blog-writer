@@ -34,3 +34,8 @@ supabase/.temp/
 .pipeline.log
 .pipeline.lock
 .embed-eval.log
+
+# 이미지 재압축 진행 기록 (scripts/recompress-images.mjs)
+output/.recompress-ledger.json
+output/.image-originals/
+output/.recompress-run.log

@@ -35,7 +35,7 @@
   한글 독음 하나로만 쓴다. 통용 한글 표기가 없는 이름(`SF9`, `2PM`, `10CM`, `NCT`, `god`)만 예외.
   근거는 `docs/지침/02_원고_작성_지침.md`
 - 인물 원고 본문 이미지 `<img>` **정확히 4개** + 출처 표기 4개 (한 세트, 명함 제외)
-- 이미지 호스팅은 **Supabase Storage 버킷(`article-images`)만** — Vercel Blob URL 금지
+- 이미지 호스팅은 **업로드 스크립트(`upload-article-images.js`·`upload-local-images.mjs`)가 돌려준 URL만** — R2(`R2_*` env 설정 시) 아니면 Supabase 버킷. 손으로 만든 URL·Vercel Blob URL 금지
 - 본문 단락은 일반 `<p>` 금지 → **`se-text-paragraph` 클래스 구조 필수**
 - 모든 `<table>`에 **`table-layout:fixed`** + 첫 행 `width:%`
 - 유튜브는 **iframe 임베드 정확히 2개** (raw URL 금지)
