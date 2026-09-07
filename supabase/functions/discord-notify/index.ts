@@ -5,7 +5,9 @@
 //   1) 발행현황 채널 — 당일 발행 현황 (임베드 + 키워드/블로그 URL)
 //   2) 검색노출 채널 — 전일 발행 키워드의 네이버 블로그 검색 쿼리 URL
 //
-// pg_cron이 매일 09:30 KST에 net.http_post로 이 함수를 호출한다.
+// GitHub Actions(.github/workflows/daily-discord.yml)가 매일 09:30 KST에 RUN_ONCE=1 로 이 파일을 직접 실행한다.
+// 네이버 RSS 와 Discord 웹훅만 쓰므로 Supabase 접근이 필요 없다(플랜 차단 402 와 무관).
+// Supabase 에 배포된 서버 모드는 대시보드 동기화 버튼(/api/discord-notify)의 수동 발송용이다.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
@@ -85,7 +87,7 @@ async function postJson(webhook: string, body: unknown) {
   if (!res.ok) throw new Error(`Discord 전송 실패: ${res.status} ${await res.text()}`);
 }
 
-Deno.serve(async () => {
+async function notify(): Promise<Response> {
   const today     = kstDateStr(0);
   const yesterday = kstDateStr(-1);
 
@@ -173,4 +175,11 @@ Deno.serve(async () => {
     JSON.stringify({ ok: true, today, total, yesterday, yesterdayCount: publishedYesterday.length, errors: rssErrors }),
     { headers: { "Content-Type": "application/json" } },
   );
-});
+}
+
+if (Deno.env.get("RUN_ONCE")) {
+  const res = await notify();
+  console.log(await res.text());
+} else {
+  Deno.serve(notify);
+}
