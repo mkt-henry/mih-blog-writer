@@ -1,12 +1,15 @@
 name: MIH 발행 현황 Discord 알림
 
-# Supabase 플랜 차단(402)과 무관하게 돌도록 GitHub Actions 에서 엣지 함수 코드를 직접 실행한다.
-# 네이버 RSS 만 읽고 Discord 웹훅으로 보내므로 Supabase 접근이 필요 없다.
+# 예비 발송 경로다. 정규 스케줄은 Supabase pg_cron 잡 mih-daily-discord 이며
+# (20260907020000_discord_notify_back_to_pg_cron.sql), 여기서는 자동 실행하지 않는다.
+# 이중 발송을 막기 위해 schedule 트리거를 두지 않는다.
+#
+# 2026-09-07 오전 Supabase egress 402 로 엣지 함수가 막혔을 때 이 워크플로로 이전했다가,
+# 같은 날 차단이 풀린 것을 확인해 pg_cron 으로 되돌렸다. 다시 막히면 아래 수동 실행으로
+# 발송한다 — 네이버 RSS 와 Discord 웹훅만 쓰므로 Supabase 없이도 돈다.
 
 on:
-  schedule:
-    - cron: '30 0 * * *'   # 매일 09:30 KST (00:30 UTC)
-  workflow_dispatch:        # 수동 실행
+  workflow_dispatch:        # 수동 실행 전용 (Supabase 가 막혔을 때 쓴다)
 
 jobs:
   notify:
