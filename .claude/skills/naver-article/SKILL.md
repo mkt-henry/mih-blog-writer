@@ -54,9 +54,8 @@ node scripts/kb.mjs brief --person="<인물명>"
 
 ## 0-3. 이미지 호스팅 (비협상)
 
-이미지는 **Supabase Storage 버킷(`article-images`)에만** 올린다. Vercel Blob 은 쓰지 않는다.
-최종 src 형식:
-`https://djtmniygzdbavxwrppxb.supabase.co/storage/v1/object/public/article-images/{ascii-slug}/img{N}.jpg`
+이미지는 **업로드 스크립트로만** 올린다. 저장 위치는 env 가 정한다 — R2(`R2_*` 설정 시, `https://img.bp-studio.com/{ascii-slug}/img{N}.jpg`) 아니면 Supabase 버킷(`article-images`). Vercel Blob 은 쓰지 않는다.
+최종 src 는 스크립트 출력 그대로 쓴다(손으로 URL 을 만들지 않는다). 올릴 때 800px·JPEG q80 으로 자동 축소된다.
 
 ## 실행 기록
 

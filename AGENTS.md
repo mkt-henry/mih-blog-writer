@@ -22,7 +22,8 @@ mih-blog-writer/
 │   └── 네이버_블로그_상위_노출_전략.md
 ├── scripts/
 │   ├── publish-article.js      ← HTML → Supabase articles 업로드
-│   ├── upload-article-images.js← 이미지 Supabase 버킷 업로드
+│   ├── upload-article-images.js← 이미지 축소 후 R2/Supabase 업로드 (lib/image-store.mjs 가 env 로 선택)
+│   ├── recompress-images.mjs   ← 기존 Supabase 이미지를 같은 경로에 축소 덮어쓰기 (npm run recompress:images)
 │   └── migrate-*.js            ← 일회성 마이그레이션
 ├── supabase/migrations/        ← DB 스키마 (articles, keywords, app_users 등)
 ├── AGENTS.md                   ← 이 문서: 공통 규칙
@@ -411,7 +412,7 @@ console.log('sentence spacing applied');
 - [ ] 본인이 나온 이미지임 (공식 인스타그램 우선, 부족 시 기타 이미지 허용)
 - [ ] 보도자료 이미지가 없음
 - [ ] 이미지 4개가 모두 CTA 이전 본문 안에 배치됨
-- [ ] 이미지 업로드 스크립트 실행 후 본문 이미지 src가 Supabase 버킷 공개 URL로 교체됨 (Vercel Blob URL 잔존 시 `check:article` 하드 실패)
+- [ ] 이미지 업로드 스크립트 실행 후 본문 이미지 src가 업로드 스크립트가 돌려준 URL(R2 또는 Supabase)로 교체됨 (Vercel Blob URL 잔존 시 `check:article` 하드 실패)
 - [ ] 유튜브 iframe 임베드 정확히 2개 (raw URL 금지)
 - [ ] 따옴표 인용구 1~2회 (도입부/핵심 메시지/마무리)
 - [ ] 명함 `<img>` 태그 본문에 없음
