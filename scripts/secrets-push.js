@@ -34,6 +34,12 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const SECRETS = [
   { key: 'APIFY_TOKEN',           description: 'Apify API 토큰 (Instagram 이미지 수집)' },
   { key: 'SUPABASE_ACCESS_TOKEN', description: 'Supabase personal access token (DB 마이그레이션용)' },
+  // Cloudflare R2 — 원고 이미지 저장소 (2026-09-07). 5개가 전부 있어야 scripts/lib/image-store.mjs 가 R2 로 올린다.
+  { key: 'R2_ACCOUNT_ID',         description: 'Cloudflare 계정 ID' },
+  { key: 'R2_BUCKET',             description: 'R2 버킷 이름 (mih-article-images)' },
+  { key: 'R2_PUBLIC_URL',         description: 'R2 공개 주소 (https://img.bp-studio.com)' },
+  { key: 'R2_ACCESS_KEY_ID',      description: 'R2 S3 Access Key ID (= R2 API 토큰 id)' },
+  { key: 'R2_SECRET_ACCESS_KEY',  description: 'R2 S3 Secret Access Key (= sha256(토큰값))' },
 ];
 
 async function upsert(key, value, description) {
