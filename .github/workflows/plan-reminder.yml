@@ -1,0 +1,21 @@
+name: Supabase 플랜 갱신 알림
+
+# 2026-09-07 egress 한도 초과로 Pro 로 올렸다. 갱신일(매달 7일) 전에 무료로 내릴지 판단하도록
+# 10월 5일·6일 09:30 KST 에 발행현황 채널로 한 번씩 알린다. 판단이 끝나면 이 파일은 지운다.
+
+on:
+  schedule:
+    - cron: '30 0 5,6 10 *'   # 10/5, 10/6 09:30 KST (00:30 UTC)
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discord 알림
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -sS -X POST -H 'Content-Type: application/json' "$DISCORD_WEBHOOK_URL" -d @- <<'EOF'
+          {"content": "⏰ **Supabase Pro 갱신 예정 (10월 7일)** — 무료로 내릴지 지금 결정하세요.\n\n9월 7일 사진 재압축으로 전송량이 58% 줄었습니다. 한 달 전송량(Egress)이 5GB 미만이면 무료 플랜으로 충분합니다.\n1) 사용량 확인: https://supabase.com/dashboard/org/wabptptdtkmixdxtuwsz/usage\n2) 5GB 미만이면 플랜 변경: https://supabase.com/dashboard/org/wabptptdtkmixdxtuwsz/billing\n\n애매하면 Claude 에게 \"Supabase 플랜 봐줘\" 라고 물어보세요."}
+          EOF
