@@ -1,0 +1,38 @@
+name: MIH 네이버 검색 노출 확인
+
+# 예전에는 Supabase pg_cron(mih-serp-check)이 Vercel 의
+# /api/cron/naver-search-screenshots 를 때렸다. 검색 페이지를 수십 개 받아오고
+# 스크린샷을 기다리는 동안 Vercel 함수가 계속 떠 있어 사용량으로 잡혔다.
+# (2026-09-10: Hobby 한도 초과로 계정 전체 배포가 중단된 뒤 여기로 옮겼다.)
+#
+# 스케줄은 기존 pg_cron 과 동일한 00:30 UTC (09:30 KST).
+
+on:
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "다시 돌릴 날짜 (YYYY-MM-DD). 비우면 기본 대상일"
+        required: false
+
+jobs:
+  serp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run serp:screenshots
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NAVER_SEARCH_DISCORD_WEBHOOK_URL: ${{ secrets.NAVER_SEARCH_DISCORD_WEBHOOK_URL }}
+          SERP_DATE: ${{ inputs.date }}
