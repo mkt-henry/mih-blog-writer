@@ -177,6 +177,19 @@ describe('namesOf', () => {
     expect(namesOf({ person_name: '벤', title: '[벤 섭외] 열애중' })).toEqual(['벤']);
     expect(namesOf({ person_name: null, title: null })).toEqual([]);
   });
+
+  it('괄호 안 한글 표기도 별칭으로 돌려준다(발행본은 한글로 올라간다)', () => {
+    // 실제 사고: 초안 "CAMO(카모)" 와 발행본 "카모" 가 같은 인물로 안 묶여
+    // 발행 완료된 원고가 계속 '발행 대기'로 남았다.
+    const draft = namesOf({
+      person_name: 'CAMO(카모)',
+      title: '[CAMO(카모) 섭외] 여성 래퍼',
+    });
+    expect(draft).toContain('카모');
+    expect(draft).toContain('camo');
+    // 괄호 밖이 한글이면 기존 동작 그대로 — 괄호 안을 이름으로 삼지 않는다.
+    expect(namesOf({ person_name: '이세영 (무니)', title: null })).toEqual(['이세영']);
+  });
 });
 
 describe('buildNameIndex', () => {
