@@ -48,6 +48,7 @@ export default function DashboardClient({ groups, kpis, generatedAt, perms }: Pr
     };
     const filter = (g: typeof groups.mih_speaker) => ({
       pool: g.pool.filter(match),
+      reserved: g.reserved.filter(match),
       today: g.today.filter(match),
       recent: g.recent.filter(match),
     });

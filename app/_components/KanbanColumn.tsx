@@ -79,7 +79,8 @@ export default function KanbanColumn({ agency, agencyInfo, group, onOpen }: Prop
         {group.today.map((a) => <ArticleCard key={a.id} article={a} variant="published" onOpen={onOpen} />)}
       </Section>
 
-      <RecentSection articles={group.recent} onOpen={onOpen} />
+      <FoldedSection label="예약 완료" variant="reserved" articles={group.reserved} onOpen={onOpen} />
+      <FoldedSection label="최근 발행" variant="recent" articles={group.recent} onOpen={onOpen} />
     </div>
   );
 }
@@ -96,7 +97,7 @@ function Section({ label, count, color, children }: { label: string; count: numb
   );
 }
 
-function RecentSection({ articles, onOpen }: { articles: AgencyGroup["recent"]; onOpen: (id: string) => void }) {
+function FoldedSection({ label, variant, articles, onOpen }: { label: string; variant: "reserved" | "recent"; articles: AgencyGroup["recent"]; onOpen: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   if (articles.length === 0) return null;
   return (
@@ -105,10 +106,10 @@ function RecentSection({ articles, onOpen }: { articles: AgencyGroup["recent"]; 
         onClick={() => setOpen((v) => !v)}
         className="w-full text-[9px] font-bold uppercase tracking-wide flex justify-between items-center px-0.5 pt-1 pb-0.5 text-gray-500 hover:text-gray-700"
       >
-        <span>최근 발행</span>
+        <span>{label}</span>
         <span>{open ? "▾" : "▸"} {articles.length}</span>
       </button>
-      {open && articles.map((a) => <ArticleCard key={a.id} article={a} variant="recent" onOpen={onOpen} />)}
+      {open && articles.map((a) => <ArticleCard key={a.id} article={a} variant={variant} onOpen={onOpen} />)}
     </div>
   );
 }

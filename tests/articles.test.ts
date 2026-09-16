@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { groupArticlesForKanban, computeKpis, findNeighbor, type ArticleRow, type KanbanGroups } from '@/lib/articles';
+import { groupArticlesForKanban, computeKpis, findNeighbor, pendingQueue, type ArticleRow, type KanbanGroups } from '@/lib/articles';
 import type { AgencySlug } from '@/lib/agencies';
 
 function mk(over: Partial<ArticleRow>): ArticleRow {
+  const person = over.person_name ?? '홍길동';
   return {
     id: 'a',
     publish_date: '2026-05-21',
     agency: 'mih_speaker',
     slug: 'hong',
     person_name: '홍길동',
-    title: '[홍길동 섭외] ...',
+    title: `[${person} 섭외] ...`,
     source_path: null,
     instagram_url: null,
     category: null,
@@ -19,6 +20,7 @@ function mk(over: Partial<ArticleRow>): ArticleRow {
     published_at: null,
     published_url: null,
     published_source: null,
+    reserved_at: null,
     ...over,
   };
 }
@@ -55,8 +57,8 @@ describe('groupArticlesForKanban', () => {
 
   it('pool is sorted FIFO (oldest created_at first)', () => {
     const articles = [
-      mk({ id: 'new', agency: 'mih_casting', created_at: '2026-05-21T00:00:00Z' }),
-      mk({ id: 'old', agency: 'mih_casting', created_at: '2026-05-10T00:00:00Z' }),
+      mk({ id: 'new', agency: 'mih_casting', person_name: 'A', created_at: '2026-05-21T00:00:00Z' }),
+      mk({ id: 'old', agency: 'mih_casting', person_name: 'B', created_at: '2026-05-10T00:00:00Z' }),
     ];
     const grouped = groupArticlesForKanban(articles);
     expect(grouped.mih_casting.pool.map((a) => a.id)).toEqual(['old', 'new']);
@@ -118,6 +120,37 @@ describe('groupArticlesForKanban', () => {
   });
 });
 
+describe('발행 대기 규칙 — 계정 피드와 대시보드 공용', () => {
+  it('표기가 달라도 이미 발행된 인물이면 대기에서 뺀다 ("CAMO(카모)" = "카모")', () => {
+    const articles = [
+      mk({ id: 'pub', agency: 'mih_agency', person_name: '카모', title: '[카모 섭외] ...', published_at: '2026-08-26T23:00:00Z' }),
+      mk({ id: 'draft', agency: 'mih_agency', person_name: 'CAMO(카모)', title: '[CAMO(카모) 섭외] ...' }),
+    ];
+    expect(groupArticlesForKanban(articles).mih_agency.pool).toEqual([]);
+    expect(pendingQueue([articles[1]], new Set(['카모']))).toEqual([]);
+  });
+
+  it('예약 완료 원고는 대기 풀·KPI 에서 빠지고 예약 완료 칸으로 간다', () => {
+    const articles = [
+      mk({ id: 'wait', agency: 'mih_agency', person_name: 'A' }),
+      mk({ id: 'resv', agency: 'mih_agency', person_name: 'B', reserved_at: '2026-09-13T23:36:40Z' }),
+    ];
+    const g = groupArticlesForKanban(articles).mih_agency;
+    expect(g.pool.map((a) => a.id)).toEqual(['wait']);
+    expect(g.reserved.map((a) => a.id)).toEqual(['resv']);
+    expect(computeKpis(articles, 0).poolTotal).toBe(1);
+  });
+
+  it('한 인물의 대기 원고가 여럿이면 최신 1개만 남긴다', () => {
+    const articles = [
+      mk({ id: 'old', agency: 'mih_casting', person_name: 'A', created_at: '2026-09-01T00:00:00Z' }),
+      mk({ id: 'new', agency: 'mih_casting', person_name: 'A', created_at: '2026-09-10T00:00:00Z' }),
+      mk({ id: 'other', agency: 'mih_casting', person_name: 'B', created_at: '2026-09-05T00:00:00Z' }),
+    ];
+    expect(groupArticlesForKanban(articles).mih_casting.pool.map((a) => a.id)).toEqual(['other', 'new']);
+  });
+});
+
 describe('computeKpis', () => {
   it('counts pool size, today count, this-week count, unmatched flag', () => {
     const todayMid = todayKstIso();
@@ -154,18 +187,19 @@ describe('findNeighbor (모달 순회)', () => {
       title: id, source_path: null, instagram_url: null, category: null, notes: null,
       created_at: '2026-05-20T00:00:00Z', updated_at: '2026-05-20T00:00:00Z',
       published_at: sec === 'pool' ? null : '2026-05-22T00:00:00Z',
-      published_url: null, published_source: null,
+      published_url: null, published_source: null, reserved_at: null,
       ...extra,
     });
     return {
       mih_speaker: {
         pool: [mkA('s1', 'mih_speaker', 'pool'), mkA('s2', 'mih_speaker', 'pool'), mkA('s3', 'mih_speaker', 'pool')],
+        reserved: [],
         today: [mkA('s-t1', 'mih_speaker', 'today')],
         recent: [mkA('s-r1', 'mih_speaker', 'recent')],
       },
-      mih_casting: { pool: [mkA('c1', 'mih_casting', 'pool')], today: [], recent: [] },
-      mih_agency: { pool: [], today: [], recent: [] },
-      other: { pool: [], today: [], recent: [] },
+      mih_casting: { pool: [mkA('c1', 'mih_casting', 'pool')], reserved: [], today: [], recent: [] },
+      mih_agency: { pool: [], reserved: [], today: [], recent: [] },
+      other: { pool: [], reserved: [], today: [], recent: [] },
     };
   }
 

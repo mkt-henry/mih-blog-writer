@@ -4,7 +4,8 @@ import { AGENCIES, type AgencySlug } from "@/lib/agencies";
 import { buildBusinessCardHtml, mergeWithBusinessCard } from "@/lib/business-card";
 import AccountCopyButtons from "./AccountCopyButtons";
 import ReserveToggle from "./ReserveToggle";
-import { buildNameIndex, fetchAll, namesOf } from "@/lib/name-match.mjs";
+import { buildNameIndex, fetchAll } from "@/lib/name-match.mjs";
+import { pendingQueue } from "@/lib/articles";
 
 const PAGE_SIZE = 3;
 
@@ -79,8 +80,7 @@ export default async function AccountFeed({
     );
   }
 
-  // 3) 이미 발행된 인물 제외 + 인물당 1개(최신)만 → 전체 후보 목록.
-  //    조회는 최신순이라 인물당 최신 원고가 선택되고, 표시는 오래된순으로 정렬한다.
+  // 3) 이미 발행된 인물 제외 + 인물당 1개(최신)만 → 전체 후보 목록(오래된순).
   type Row = {
     id: string;
     title: string;
@@ -90,28 +90,16 @@ export default async function AccountFeed({
     reserved_at: string | null;
     created_at: string;
   };
-  const seenPersons = new Set<string>();
-  const all: Row[] = [];
-  for (const a of pending ?? []) {
-    const person = ((a.person_name as string) ?? "").trim();
-    // 표기가 갈려도(괄호 주석·공백·로마자 슬러그·"[유성남 셰프 섭외]" 같은 직함) 같은 인물로 묶이도록
-    // person_name 과 제목 인물명 **둘 다** 정규화해 비교한다. 하나라도 걸리면 같은 인물로 본다.
-    const keys = namesOf({ person_name: person, title: a.title as string | null });
-    if (keys.some((k) => publishedPersons.has(k))) continue; // 이미 발행된 인물(전 계정)
-    if (keys.some((k) => seenPersons.has(k))) continue; // 인물당 1개(최신)
-    for (const k of keys) seenPersons.add(k);
-    all.push({
-      id: a.id as string,
-      title: (a.title as string) ?? "",
-      person_name: person,
-      category: (a.category as string) ?? "",
-      reserved: a.reserved_at != null,
-      reserved_at: (a.reserved_at as string) ?? null,
-      created_at: (a.created_at as string) ?? "",
-    });
-  }
-  // 표시 순서: 오래된 원고가 먼저 나오도록 created_at 오름차순 정렬.
-  all.sort((x, y) => x.created_at.localeCompare(y.created_at));
+  // 규칙은 대시보드와 공용(pendingQueue) — 두 화면의 "발행 대기" 숫자가 갈라지지 않게 한다.
+  const all: Row[] = pendingQueue(pending ?? [], publishedPersons).map((a) => ({
+    id: a.id,
+    title: a.title ?? "",
+    person_name: (a.person_name ?? "").trim(),
+    category: a.category ?? "",
+    reserved: a.reserved_at != null,
+    reserved_at: a.reserved_at ?? null,
+    created_at: a.created_at ?? "",
+  }));
 
   // 4) reserved_at 유무로 노출/숨김 분리.
   const visible = all.filter((r) => !r.reserved);

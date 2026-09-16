@@ -6,7 +6,7 @@ import type { ArticleRow } from "@/lib/articles";
 import { copyPlain, copyRichHtml } from "@/lib/clipboard";
 import { buildBusinessCardHtml, mergeWithBusinessCard } from "@/lib/business-card";
 
-type Variant = "pool" | "published" | "recent";
+type Variant = "pool" | "reserved" | "published" | "recent";
 type Props = { article: ArticleRow; variant: Variant; onOpen: (id: string) => void };
 
 function kstTime(iso: string): string {
@@ -70,6 +70,7 @@ export default function ArticleCard({ article, variant, onOpen }: Props) {
       <div className="flex items-center justify-between mt-1">
         <div className="text-[10px] text-[color:var(--color-text-muted)]">
           {variant === "pool" && `${article.created_at.slice(0, 10)} 추가`}
+          {variant === "reserved" && article.reserved_at && `${article.reserved_at.slice(0, 10)} 예약`}
           {variant === "published" && `${article.agency} RSS 매칭`}
           {variant === "recent" && article.published_at && `${article.published_at.slice(0, 10)} 발행`}
         </div>

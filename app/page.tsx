@@ -26,7 +26,7 @@ export default async function DashboardV2Page() {
       fetchAll<ArticleRow>(
         sb,
         "articles",
-        "id,publish_date,agency,slug,person_name,title,source_path,instagram_url,category,notes,created_at,updated_at,published_at,published_url,published_source",
+        "id,publish_date,agency,slug,person_name,title,source_path,instagram_url,category,notes,created_at,updated_at,published_at,published_url,published_source,reserved_at",
         (q) =>
           q
             .in("agency", visible.length > 0 ? visible : ["__none__"])
