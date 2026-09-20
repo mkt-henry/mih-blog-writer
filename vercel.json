@@ -8,7 +8,8 @@
     "app/api/manuscripts/[id]/route.ts": { "maxDuration": 15 },
     "app/api/articles/[id]/route.ts": { "maxDuration": 15 },
     "app/api/rss/route.ts": { "maxDuration": 15 },
-    "app/api/rss-sync/route.ts": { "maxDuration": 30 },
+    "app/api/rss-sync/route.ts": { "maxDuration": 120 },
+    "app/api/discord-notify/route.ts": { "maxDuration": 60 },
     "app/api/cron/naver-search-screenshots/route.ts": { "maxDuration": 300 }
   }
 }

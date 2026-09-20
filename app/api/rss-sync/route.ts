@@ -22,7 +22,7 @@ export async function POST() {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: "{}",
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(110_000),
     });
     const body = await res.text();
     let json: string;
