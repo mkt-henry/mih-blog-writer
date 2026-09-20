@@ -9,6 +9,21 @@ import { pendingQueue } from "@/lib/articles";
 
 const PAGE_SIZE = 3;
 
+function formatCreatedAt(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "날짜 확인 불가";
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(date);
+}
+
 type SearchParams = Record<string, string | string[] | undefined>;
 
 // 페이지 라우트의 searchParams → AccountFeed props 파싱(공용).
@@ -210,6 +225,7 @@ export default async function AccountFeed({
               data-category={a.category || undefined}
               data-post-keyword={a.person_name || undefined}
               data-order={start + idx + 1}
+              data-created-at={a.created_at}
               data-scheduled-at={a.reserved_at ?? undefined}
               className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 bg-white p-4"
             >
@@ -228,6 +244,9 @@ export default async function AccountFeed({
                     {a.person_name}
                   </div>
                 ) : null}
+                <div className="mt-1 text-xs text-gray-400">
+                  작성 <time dateTime={a.created_at}>{formatCreatedAt(a.created_at)}</time>
+                </div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
                 <span
