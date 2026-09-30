@@ -9,10 +9,15 @@ export function countBodyImages(html) {
   return imgs.filter((t) => !/agency-card|business-card|kakao/i.test(t)).length;
 }
 
-// 이미지 출처 표기 개수 ("출처 - ... 공식 SNS|자료").
+// 이미지 출처 표기 개수 (공식 SNS·인스타그램·유튜브 채널·자료·채널 또는 자료 제공처 표기).
 // SE3 캡션은 <span> 안의 평문이므로 출처~공식 사이에 태그가 없다고 가정한다([^<]).
 export function countSourceCaptions(html) {
-  return (html.match(/출처\s*-\s*[^<]*?공식\s*(?:SNS|자료)/g) || []).length;
+  return (html.match(/출처\s*-\s*[^<]*?(?:공식\s*(?:SNS|인스타그램|유튜브\s*채널|자료|채널)|(?:소속 에이전시|아츠로) 제공 자료)/g) || []).length;
+}
+
+// 03지침 허용 형식: `출처 - [아티스트명] 공식 SNS` 또는 `공식 자료` 뿐. 그 밖의 문구(채널명·제공 자료 등)를 돌려준다.
+export function badSourceCaptions(html) {
+  return (html.match(/출처\s*-\s*[^<]*/g) || []).filter((t) => !/^출처\s*-\s*\S[^<]*?\s공식\s*(?:SNS|자료)\s*$/.test(t.trim()));
 }
 
 // 유튜브 iframe 임베드 개수
@@ -313,6 +318,9 @@ export function runPersonChecks(html, { title, personName } = {}) {
 
   const srcs = countSourceCaptions(html);
   if (srcs !== 4) fail('source_captions', `출처 표기 ${srcs}개 (정확히 4개 필요)`);
+
+  const badCaps = badSourceCaptions(html);
+  if (badCaps.length) fail('source_caption_format', `출처 문구 형식 위반 ${badCaps.length}개 (출처 - [이름] 공식 SNS|공식 자료만 허용): ${badCaps[0].trim()}`);
 
   const yt = countYoutubeIframes(html);
   if (yt !== 2) fail('youtube_iframe', `유튜브 iframe ${yt}개 (정확히 2개 필요)`);
