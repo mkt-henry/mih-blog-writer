@@ -1,20 +1,24 @@
-name: MIH 네이버 검색 노출 확인
+name: MIH 네이버 검색 노출 확인 (예비)
 
-# 예전에는 Supabase pg_cron(mih-serp-check)이 Vercel 의
-# /api/cron/naver-search-screenshots 를 때렸다. 검색 페이지를 수십 개 받아오고
-# 스크린샷을 기다리는 동안 Vercel 함수가 계속 떠 있어 사용량으로 잡혔다.
-# (2026-09-10: Hobby 한도 초과로 계정 전체 배포가 중단된 뒤 여기로 옮겼다.)
+# 정규 스케줄은 Supabase pg_cron(mih-serp-check) → Vercel /api/cron/naver-search-screenshots 다
+# (매일 00:30 UTC = 09:30 KST, mih_serp_checks 에 매일 기록되는 것으로 확인).
+# 2026-09-10 에 이 워크플로로 옮기려 했지만 pg_cron 잡이 그대로 남아 있었고, 이 워크플로는
+# npm ci(lock 파일 불일치)와 빠진 시크릿 때문에 한 번도 성공하지 못했다. 둘 다 돌면 기록과 알림이
+# 두 번 나가므로 2026-10-05 부터 이 워크플로는 수동 실행 전용 예비 경로다(Vercel 이 막혔을 때).
 #
-# 스케줄은 기존 pg_cron 과 동일한 00:30 UTC (09:30 KST).
+# 알림은 Discord 대신 AIStudio 로 간다(repo secret AISTUDIO_NOTIFY_TOKEN, 토큰 label mih-github).
+# test 를 켜면 검색·기록 없이 푸시 없는 [테스트] 알림 하나만 보낸다.
 
 on:
-  schedule:
-    - cron: "30 0 * * *"
   workflow_dispatch:
     inputs:
       date:
         description: "다시 돌릴 날짜 (YYYY-MM-DD). 비우면 기본 대상일"
         required: false
+      test:
+        description: "연결 확인만 ([테스트] 알림 하나, 검색·기록 없음)"
+        type: boolean
+        default: false
 
 jobs:
   serp:
@@ -25,7 +29,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
 
       - run: npm ci
@@ -34,5 +38,6 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NAVER_SEARCH_DISCORD_WEBHOOK_URL: ${{ secrets.NAVER_SEARCH_DISCORD_WEBHOOK_URL }}
+          AISTUDIO_NOTIFY_TOKEN: ${{ secrets.AISTUDIO_NOTIFY_TOKEN }}
           SERP_DATE: ${{ inputs.date }}
+          SERP_TEST: ${{ inputs.test && '1' || '' }}

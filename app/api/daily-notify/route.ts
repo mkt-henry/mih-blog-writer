@@ -15,7 +15,7 @@ export async function POST() {
   }
 
   const projectRef = new URL(url).host.split(".")[0];
-  const fnUrl = `https://${projectRef}.functions.supabase.co/discord-notify`;
+  const fnUrl = `https://${projectRef}.functions.supabase.co/daily-notify`;
 
   try {
     const res = await fetch(fnUrl, {

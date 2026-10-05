@@ -1,5 +1,5 @@
 import { parseSerp } from './exposure';
-import { postScreenshotToDiscord } from './discord';
+import { postScreenshotNotice, postSerpSummary } from './notify';
 import { fetchNaverSearchHtml, buildNaverSearchUrl, SURFACES } from './search';
 import { fetchNaverSearchScreenshotPng } from './screenshot';
 import { targetDates, groupByQuery, kstDateMinus, type PublishedArticle } from './schedule';
@@ -42,9 +42,8 @@ async function inPool<T>(items: T[], fn: (item: T) => Promise<void>): Promise<vo
 }
 
 export async function runDailyNaverScreenshotJob(args: {
-  webhookUrl: string;
   date?: string;
-}): Promise<JobSummary> {
+} = {}): Promise<JobSummary> {
   const now = new Date();
   // date 파라미터가 오면 그 하루만 본다(수동 재실행용). 없으면 D+1/3/7/14/30 전부.
   const dates = args.date ? [args.date] : targetDates(now);
@@ -59,7 +58,7 @@ export async function runDailyNaverScreenshotJob(args: {
   }
 
   const groups = groupByQuery(articles);
-  // D+1 그룹만 Discord 발송 대상이다. 나머지는 기록만 한다.
+  // D+1 그룹만 AIStudio 알림 대상이다. 나머지는 기록만 한다.
   const dPlus1Ids = new Set(articles.filter((a) => a.publish_date === dPlus1).map((a) => a.id));
 
   let indexedBlogTab = 0;
@@ -80,16 +79,16 @@ export async function runDailyNaverScreenshotJob(args: {
       if (hits['pc-total']) exposedTotal += 1;
       if (!hits['blog-tab'] && !hits['pc-total']) missed += 1;
 
-      // Discord 발송은 종전과 같다 — D+1 이면서 통합검색에 노출된 건에만 보낸다.
+      // 알림은 종전(Discord)과 같다 — D+1 이면서 통합검색에 노출된 건에만 보낸다.
       const isDPlus1 = g.articleIds.some((id) => dPlus1Ids.has(id));
       if (hits['pc-total'] && isDPlus1) {
         const searchUrl = buildNaverSearchUrl(g.query);
         const png = await fetchNaverSearchScreenshotPng(searchUrl);
-        await postScreenshotToDiscord({
-          webhookUrl: args.webhookUrl,
+        await postScreenshotNotice({
           keyword: g.query,
           searchUrl,
           pngBuffer: png,
+          date: dPlus1,
         });
         posted += 1;
       }
@@ -97,6 +96,12 @@ export async function runDailyNaverScreenshotJob(args: {
       errors.push(`${g.query}: ${(e as Error).message}`.slice(0, 200));
     }
   });
+
+  try {
+    await postSerpSummary({ date: dPlus1, groups: groups.length, exposedTotal, indexedBlogTab, missed, posted, errors });
+  } catch (e) {
+    errors.push(`summary: ${(e as Error).message}`.slice(0, 200));
+  }
 
   return {
     ok: true,
