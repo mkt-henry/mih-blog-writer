@@ -13,7 +13,7 @@ export const AGENCIES: Record<AgencySlug, AgencyInfo> = {
   // 표시 이름은 `influence`, 실제 발행 블로그 주소는 `gdfdhzgfgfhgdj` 다.
   // 내부 슬러그 `mih_speaker` 는 바꾸지 않는다 — articles.agency CHECK 제약, 과거 발행 331건,
   // keywords 3,008건, output/ 경로, 공개 피드 URL(/mih_speaker), 그리고 이미 배포된
-  // 엣지 함수(rss-sync / discord-notify)가 전부 이 값에 묶여 있다.
+  // 엣지 함수(rss-sync / daily-notify)가 전부 이 값에 묶여 있다.
   // 예전 발행 블로그 blog.naver.com/mih_speaker 는 2026-08-22 로 운영 종료했고
   // 검색 노출 집계에만 남긴다(lib/naver-search/exposure.ts).
   // 2026-09-07 부로 강연 전용이 아니라 일반 섭외 계정이다.

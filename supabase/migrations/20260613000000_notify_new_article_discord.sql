@@ -18,7 +18,7 @@
 insert into app_settings (key, value, description)
 values (
   'DISCORD_NEW_ARTICLE_WEBHOOK_URL',
-  'https://discord.com/api/webhooks/1515145113943281769/EILqu24uSnwVFIrWzMjX6W0rDuqJyYyoqcqOrm8F5BRG75jWcMNvY9YJOqzbF9wrHhvi',
+  '<웹훅 주소 — 저장소에 두지 않는다(2026-10-05 삭제)>',
   '신규 원고 INSERT 시 실시간 알림 Discord 웹훅'
 )
 on conflict (key) do update set value = excluded.value, updated_at = now();
