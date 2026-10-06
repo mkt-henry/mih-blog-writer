@@ -57,12 +57,14 @@ node scripts/kb.mjs brief --person="<인물명>"
 | 출처 | 코드 |
 | --- | --- |
 | `check:article` | `body_images` `source_captions` `youtube_iframe` `youtube_raw` `bare_paragraph` `table_layout` `broken_src` `blob_image_src` `placeholder` `business_card` `kakao_url` `hashtags` `title_keyword` `title_name` `title_digit` `prose_length` `keyword_density` `hashtag_keyword` `dup_table_echo` `dup_sentence` |
-| 검수 전용 | `kb:미근거` `kb:미검증` `kb:금지표현` `kb:일반론` `kb:영상제목` `kb:이미지텍스트` |
+| 검수 전용 | `kb:미근거` `kb:미검증` `kb:금지표현` `kb:일반론` `kb:영상제목` `kb:이미지텍스트` `truncated_sentence` |
 
 - `kb:영상제목` — 유튜브 임베드의 카드 제목·채널이 rejected/conflict 사실이나 마케팅 카피를
   그대로 노출한다. 본문에 안 써도 플레이어가 띄운다. **oEmbed 로 제목·채널을 매번 확인한다.**
 - `kb:이미지텍스트` — 이미지에 수상 라우렐·별점·매체 로고·QR·조회수 배지 같은 텍스트가
   박혀 있거나, 인물이 한 픽셀도 없는 표지 슬라이드다. **이미지 4장을 Read 로 매번 육안 확인한다.**
+- `truncated_sentence` — 문장이 쉼표나 연결어미에서 끊긴 채 다음 블록으로 넘어간다.
+  재작성·분량 감축 라운드에서 생긴다. `check:article` 은 잡지 못하니 단락 종결을 육안으로 확인한다.
 
 ## 돌려줄 것
 
