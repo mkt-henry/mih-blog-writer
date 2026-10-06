@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// 네이버 검색 노출 확인 + 스크린샷 AIStudio 알림 실행기(수동 예비 경로).
+// 네이버 검색 노출 확인 + 스크린샷 AIStudio·Discord 알림 실행기(수동 예비 경로).
 //
 // 예전에는 Supabase pg_cron(mih-serp-check)이 Vercel 의
 // /api/cron/naver-search-screenshots 를 때렸다. 그 라우트는 검색 페이지 수십 개를
@@ -13,7 +13,7 @@
 // 로직은 runDailyNaverScreenshotJob 그대로다 — 복제하지 않는다. 실행 위치만 바뀐다.
 
 import path from "node:path";
-import { runDailyNaverScreenshotJob } from "@/lib/naver-search";
+import { runDailyNaverScreenshotJob, type NotifyOnly } from "@/lib/naver-search";
 import { postSerpTestNotice } from "@/lib/naver-search/notify";
 
 async function main() {
@@ -25,7 +25,11 @@ async function main() {
     /* dotenv 없거나 .env.local 없으면 process.env 그대로 쓴다 */
   }
 
-  if (!process.env.AISTUDIO_NOTIFY_TOKEN) {
+  // SERP_ONLY=discord|aistudio 면 그 채널로만 보낸다. Discord 는 NAVER_SEARCH_DISCORD_WEBHOOK_URL 이 있을 때만 간다.
+  const rawOnly = process.env.SERP_ONLY?.trim();
+  const only: NotifyOnly | undefined = rawOnly === "discord" || rawOnly === "aistudio" ? rawOnly : undefined;
+
+  if (only !== "discord" && !process.env.AISTUDIO_NOTIFY_TOKEN) {
     throw new Error("AISTUDIO_NOTIFY_TOKEN 환경변수가 필요하다.");
   }
 
@@ -40,7 +44,7 @@ async function main() {
   const raw = process.env.SERP_DATE?.trim();
   const date = raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : undefined;
 
-  const summary = await runDailyNaverScreenshotJob({ date });
+  const summary = await runDailyNaverScreenshotJob({ date, only });
   console.log(JSON.stringify(summary, null, 2));
   // 항목별 오류는 요약(errors)에 담겨 나온다. 소스 한 곳이 죽었다고 매일 빨간
   // 배지가 뜨면 아무도 안 보므로 실행 자체는 성공으로 둔다.

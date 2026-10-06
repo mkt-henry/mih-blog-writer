@@ -1,4 +1,4 @@
-name: MIH 발행 현황 AIStudio 알림 (예비)
+name: MIH 발행 현황 AIStudio·Discord 알림 (예비)
 
 # 예비 발송 경로다. 정규 스케줄은 Supabase pg_cron 잡 mih-daily-notify 이며
 # (20261005000000_discord_to_aistudio_notify.sql), 여기서는 자동 실행하지 않는다.
@@ -8,9 +8,17 @@ name: MIH 발행 현황 AIStudio 알림 (예비)
 # 같은 날 차단이 풀린 것을 확인해 pg_cron 으로 되돌렸다. 다시 막히면 아래 수동 실행으로
 # 발송한다 — 네이버 RSS 와 AIStudio 알림만 쓰므로 Supabase 없이도 돈다.
 # 2026-10-05: Discord 대신 AIStudio 알림으로 보낸다(repo secret AISTUDIO_NOTIFY_TOKEN, 토큰 label mih-github).
+# 2026-10-06: Owner 요청으로 Discord 도 같이 보낸다(repo secret DISCORD_WEBHOOK_URL = 발행현황 채널,
+#             DISCORD_SEARCH_WEBHOOK_URL = 검색노출 채널, 비우면 그 채널만 꺼진다). only 로 한쪽에만 보낼 수 있다.
 
 on:
   workflow_dispatch:        # 수동 실행 전용 (Supabase 가 막혔을 때 쓴다)
+    inputs:
+      only:
+        description: "한쪽에만 보내기 (비우면 둘 다)"
+        type: choice
+        options: ["", "aistudio", "discord"]
+        default: ""
 
 jobs:
   notify:
@@ -22,8 +30,11 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: AIStudio 알림 전송
+      - name: AIStudio·Discord 알림 전송
         env:
           RUN_ONCE: '1'
+          ONLY: ${{ inputs.only }}
           AISTUDIO_NOTIFY_TOKEN: ${{ secrets.AISTUDIO_NOTIFY_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_SEARCH_WEBHOOK_URL: ${{ secrets.DISCORD_SEARCH_WEBHOOK_URL }}
         run: deno run --allow-net --allow-env supabase/functions/daily-notify/index.ts

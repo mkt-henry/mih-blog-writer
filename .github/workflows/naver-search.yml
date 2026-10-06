@@ -6,7 +6,9 @@ name: MIH 네이버 검색 노출 확인 (예비)
 # npm ci(lock 파일 불일치)와 빠진 시크릿 때문에 한 번도 성공하지 못했다. 둘 다 돌면 기록과 알림이
 # 두 번 나가므로 2026-10-05 부터 이 워크플로는 수동 실행 전용 예비 경로다(Vercel 이 막혔을 때).
 #
-# 알림은 Discord 대신 AIStudio 로 간다(repo secret AISTUDIO_NOTIFY_TOKEN, 토큰 label mih-github).
+# 알림은 AIStudio 로 간다(repo secret AISTUDIO_NOTIFY_TOKEN, 토큰 label mih-github).
+# 2026-10-06: Owner 요청으로 스크린샷은 Discord 에도 같이 간다(repo secret NAVER_SEARCH_DISCORD_WEBHOOK_URL,
+#             비우면 Discord 만 꺼진다). only 로 한쪽에만 보낼 수 있다.
 # test 를 켜면 검색·기록 없이 푸시 없는 [테스트] 알림 하나만 보낸다.
 
 on:
@@ -19,6 +21,11 @@ on:
         description: "연결 확인만 ([테스트] 알림 하나, 검색·기록 없음)"
         type: boolean
         default: false
+      only:
+        description: "한쪽에만 보내기 (비우면 둘 다)"
+        type: choice
+        options: ["", "aistudio", "discord"]
+        default: ""
 
 jobs:
   serp:
@@ -39,5 +46,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           AISTUDIO_NOTIFY_TOKEN: ${{ secrets.AISTUDIO_NOTIFY_TOKEN }}
+          NAVER_SEARCH_DISCORD_WEBHOOK_URL: ${{ secrets.NAVER_SEARCH_DISCORD_WEBHOOK_URL }}
+          SERP_ONLY: ${{ inputs.only }}
           SERP_DATE: ${{ inputs.date }}
           SERP_TEST: ${{ inputs.test && '1' || '' }}

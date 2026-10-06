@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { runDailyNaverScreenshotJob } from '@/lib/naver-search';
+import { runDailyNaverScreenshotJob, type NotifyOnly } from '@/lib/naver-search';
+import { naverSearchDiscordWebhook } from '@/lib/naver-search/discord';
 import { postSerpTestNotice } from '@/lib/naver-search/notify';
 
 export const runtime = 'nodejs';
@@ -18,11 +19,19 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  if (!process.env.AISTUDIO_NOTIFY_TOKEN) {
+  const url = new URL(req.url);
+
+  // ?only=discord : Discord 로만, ?only=aistudio : AIStudio 로만 보낸다(그날 것을 한쪽에만 다시 보낼 때).
+  // 검색 기록(mih_serp_checks)은 같은 날 두 번 넣지 않으므로(upsert ignoreDuplicates) 다시 돌려도 안전하다.
+  const onlyParam = url.searchParams.get('only');
+  const only: NotifyOnly | undefined = onlyParam === 'discord' || onlyParam === 'aistudio' ? onlyParam : undefined;
+
+  if (only !== 'discord' && !process.env.AISTUDIO_NOTIFY_TOKEN) {
     return NextResponse.json({ error: 'AISTUDIO_NOTIFY_TOKEN not set' }, { status: 500 });
   }
-
-  const url = new URL(req.url);
+  if (only === 'discord' && !naverSearchDiscordWebhook()) {
+    return NextResponse.json({ error: 'NAVER_SEARCH_DISCORD_WEBHOOK_URL not set' }, { status: 500 });
+  }
 
   // ?test=1 : 검색·기록 없이 푸시 없는 [테스트] AIStudio 알림 하나만 보낸다(연결 확인용).
   if (url.searchParams.get('test') === '1') {
@@ -38,7 +47,7 @@ export async function GET(req: Request) {
   const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
 
   try {
-    const summary = await runDailyNaverScreenshotJob({ date });
+    const summary = await runDailyNaverScreenshotJob({ date, only });
     return NextResponse.json(summary);
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
