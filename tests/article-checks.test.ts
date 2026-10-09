@@ -134,6 +134,10 @@ describe('kakaoUrlIssues', () => {
     expect(r.count).toBe(2);
     expect(r.bad).toEqual(['https://open.kakao.com/o/WRONG']);
   });
+  it('counts malformed <a<br>href= opening tags', () => {
+    expect(kakaoUrlIssues('<a<br>href="https://open.kakao.com/o/snG6VXti">x</a>').broken).toBe(1);
+    expect(kakaoUrlIssues('<a href="https://open.kakao.com/o/snG6VXti">x<br>y</a>').broken).toBe(0);
+  });
 });
 
 describe('countHashtags', () => {

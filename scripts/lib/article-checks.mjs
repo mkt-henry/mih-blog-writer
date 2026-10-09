@@ -75,7 +75,9 @@ export function hasBusinessCardImg(html) {
 export function kakaoUrlIssues(html) {
   const all = html.match(/https:\/\/open\.kakao\.com\/o\/[A-Za-z0-9]+/g) || [];
   const bad = [...new Set(all.filter((u) => u !== KAKAO_URL))];
-  return { count: all.length, bad };
+  // `<a<br>href=...` — 여는 태그가 깨져 링크가 안 눌린다 (2026-10-09 원고 3건)
+  const broken = (html.match(/<a</gi) || []).length;
+  return { count: all.length, bad, broken };
 }
 
 // 해시태그 개수 — 태그(style 속성의 hex 색상 포함)를 먼저 제거하고 본문 텍스트의 #토큰만 센다
@@ -348,6 +350,7 @@ export function runPersonChecks(html, { title, personName } = {}) {
 
   const kakao = kakaoUrlIssues(html);
   if (kakao.bad.length > 0) fail('kakao_url', `허용되지 않은 카카오 URL: ${kakao.bad.join(', ')}`);
+  if (kakao.broken > 0) fail('kakao_url', `깨진 링크 태그 <a<… ${kakao.broken}건 — <a href="..."> 로 고쳐야 링크가 눌린다`);
 
   // [순위] 해시태그 개수 — 상위 42% / 하위 43% 로 판별력이 없었다. 발행을 막지 않는다.
   const tags = countHashtags(html);
