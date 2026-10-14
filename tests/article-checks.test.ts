@@ -137,6 +137,7 @@ describe('kakaoUrlIssues', () => {
   it('counts malformed <a<br>href= opening tags', () => {
     expect(kakaoUrlIssues('<a<br>href="https://open.kakao.com/o/snG6VXti">x</a>').broken).toBe(1);
     expect(kakaoUrlIssues('<a href="https://open.kakao.com/o/snG6VXti">x<br>y</a>').broken).toBe(0);
+    expect(kakaoUrlIssues('<a href="https://open.<br><br>kakao.<br><br>com/o/snG6VXti">x</a>').broken).toBe(1);
   });
 });
 
