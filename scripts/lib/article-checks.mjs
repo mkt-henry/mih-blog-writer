@@ -76,7 +76,8 @@ export function kakaoUrlIssues(html) {
   const all = html.match(/https:\/\/open\.kakao\.com\/o\/[A-Za-z0-9]+/g) || [];
   const bad = [...new Set(all.filter((u) => u !== KAKAO_URL))];
   // `<a<br>href=...` — 여는 태그가 깨져 링크가 안 눌린다 (2026-10-09 원고 3건)
-  const broken = (html.match(/<a</gi) || []).length;
+  // `href="https://open.<br><br>kakao.<br><br>com/..."` — 줄바꿈 후처리가 URL 속에 들어가 링크가 깨진다 (2026-10-14 원고 1건)
+  const broken = (html.match(/<a</gi) || []).length + (html.match(/href="[^"]*</gi) || []).length;
   return { count: all.length, bad, broken };
 }
 
