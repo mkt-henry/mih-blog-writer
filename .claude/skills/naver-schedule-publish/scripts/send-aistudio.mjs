@@ -9,8 +9,12 @@
 // Discord: 예전 send-discord.mjs 와 같이 메시지 하나에 사진을 모두(10장까지) 붙인다.
 // 두 곳은 따로 보낸다 — 한쪽이 실패해도 다른 쪽은 나가고, 실패가 있으면 끝에 종료 코드 1.
 // --test 면 AIStudio 에만 [테스트] 제목·푸시 없이 보낸다(Discord 로는 보내지 않는다).
+// 2026-10-17 Owner: 사이트 앱(mih.bp-studio.com/alerts, PWA 푸시)에도 Discord 와 같은 글·사진을 남긴다.
+//   Discord 와 같은 조건(--test·--no-discord 면 안 남김)이고 웹훅이 꺼져 있어도 남긴다. 사진은 R2(alerts/)에 가로 1080px 로 올린다.
+//   .env.local 의 SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY·R2_* 를 쓴다. --no-app 이면 사이트에는 남기지 않는다.
 import { readFileSync, existsSync } from 'fs';
-import { basename, extname } from 'path';
+import { basename, extname, dirname, join } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 if (existsSync('.env.local')) {
   for (const l of readFileSync('.env.local', 'utf8').split(/\r?\n/)) {
@@ -41,6 +45,7 @@ if (flags.has('--check')) {
 
 const toAistudio = !flags.has('--discord-only');
 const toDiscord = !flags.has('--no-discord') && !test;
+const toApp = toDiscord && !flags.has('--no-app');
 
 const isImage = (a) => /\.(png|jpe?g|webp)$/i.test(a) && existsSync(a);
 const [title, ...rest] = args;
@@ -87,11 +92,42 @@ async function sendAistudio() {
   }
 }
 
-async function sendDiscord() {
-  // 예전 형식: "📅 **10/5 예약 발행 완료** — 4계정 × 3편 (08:00 · 08:30 · 09:00)" + 캡처 사진.
+/** Discord 로 나가는 글: "📅 **10/5 예약 발행 완료** — …" + 본문. 사이트 알림도 같은 글을 쓴다. */
+function discordContent() {
   const dash = title.indexOf(' — ');
   const head = dash > 0 ? `${title.slice(0, dash).replace(/^(\S+)\s+/, '$1 **')}**${title.slice(dash)}` : title;
-  const content = (body ? `${head}\n${body}` : head).slice(0, 2000);
+  return (body ? `${head}\n${body}` : head).slice(0, 2000);
+}
+
+async function sendApp() {
+  const sbUrl = process.env.SUPABASE_URL, sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!sbUrl || !sbKey) throw new Error('사이트 알림: SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY 가 .env.local 에 없다');
+  // 저장소 루트의 이미지 저장소 모듈(R2 업로드·축소·9.5GB 가드)을 그대로 쓴다.
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
+  const store = await import(pathToFileURL(join(repoRoot, 'scripts', 'lib', 'image-store.mjs')).href);
+  const images = [];
+  if (store.backend() === 'r2') {
+    const day = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+    for (const f of files.slice(0, 10)) {
+      const buf = await store.shrink(readFileSync(f), { width: 1080, quality: 82 });
+      const key = `alerts/${day}/${Math.random().toString(36).slice(2, 10)}.jpg`;
+      await store.putR2(key, buf);
+      images.push({ url: store.publicUrl(key), name: basename(f) });
+    }
+  } else if (files.length) console.log('사이트 알림: R2_* 가 없어 사진 없이 글만 남긴다');
+  const res = await fetch(`${sbUrl}/rest/v1/mih_alerts`, {
+    method: 'POST',
+    headers: { apikey: sbKey, Authorization: `Bearer ${sbKey}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ channel: 'schedule', payload: { content: discordContent() }, images }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) throw new Error(`사이트 알림 실패 ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  console.log('app', res.status, images.length);
+}
+
+async function sendDiscord() {
+  // 예전 형식: "📅 **10/5 예약 발행 완료** — 4계정 × 3편 (08:00 · 08:30 · 09:00)" + 캡처 사진.
+  const content = discordContent();
   const fd = new FormData();
   fd.append('payload_json', JSON.stringify({ content }));
   files.slice(0, 10).forEach((f, i) => {
@@ -111,5 +147,8 @@ if (toDiscord) {
   else {
     try { await sendDiscord(); } catch (e) { failures.push(e.message); console.error(e.message); }
   }
+}
+if (toApp) {
+  try { await sendApp(); } catch (e) { failures.push(e.message); console.error(e.message); }
 }
 if (failures.length) process.exit(1);

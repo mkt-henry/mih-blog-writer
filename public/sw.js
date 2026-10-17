@@ -7,7 +7,7 @@
 // 브라우저가 "앱 설치"를 띄우려면 fetch 처리기가 있는 서비스 워커가 필요하다.
 // 여기서는 그 조건만 채우고 나머지는 그대로 네트워크로 흘려보낸다.
 
-const CACHE = "mih-static-v1";
+const CACHE = "mih-static-v2";
 const STATIC = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -41,4 +41,38 @@ self.addEventListener("fetch", (event) => {
   if (STATIC.includes(url.pathname)) {
     event.respondWith(caches.match(req).then((hit) => hit || fetch(req)));
   }
+});
+
+// 사이트 알림 푸시(Supabase 함수 send-push 가 보낸다). 글자는 Discord 알림 제목·요약이고, 누르면 /alerts 의 그 알림으로 간다.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "MIH 알림", body: event.data ? event.data.text() : "" };
+  }
+  const options = {
+    body: data.body || "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: data.tag,
+    data: { url: data.url || "/alerts" },
+  };
+  if (data.image) options.image = data.image;
+  event.waitUntil(self.registration.showNotification(data.title || "MIH 알림", options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/alerts", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (new URL(c.url).origin === self.location.origin && "focus" in c) {
+          return c.focus().then((w) => (w && "navigate" in w ? w.navigate(url) : w));
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
 });
