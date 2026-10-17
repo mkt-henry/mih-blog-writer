@@ -35,12 +35,12 @@ export default async function AlertsPage({
 
   return (
     <main className="mx-auto max-w-2xl px-3 py-4 pb-16">
-      <div className="mb-3 flex items-center gap-2">
-        <h1 className="text-lg font-bold">알림</h1>
-        <span className="text-xs text-gray-500">디스코드와 같은 알림 · 최근 {PAGE}건</span>
+      <div className="mb-1 flex items-center gap-2">
+        <h1 className="whitespace-nowrap text-lg font-bold">알림</h1>
         <div className="flex-1" />
         <PushToggle />
       </div>
+      <p className="mb-3 text-xs text-gray-500">디스코드와 같은 알림 · 최근 {PAGE}건 · 복사 버튼을 누르면 글자를 그대로 복사합니다</p>
       {error && <p className="mb-3 text-sm text-red-600">알림을 불러오지 못했습니다: {error.message}</p>}
       <AlertList alerts={alerts} channel={channel} />
     </main>

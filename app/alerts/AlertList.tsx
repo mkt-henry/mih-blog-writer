@@ -16,14 +16,13 @@ import {
   type AlertEmbed,
 } from "@/lib/alert-format";
 
-const kst = (iso: string) =>
-  new Date(iso).toLocaleString("ko-KR", {
-    timeZone: "Asia/Seoul",
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+// 서버와 브라우저의 날짜 표기(ICU)가 달라 화면이 어긋나지 않게 직접 만든다: "10/17 09:25" (한국 시간)
+const kst = (iso: string) => {
+  const d = new Date(new Date(iso).getTime() + 9 * 3600_000);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+};
 
 function CopyButton({ text, label, small }: { text: string; label?: string; small?: boolean }) {
   const [done, setDone] = useState(false);
@@ -138,7 +137,7 @@ function Embed({ e }: { e: AlertEmbed }) {
           {e.fields.map((f, i) => (
             <div key={i} className={f.inline ? "col-span-1 min-w-0" : "col-span-3 min-w-0"}>
               <div className="flex items-center gap-1 text-xs font-semibold text-gray-700">
-                <span className="truncate">{f.name}</span>
+                <span className="min-w-0 break-keep">{f.name}</span>
                 <CopyButton text={stripMarkdown(f.value)} label={`${f.name} 복사`} small />
               </div>
               <div className="text-sm">
