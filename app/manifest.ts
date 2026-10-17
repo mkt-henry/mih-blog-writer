@@ -22,6 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
+      { name: "알림", url: "/alerts" },
       { name: "발행 현황", url: "/rss" },
       { name: "경쟁 글", url: "/competitors" },
       { name: "키워드", url: "/keywords" },

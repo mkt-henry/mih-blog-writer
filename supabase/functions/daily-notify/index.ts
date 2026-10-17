@@ -19,6 +19,10 @@
 //
 // 필요한 비밀값: AISTUDIO_NOTIFY_TOKEN (supabase secrets, 토큰 label mih-supabase). AISTUDIO_NOTIFY_URL 은 선택.
 // Discord: DISCORD_WEBHOOK_URL, DISCORD_SEARCH_WEBHOOK_URL (supabase secrets / GitHub repo secrets). 없으면 그 채널은 건너뛴다.
+//
+// 2026-10-17 Owner: 사이트 앱(PWA)에도 Discord 형식 그대로 — Discord 로 보내는 본문을 mih_alerts 에도 넣는다
+// (사이트 /alerts 에 쌓이고 앱을 설치한 기기에 푸시, 복사 버튼). Discord 웹훅이 꺼져 있어도 넣는다.
+// {"only":"aistudio"} · {"test":true} 면 넣지 않는다(Discord 와 같은 조건). SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY 가 없으면 건너뛴다.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
@@ -106,6 +110,24 @@ async function notifyAistudio(notice: Notice) {
     signal:  AbortSignal.timeout(20_000),
   });
   if (!res.ok) throw new Error(`AIStudio 알림 실패: ${res.status} ${(await res.text()).slice(0, 300)}`);
+}
+
+// 사이트 알림(mih_alerts) — 엣지 런타임 기본 비밀값으로 넣는다. 없으면(GitHub Actions 예비 경로) 건너뛴다.
+const SB_URL = (Deno.env.get("SUPABASE_URL") ?? "").trim();
+const SB_KEY = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").trim();
+
+async function recordAlert(channel: string, payload: unknown) {
+  if (!SB_URL || !SB_KEY) return;
+  const res = await fetch(`${SB_URL}/rest/v1/mih_alerts`, {
+    method:  "POST",
+    headers: {
+      apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`,
+      "Content-Type": "application/json", Prefer: "return=minimal",
+    },
+    body:    JSON.stringify({ channel, payload }),
+    signal:  AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) throw new Error(`사이트 알림 실패: ${res.status} ${(await res.text()).slice(0, 300)}`);
 }
 
 async function postDiscord(webhook: string, body: unknown) {
@@ -224,41 +246,50 @@ async function notify(req?: Request): Promise<Response> {
   }));
 
   // Discord 발행현황 채널 — PR #23 전 discord-notify 와 같은 형식(임베드 + 키워드/블로그 URL 메시지).
-  if (toDiscord && DISCORD_STATUS) {
-    await attempt("discord:status", async () => {
-      const rssField = SLUGS
-        .map((slug) => {
-          const items = publishedToday[slug];
-          if (items.length === 0) return null;
-          const lines = items.map((r) => {
-            const t = r.title.length > 30 ? r.title.slice(0, 30) + "…" : r.title;
-            return `  \`${kstTimeStr(r.ts)}\` ${t}`;
-          }).join("\n");
-          return `**[${AGENCIES[slug].label}]**\n${lines}`;
-        })
-        .filter(Boolean)
-        .join("\n\n");
+  // 같은 본문을 사이트 알림(mih_alerts)에도 넣는다. 키워드/URL 은 Discord 에선 2000자로 나눠 가지만 사이트엔 한 건으로.
+  if (toDiscord) {
+    const rssField = SLUGS
+      .map((slug) => {
+        const items = publishedToday[slug];
+        if (items.length === 0) return null;
+        const lines = items.map((r) => {
+          const t = r.title.length > 30 ? r.title.slice(0, 30) + "…" : r.title;
+          return `  \`${kstTimeStr(r.ts)}\` ${t}`;
+        }).join("\n");
+        return `**[${AGENCIES[slug].label}]**\n${lines}`;
+      })
+      .filter(Boolean)
+      .join("\n\n");
 
-      const fields: { name: string; value: string; inline: boolean }[] = [
-        { name: `📡 오늘 발행 (${total}건)`, value: (rssField || "아직 발행된 원고가 없습니다.").slice(0, 1024), inline: false },
-      ];
-      if (rssErrors.length > 0) {
-        fields.push({ name: "⚠️ RSS 수집 오류", value: rssErrors.join("\n").slice(0, 512), inline: false });
-      }
-      await postDiscord(DISCORD_STATUS, {
-        embeds: [{
-          title:     `📋 MIH 발행 현황 · ${today}`,
-          color:     0x1565c0,
-          fields,
-          footer:    { text: "MIH Blog Writer · 매일 09:30 KST" },
-          timestamp: new Date().toISOString(),
-        }],
+    const fields: { name: string; value: string; inline: boolean }[] = [
+      { name: `📡 오늘 발행 (${total}건)`, value: (rssField || "아직 발행된 원고가 없습니다.").slice(0, 1024), inline: false },
+    ];
+    if (rssErrors.length > 0) {
+      fields.push({ name: "⚠️ RSS 수집 오류", value: rssErrors.join("\n").slice(0, 512), inline: false });
+    }
+    const statusEmbed = {
+      embeds: [{
+        title:     `📋 MIH 발행 현황 · ${today}`,
+        color:     0x1565c0,
+        fields,
+        footer:    { text: "MIH Blog Writer · 매일 09:30 KST" },
+        timestamp: new Date().toISOString(),
+      }],
+    };
+    const all = SLUGS.flatMap((slug) => publishedToday[slug]).sort((a, b) => a.ts - b.ts);
+    const keywordLines = all.map((r) => `${extractKeyword(r.title)} 섭외\n${r.link}`);
+
+    if (DISCORD_STATUS) {
+      await attempt("discord:status", async () => {
+        await postDiscord(DISCORD_STATUS, statusEmbed);
+        if (total > 0) {
+          for (const content of discordChunks(`▶ ${today}`, keywordLines)) await postDiscord(DISCORD_STATUS, { content });
+        }
       });
-      if (total > 0) {
-        const all = SLUGS.flatMap((slug) => publishedToday[slug]).sort((a, b) => a.ts - b.ts);
-        const lines = all.map((r) => `${extractKeyword(r.title)} 섭외\n${r.link}`);
-        for (const content of discordChunks(`▶ ${today}`, lines)) await postDiscord(DISCORD_STATUS, { content });
-      }
+    }
+    await attempt("app:status", async () => {
+      await recordAlert("status", statusEmbed);
+      if (total > 0) await recordAlert("status", { content: [`▶ ${today}`, ...keywordLines].join("\n\n") });
     });
   }
 
@@ -281,15 +312,19 @@ async function notify(req?: Request): Promise<Response> {
     }));
   }
 
-  // Discord 검색노출 채널 — 예전과 같은 텍스트(검색 쿼리 URL 목록).
-  if (toDiscord && DISCORD_SEARCH && publishedYesterday.length > 0) {
+  // Discord 검색노출 채널 — 예전과 같은 텍스트(검색 쿼리 URL 목록). 사이트 알림에도 한 건으로 넣는다.
+  if (toDiscord && publishedYesterday.length > 0) {
     const queryLines = publishedYesterday.map((r) => {
       const kw = extractKeyword(r.title);
       return `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(kw + " 섭외")}`;
     });
-    await attempt("discord:search", async () => {
-      for (const content of discordChunks(`▶ ${yesterday} 검색 노출`, queryLines)) await postDiscord(DISCORD_SEARCH, { content });
-    });
+    if (DISCORD_SEARCH) {
+      await attempt("discord:search", async () => {
+        for (const content of discordChunks(`▶ ${yesterday} 검색 노출`, queryLines)) await postDiscord(DISCORD_SEARCH, { content });
+      });
+    }
+    await attempt("app:search", () =>
+      recordAlert("search", { content: [`▶ ${yesterday} 검색 노출`, ...queryLines].join("\n\n") }));
   }
 
   const ok = sendErrors.length === 0;

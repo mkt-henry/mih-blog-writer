@@ -1,6 +1,7 @@
 import { parseSerp } from './exposure';
 import { postScreenshotNotice, postSerpSummary } from './notify';
 import { naverSearchDiscordWebhook, postScreenshotToDiscord } from './discord';
+import { recordAlert } from '@/lib/alerts.server';
 import { fetchNaverSearchHtml, buildNaverSearchUrl, SURFACES } from './search';
 import { fetchNaverSearchScreenshotPng } from './screenshot';
 import { targetDates, groupByQuery, kstDateMinus, type PublishedArticle } from './schedule';
@@ -22,6 +23,8 @@ export type JobSummary = {
   posted: number;
   /** Discord 로 보낸 스크린샷 수(웹훅이 없으면 0) */
   discordPosted: number;
+  /** 사이트 알림(/alerts)에 남긴 스크린샷 수 */
+  appPosted: number;
   errors: string[];
 };
 
@@ -54,6 +57,8 @@ export async function runDailyNaverScreenshotJob(args: {
   // 2026-10-06 Owner: 당분간 Discord 도 같이 보낸다(지우지 말 것). 두 채널은 따로 보내서 한쪽 실패가 다른 쪽을 막지 않는다.
   const toAistudio = args.only !== 'discord';
   const discordWebhook = args.only === 'aistudio' ? null : naverSearchDiscordWebhook();
+  // 사이트 앱 알림(/alerts)은 Discord 와 같은 본문·같은 조건으로 남긴다(웹훅이 꺼져 있어도). 2026-10-17
+  const toApp = args.only !== 'aistudio';
   const now = new Date();
   // date 파라미터가 오면 그 하루만 본다(수동 재실행용). 없으면 D+1/3/7/14/30 전부.
   const dates = args.date ? [args.date] : targetDates(now);
@@ -76,6 +81,7 @@ export async function runDailyNaverScreenshotJob(args: {
   let missed = 0;
   let posted = 0;
   let discordPosted = 0;
+  let appPosted = 0;
 
   await inPool(groups, async (g) => {
     try {
@@ -92,7 +98,7 @@ export async function runDailyNaverScreenshotJob(args: {
 
       // 알림은 종전(Discord)과 같다 — D+1 이면서 통합검색에 노출된 건에만 보낸다.
       const isDPlus1 = g.articleIds.some((id) => dPlus1Ids.has(id));
-      if (hits['pc-total'] && isDPlus1 && (toAistudio || discordWebhook)) {
+      if (hits['pc-total'] && isDPlus1 && (toAistudio || discordWebhook || toApp)) {
         const searchUrl = buildNaverSearchUrl(g.query);
         const png = await fetchNaverSearchScreenshotPng(searchUrl);
         if (toAistudio) {
@@ -114,6 +120,15 @@ export async function runDailyNaverScreenshotJob(args: {
             discordPosted += 1;
           } catch (e) {
             errors.push(`${g.query} (Discord): ${(e as Error).message}`.slice(0, 200));
+          }
+        }
+        if (toApp) {
+          try {
+            const safeName = g.query.replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 64) || 'screenshot';
+            await recordAlert('serp-shot', { content: `🔎 ${g.query}\n${searchUrl}` }, [{ name: `${safeName}.png`, data: png }]);
+            appPosted += 1;
+          } catch (e) {
+            errors.push(`${g.query} (사이트 알림): ${(e as Error).message}`.slice(0, 200));
           }
         }
       }
@@ -141,6 +156,7 @@ export async function runDailyNaverScreenshotJob(args: {
     missed,
     posted,
     discordPosted,
+    appPosted,
     errors,
   };
 }

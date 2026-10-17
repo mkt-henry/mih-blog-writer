@@ -29,7 +29,7 @@ export default function NavBar({ isAdmin, keywordOnly }: Props) {
   return (
     <header className="sticky top-0 z-40 flex items-center gap-2 bg-white border-b border-[color:var(--color-border)] px-3 py-2">
       <div className="text-sm font-bold text-[color:var(--color-primary)]">MIH</div>
-      <nav className="flex gap-1 ml-1">
+      <nav className="flex gap-1 ml-1 min-w-0 overflow-x-auto">
         {keywordOnly ? (
           link("/keywords", "키워드")
         ) : (
@@ -38,6 +38,7 @@ export default function NavBar({ isAdmin, keywordOnly }: Props) {
             {link("/rss", "발행 현황")}
             {link("/competitors", "경쟁 글")}
             {link("/keywords", "키워드")}
+            {link("/alerts", "알림")}
             {isAdmin && link("/admin/users", "사용자 관리")}
           </>
         )}
