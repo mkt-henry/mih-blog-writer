@@ -18,7 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 
 if (existsSync('.env.local')) {
   for (const l of readFileSync('.env.local', 'utf8').split(/\r?\n/)) {
-    const m = l.match(/^([A-Z_]+)=(.*)$/);
+    const m = l.match(/^([A-Z0-9_]+)=(.*)$/); // R2_* 처럼 숫자가 든 이름도 읽는다
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^"|"$/g, '');
   }
 }
@@ -104,17 +104,22 @@ async function sendApp() {
   if (!sbUrl || !sbKey) throw new Error('사이트 알림: SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY 가 .env.local 에 없다');
   // 저장소 루트의 이미지 저장소 모듈(R2 업로드·축소·9.5GB 가드)을 그대로 쓴다.
   const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
-  const store = await import(pathToFileURL(join(repoRoot, 'scripts', 'lib', 'image-store.mjs')).href);
   const images = [];
-  if (store.backend() === 'r2') {
-    const day = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
-    for (const f of files.slice(0, 10)) {
-      const buf = await store.shrink(readFileSync(f), { width: 1080, quality: 82 });
-      const key = `alerts/${day}/${Math.random().toString(36).slice(2, 10)}.jpg`;
-      await store.putR2(key, buf);
-      images.push({ url: store.publicUrl(key), name: basename(f) });
-    }
-  } else if (files.length) console.log('사이트 알림: R2_* 가 없어 사진 없이 글만 남긴다');
+  // 사진 올리기가 실패해도(node_modules 에 sharp·S3 모듈이 없는 등) 알림 글은 남긴다.
+  try {
+    const store = await import(pathToFileURL(join(repoRoot, 'scripts', 'lib', 'image-store.mjs')).href);
+    if (store.backend() === 'r2') {
+      const day = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+      for (const f of files.slice(0, 10)) {
+        const buf = await store.shrink(readFileSync(f), { width: 1080, quality: 82 });
+        const key = `alerts/${day}/${Math.random().toString(36).slice(2, 10)}.jpg`;
+        await store.putR2(key, buf);
+        images.push({ url: store.publicUrl(key), name: basename(f) });
+      }
+    } else if (files.length) console.log('사이트 알림: R2_* 가 없어 사진 없이 글만 남긴다');
+  } catch (e) {
+    console.error(`사이트 알림: 사진 ${images.length}/${Math.min(files.length, 10)}장만 올리고 글은 남긴다 — ${e.message}`);
+  }
   const res = await fetch(`${sbUrl}/rest/v1/mih_alerts`, {
     method: 'POST',
     headers: { apikey: sbKey, Authorization: `Bearer ${sbKey}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
