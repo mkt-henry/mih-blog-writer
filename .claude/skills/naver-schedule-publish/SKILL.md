@@ -35,7 +35,9 @@ u0~u3 은 개인·회사 프로필 — 쓰지 않는다. 글쓰기 URL `https://
 
 ## 2. 예약 규칙
 
-- 원고 관리 페이지에 **보이는 순서대로** 08:00 · 08:30 · 09:00.
+- 원고 관리 페이지에 **보이는 순서대로** 계정별 시각 3개에 건다. 편수는 계정당 3편 그대로다.
+- 시각은 `run.sh` 가 계정·날짜마다 정한다(`bash $K/run.sh times [YYYY-MM-DD]` 로 미리 본다). 에이전시 07시대~, 인플루언스 10시대~, 캐스팅 13시대~ 에 첫 글, 글 사이 50~120분(10분 단위). 기타는 08:00 · 08:30 · 09:00 고정.
+  네 계정이 매일 같은 시각에 올라가던 때(~10-19) 인플루언스·캐스팅·에이전시 새 글이 검색에서 빠져서 바꿨다. 같은 시각으로 되돌리지 않는다.
 - 발행일은 다음날. 자정 넘어 작업하면 당일. `run.sh` 기본값: 06시 전이면 오늘, 아니면 내일. 다르면 날짜를 인자로 준다.
 
 캡처와 세션 입출력은 repo 의 `tmp/naver-schedule-publish/`(git 이 무시)에 남는다. 카드 폴더 안이라 카드 답에 `IMAGE: tmp/naver-schedule-publish/<feed>.png` 로 바로 붙일 수 있다.
@@ -47,7 +49,7 @@ bash $K/run.sh sessions              # ① run_in_background + timeout 최대. 4
 bash $K/run.sh prepare [YYYY-MM-DD]  # ② 12편 세팅. 10~15분 → run_in_background 로 돌리고 출력 확인
 bash $K/run.sh publish [YYYY-MM-DD]  # ③ 예약 확정 + "발행 예약 완료" 체크
 bash $K/run.sh report                # ④ 임시저장 0 확인 + 예약 목록 캡처 4장
-node $K/send-aistudio.mjs "📅 <M/D> 예약 발행 완료 — 4계정 × 3편 (08:00 · 08:30 · 09:00)" "<계정별 제목·건너뛴 계정 마크다운, 생략 가능>" \
+node $K/send-aistudio.mjs "📅 <M/D> 예약 발행 완료 — 4계정 × 3편 (시각은 계정별)" "<계정별 시각(run.sh times)·제목·건너뛴 계정 마크다운>" \
   "tmp/naver-schedule-publish/mih_agency.png" …/mih_casting.png …/mih_speaker.png …/mih_other.png   # ⑤ AIStudio + Discord (AIStudio 연결 확인만: 맨 앞에 --test, Discord 로는 안 감)
 ```
 

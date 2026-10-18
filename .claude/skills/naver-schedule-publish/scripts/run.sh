@@ -6,7 +6,7 @@
 #   bash $K/run.sh publish [YYYY-MM-DD] # 예약 확정 → 원고 관리 "발행 예약 완료" 체크
 #   bash $K/run.sh report  [YYYY-MM-DD] # 임시저장 0 확인 → 예약 목록 캡처 4장 → (눈으로 확인 후) send-aistudio.mjs 로 AIStudio 알림 + Discord
 #
-# 날짜 기본값: 지금이 06시 전이면 오늘, 아니면 내일. 시각은 계정마다 08:00 · 08:30 · 09:00.
+# 날짜 기본값: 지금이 06시 전이면 오늘, 아니면 내일. 시각은 slots() 가 계정·날짜마다 정한다(아래).
 # 작업 폴더: $WORK (기본 <repo>/tmp/naver-schedule-publish). 세션 입출력 in<N>.txt / out<N>.txt 가 여기 생긴다.
 
 K="$(cd "$(dirname "$0")" && pwd)"
@@ -15,14 +15,31 @@ WORK="${WORK:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp/naver-sche
 ASIDE_EXE='C:\Program Files\Aside\Application\Aside.exe'
 ACCOUNTS=("4 mih_agency mih_agency" "5 mih_casting mih_casting" "6 mih_speaker gdfdhzgfgfhgdj" "7 mih_other kyh620303")
 [ -n "$ONLY" ] && for a in "${ACCOUNTS[@]}"; do [[ " $a " == *" $ONLY "* ]] && ACCOUNTS=("$a"); done   # 한 계정만: ONLY=mih_agency bash run.sh <단계>
-TIMES=("08 00" "08 30" "09 00")
-[ -n "$SLOTS" ] && IFS=',' read -ra TIMES <<< "$SLOTS"   # 08:00 을 못 맞출 때: SLOTS="08 20,08 30,09 00" bash run.sh prepare|publish
 DATE="${2:-$(node -e 'const d=new Date(); if (d.getHours()>=6) d.setDate(d.getDate()+1); console.log(d.toLocaleDateString("sv-SE"))')}"
+# 예약 시각 (2026-10-19~): 네 계정이 매일 08:00·08:30·09:00 에 똑같이 올라가 한 사람이 자동으로 돌리는 묶음처럼 보였고,
+# 10-08 부터 인플루언스·캐스팅, 10-12 부터 에이전시 새 글이 검색에서 빠졌다(기타만 정상). 편수는 그대로 두고 시각만 흩는다.
+# 계정마다 시간대를 나누고, 그 안에서 첫 글 시각과 글 사이 간격(50~120분)을 날짜로 정한다 — prepare 와 publish 가 같은 값을 얻어야 해서 무작위가 아니라 날짜·계정 해시다.
+# 네이버 예약 분 선택은 10분 단위라 분은 10의 배수. 기타(mih_other)는 계속 정상이라 08:00·08:30·09:00 그대로 둔다.
+slots() {  # slots <feed> → "HH MM,HH MM,HH MM"
+  [ -n "$SLOTS" ] && { echo "$SLOTS"; return; }   # 손으로 정할 때: SLOTS="08 20,08 30,09 00" bash run.sh prepare|publish
+  node -e '
+    const [feed, date] = process.argv.slice(1);
+    const base = { mih_agency: 7*60, mih_speaker: 10*60, mih_casting: 13*60 }[feed];
+    if (base === undefined) { console.log("08 00,08 30,09 00"); process.exit(); }
+    let h = 2166136261; for (const c of feed + date) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+    const rnd = (n) => { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; h = Math.imul(h ^ (h >>> 13), 3266489909) >>> 0; return ((h ^ (h >>> 16)) >>> 0) % n; };
+    let t = base + rnd(12) * 10; const out = [];
+    for (let i = 0; i < 3; i++) { out.push(String(Math.floor(t / 60)).padStart(2, "0") + " " + String(t % 60).padStart(2, "0")); t += 50 + rnd(8) * 10; }
+    console.log(out.join(","));' "$1" "$DATE"
+}
 
 js() { local n=$1; shift; printf '%s\n' "$*" > "$WORK/cmd$n.js"; bash "$K/send.sh" "$WORK" "$n" "$WORK/cmd$n.js"; }
 tag() { grep -a "$1" | sed "s/^.*$1 //" | tail -1; }   # 출력에서 "<TAG> ..." 한 줄만 뽑는다
 
 case "$1" in
+times)   # bash run.sh times [YYYY-MM-DD] — 그 날짜의 계정별 예약 시각만 출력 (알림 문구에 쓴다)
+  for a in "${ACCOUNTS[@]}"; do set -- $a; echo "$2 $(slots $2 | sed 's/ /:/g; s/,/ · /g')"; done ;;
+
 sessions)
   for a in "${ACCOUNTS[@]}"; do set -- $a
     # 이미 떠 있는 프로필에 Start-Process 하면 닫을 수 없는 빈 '새 탭' 창이 쌓인다 → Aside 가 꺼졌다고 답할 때만 띄운다.
@@ -39,6 +56,7 @@ sessions)
 prepare)
   echo "발행일 $DATE"
   for a in "${ACCOUNTS[@]}"; do set -- $a; n=$1 feed=$2 blog=$3
+    IFS=',' read -ra TIMES <<< "$(slots $feed)"
     bash "$K/send.sh" "$WORK" $n "$K/steps.js" | grep -q 'STEPS ok' || { echo "u$n 세션 없음 — sessions 먼저"; exit 1; }
     cnt=$(js $n "if (!globalThis.dash) globalThis.dash = await openTab('https://mih.bp-studio.com/$feed'); else await dash.reload(); await sleep(4000); console.log('CNT', await dash.locator('[data-copy-title]').count())" | tag CNT)
     echo "== $feed: 대기 원고 $cnt 개"
@@ -57,6 +75,7 @@ prepare)
 
 publish)
   for a in "${ACCOUNTS[@]}"; do set -- $a; n=$1 feed=$2
+    IFS=',' read -ra TIMES <<< "$(slots $feed)"
     js $n "globalThis.PUBT = []" >/dev/null
     for idx in 0 1 2; do set -- ${TIMES[$idx]}
       echo "$feed $1:$2 $(js $n "{ const q = await doPublish($idx,'$DATE','$1','$2'); if (q.ok) PUBT.push(q.title); console.log('PUB', JSON.stringify(q)) }" | tag PUB)"
