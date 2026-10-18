@@ -18,18 +18,18 @@ ACCOUNTS=("4 mih_agency mih_agency" "5 mih_casting mih_casting" "6 mih_speaker g
 DATE="${2:-$(node -e 'const d=new Date(); if (d.getHours()>=6) d.setDate(d.getDate()+1); console.log(d.toLocaleDateString("sv-SE"))')}"
 # 예약 시각 (2026-10-19~): 네 계정이 매일 08:00·08:30·09:00 에 똑같이 올라가 한 사람이 자동으로 돌리는 묶음처럼 보였고,
 # 10-08 부터 인플루언스·캐스팅, 10-12 부터 에이전시 새 글이 검색에서 빠졌다(기타만 정상). 편수는 그대로 두고 시각만 흩는다.
-# 계정마다 시간대를 나누고, 그 안에서 첫 글 시각과 글 사이 간격(50~120분)을 날짜로 정한다 — prepare 와 publish 가 같은 값을 얻어야 해서 무작위가 아니라 날짜·계정 해시다.
+# 계정마다 첫 글 시각(07:00~09:00)과 글 사이 간격(40~80분)을 날짜로 정해 모두 오전(늦어도 11:40) 안에 끝낸다(Owner 10-19: 오전에만).
+# prepare 와 publish 가 같은 값을 얻어야 해서 무작위가 아니라 날짜·계정 해시다.
 # 네이버 예약 분 선택은 10분 단위라 분은 10의 배수. 기타(mih_other)는 계속 정상이라 08:00·08:30·09:00 그대로 둔다.
 slots() {  # slots <feed> → "HH MM,HH MM,HH MM"
   [ -n "$SLOTS" ] && { echo "$SLOTS"; return; }   # 손으로 정할 때: SLOTS="08 20,08 30,09 00" bash run.sh prepare|publish
   node -e '
     const [feed, date] = process.argv.slice(1);
-    const base = { mih_agency: 7*60, mih_speaker: 10*60, mih_casting: 13*60 }[feed];
-    if (base === undefined) { console.log("08 00,08 30,09 00"); process.exit(); }
+    if (!["mih_agency", "mih_speaker", "mih_casting"].includes(feed)) { console.log("08 00,08 30,09 00"); process.exit(); }
     let h = 2166136261; for (const c of feed + date) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
     const rnd = (n) => { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; h = Math.imul(h ^ (h >>> 13), 3266489909) >>> 0; return ((h ^ (h >>> 16)) >>> 0) % n; };
-    let t = base + rnd(12) * 10; const out = [];
-    for (let i = 0; i < 3; i++) { out.push(String(Math.floor(t / 60)).padStart(2, "0") + " " + String(t % 60).padStart(2, "0")); t += 50 + rnd(8) * 10; }
+    let t = 7*60 + rnd(13) * 10; const out = [];
+    for (let i = 0; i < 3; i++) { out.push(String(Math.floor(t / 60)).padStart(2, "0") + " " + String(t % 60).padStart(2, "0")); t += 40 + rnd(5) * 10; }
     console.log(out.join(","));' "$1" "$DATE"
 }
 
