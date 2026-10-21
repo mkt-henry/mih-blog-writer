@@ -34,7 +34,8 @@ export default function NavBar({ isAdmin, keywordOnly }: Props) {
           link("/keywords", "키워드")
         ) : (
           <>
-            {link("/", "모아보기")}
+            {link("/", "오늘")}
+            {link("/board", "모아보기")}
             {link("/alerts", "알림")}
             {link("/rss", "발행 현황")}
             {link("/competitors", "경쟁 글")}

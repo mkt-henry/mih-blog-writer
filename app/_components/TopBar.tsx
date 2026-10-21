@@ -10,7 +10,7 @@ export default function TopBar({ generatedAt, isAdmin }: Props) {
     <header className="flex items-center gap-2 bg-white border-b border-[color:var(--color-border)] px-3 py-2">
       <div className="text-sm font-bold text-[color:var(--color-primary)]">MIH</div>
       <nav className="flex gap-1 ml-1">
-        <Link href="/" className="px-2.5 py-1 text-xs sm:text-sm rounded bg-blue-50 text-[color:var(--color-primary)] font-semibold whitespace-nowrap">모아보기</Link>
+        <Link href="/board" className="px-2.5 py-1 text-xs sm:text-sm rounded bg-blue-50 text-[color:var(--color-primary)] font-semibold whitespace-nowrap">모아보기</Link>
         <Link href="/rss" className="px-2.5 py-1 text-xs sm:text-sm rounded text-gray-600 hover:bg-gray-50 whitespace-nowrap">발행 현황</Link>
         <Link href="/keywords" className="px-2.5 py-1 text-xs sm:text-sm rounded text-gray-600 hover:bg-gray-50 whitespace-nowrap">키워드</Link>
         {isAdmin && (
