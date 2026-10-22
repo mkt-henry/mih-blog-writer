@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { EyeOff, RefreshCw } from "lucide-react";
 import { alertText, stripMarkdown } from "@/lib/alert-format";
 import { REPORT_AGENCIES, type SearchReport, type StatusReport } from "@/lib/daily-report";
 import { Content, CopyButton, kst } from "./DiscordMessage";
@@ -91,21 +92,20 @@ function SearchTab({ yesterday, today }: { yesterday: SearchReport; today: Searc
                 <div className="truncate text-xs font-medium text-gray-700">{REPORT_AGENCIES[row.agency].label}</div>
                 <div className="text-[11px] tabular-nums text-gray-500">{row.time} 발행</div>
               </div>
-              <a
-                href={row.url}
-                target="_blank"
-                rel="noreferrer"
+              {/* 로그인된 브라우저는 개인화로 우리 글이 위로 보여 시크릿(로그인 없는) 결과 화면으로 연다 (Owner 2026-10-22) */}
+              <Link
+                href={`/serp?q=${encodeURIComponent(row.keyword)}&post=${encodeURIComponent(row.post)}`}
                 className="flex min-w-0 flex-1 items-center gap-1 text-sm font-medium text-[#0068E0] hover:underline"
               >
                 <span className="truncate">{row.keyword}</span>
-                <ExternalLink className="h-3 w-3 shrink-0" />
-              </a>
+                <EyeOff className="h-3 w-3 shrink-0" />
+              </Link>
               <CopyButton text={row.url} label="링크 복사" />
             </li>
           ))}
         </ul>
       )}
-      <p className="mt-2 text-[11px] text-gray-400">키워드를 누르면 네이버 블로그 검색이 열립니다 · 복사는 검색 링크</p>
+      <p className="mt-2 text-[11px] text-gray-400">키워드를 누르면 로그인 없이 본(시크릿) 네이버 블로그 검색 순위가 열립니다 · 복사는 검색 링크</p>
     </>
   );
 }
