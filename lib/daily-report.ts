@@ -120,6 +120,8 @@ export interface SearchRow {
   url: string;
   agency: ReportAgency;
   title: string;
+  /** 발행한 글 주소(RSS 링크) — 로그인 없는 검색 화면에서 이 글을 짚는다 */
+  post: string;
   /** 발행 시각 "HH:MM" (KST) */
   time: string;
 }
@@ -138,7 +140,7 @@ export function buildSearchReport(rss: RssByAgency, day: string): SearchReport {
   );
   const rows = items.map(({ agency, r }) => {
     const keyword = `${extractKeyword(r.title)} 섭외`;
-    return { keyword, url: searchUrl(extractKeyword(r.title)), agency, title: r.title, time: kstTimeStr(r.ts) };
+    return { keyword, url: searchUrl(extractKeyword(r.title)), agency, title: r.title, post: r.link, time: kstTimeStr(r.ts) };
   });
   const message =
     rows.length > 0 ? { content: [`▶ ${day} 검색 노출`, ...rows.map((x) => x.url)].join("\n\n") } : null;
