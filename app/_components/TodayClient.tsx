@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ExternalLink, RefreshCw } from "lucide-react";
 import { alertText, stripMarkdown } from "@/lib/alert-format";
 import { REPORT_AGENCIES, type SearchReport, type StatusReport } from "@/lib/daily-report";
-import { Content, CopyButton, Embed, kst } from "./DiscordMessage";
+import { Content, CopyButton, kst } from "./DiscordMessage";
 
 type Tab = "status" | "search";
 
@@ -31,10 +31,15 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
+// 발행 현황 탭: Discord 발행현황의 키워드/블로그 URL 메시지만 보인다(위 요약 임베드는 Owner 요청으로 뺐다, 2026-10-22).
 function StatusTab({ status }: { status: StatusReport }) {
+  const lists = status.messages.filter((m) => m.content);
+  if (lists.length === 0) {
+    return <p className="py-10 text-center text-sm text-gray-500">{status.day} 에 아직 발행된 원고가 없습니다.</p>;
+  }
   return (
     <ul className="space-y-2">
-      {status.messages.map((m, i) => (
+      {lists.map((m, i) => (
         <li key={i} className="rounded-lg border border-gray-200 bg-white p-3">
           <div className="mb-1 flex items-center gap-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-primary)] text-[10px] font-bold text-white">
@@ -45,10 +50,7 @@ function StatusTab({ status }: { status: StatusReport }) {
             <CopyButton text={alertText(m)} label="전체 복사" />
           </div>
           <div className="pl-9 text-sm leading-relaxed text-gray-900">
-            {m.content && <Content text={m.content} />}
-            {(m.embeds ?? []).map((e, j) => (
-              <Embed key={j} e={e} />
-            ))}
+            <Content text={m.content!} />
           </div>
         </li>
       ))}
@@ -85,7 +87,10 @@ function SearchTab({ yesterday, today }: { yesterday: SearchReport; today: Searc
         <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
           {r.rows.map((row, i) => (
             <li key={i} className="flex items-center gap-2 px-3 py-2.5">
-              <span className="w-16 shrink-0 truncate text-[11px] text-gray-500">{REPORT_AGENCIES[row.agency].label}</span>
+              <div className="w-[4.5rem] shrink-0 leading-tight">
+                <div className="truncate text-xs font-medium text-gray-700">{REPORT_AGENCIES[row.agency].label}</div>
+                <div className="text-[11px] tabular-nums text-gray-500">{row.time} 발행</div>
+              </div>
               <a
                 href={row.url}
                 target="_blank"
@@ -147,7 +152,7 @@ export default function TodayClient({ status, searchYesterday, searchToday, rssE
         </TabButton>
       </div>
 
-      {rssErrors.length > 0 && tab === "search" && (
+      {rssErrors.length > 0 && (
         <p className="mb-2 text-xs text-red-600">일부 계정 글을 못 읽었습니다: {rssErrors.join(", ")}</p>
       )}
 

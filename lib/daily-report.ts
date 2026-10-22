@@ -120,6 +120,8 @@ export interface SearchRow {
   url: string;
   agency: ReportAgency;
   title: string;
+  /** 발행 시각 "HH:MM" (KST) */
+  time: string;
 }
 
 export interface SearchReport {
@@ -136,7 +138,7 @@ export function buildSearchReport(rss: RssByAgency, day: string): SearchReport {
   );
   const rows = items.map(({ agency, r }) => {
     const keyword = `${extractKeyword(r.title)} 섭외`;
-    return { keyword, url: searchUrl(extractKeyword(r.title)), agency, title: r.title };
+    return { keyword, url: searchUrl(extractKeyword(r.title)), agency, title: r.title, time: kstTimeStr(r.ts) };
   });
   const message =
     rows.length > 0 ? { content: [`▶ ${day} 검색 노출`, ...rows.map((x) => x.url)].join("\n\n") } : null;

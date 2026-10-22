@@ -61,9 +61,9 @@ describe('daily-report', () => {
 
   it('검색 노출은 그날 발행 키워드 검색 주소, 없으면 메시지 없음', () => {
     const r = buildSearchReport({ mih_casting: casting, mih_agency: agency }, '2026-10-22');
-    expect(r.rows.map((x) => [x.agency, x.keyword])).toEqual([
-      ['mih_agency', '아무개 섭외'],
-      ['mih_casting', '홍길동 가수 섭외'],
+    expect(r.rows.map((x) => [x.agency, x.keyword, x.time])).toEqual([
+      ['mih_agency', '아무개 섭외', '06:05'],
+      ['mih_casting', '홍길동 가수 섭외', '07:10'],
     ]);
     expect(r.message?.content).toBe(`▶ 2026-10-22 검색 노출\n\n${searchUrl('아무개')}\n\n${searchUrl('홍길동 가수')}`);
     expect(buildSearchReport({ mih_casting: casting }, '2026-10-19').message).toBeNull();
