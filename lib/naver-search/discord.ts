@@ -3,6 +3,7 @@
 // 2026-10-06 Owner: "당분간은 mih 는 디코로도 알림이 왔으면 좋겠어" — AIStudio 알림(notify.ts)과 함께 보낸다. 지우지 말 것.
 // 웹훅은 환경 변수 NAVER_SEARCH_DISCORD_WEBHOOK_URL(Vercel production / GitHub repo secret)에만 둔다.
 // 비우면 Discord 발송만 꺼진다(AIStudio 알림은 그대로).
+// 2026-10-22 Owner 지시로 꺼 두었다(Vercel production 에서 NAVER_SEARCH_DISCORD_WEBHOOK_URL 삭제).
 
 export type PostScreenshotArgs = {
   webhookUrl: string;

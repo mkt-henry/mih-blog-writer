@@ -6,8 +6,9 @@ description: 발행 대기 원고를 Aside 브라우저로 네이버 블로그 4
 # 네이버 블로그 예약 발행 (Aside 브라우저)
 
 원고 관리 페이지의 발행 대기 원고(계정당 3개)를 네이버 글쓰기에 붙여넣고 예약 발행까지 건 뒤,
-예약 목록 캡처를 AIStudio 알림(Owner 휴대폰 푸시 + 알림함)과 Discord "신규 원고 알림" 채널로 같이 보낸다
-(2026-10-06 Owner: "당분간은 mih 는 디코로도 알림이 왔으면 좋겠어" — `send-aistudio.mjs` 한 번이 둘 다 보낸다). 전 과정은 `scripts/run.sh` 하나로 돈다. 브라우저 작업은 aside-browser 스킬 규칙을 따른다.
+예약 목록 캡처를 AIStudio 알림(Owner 휴대폰 푸시 + 알림함)으로 보낸다
+(2026-10-06 Owner 요청으로 Discord "신규 원고 알림" 채널에도 같이 보냈으나, 2026-10-22 Owner 지시로 MIH Discord 알림을 모두 껐다.
+`.env.local` 에 `DISCORD_NEW_ARTICLE_WEBHOOK_URL` 이 없어 `send-aistudio.mjs` 는 Discord 를 건너뛴다 — 정상이다. 다시 켤 때 값은 No.VI 금고 `mih-discord-new-article-webhook`). 전 과정은 `scripts/run.sh` 하나로 돈다. 브라우저 작업은 aside-browser 스킬 규칙을 따른다.
 
 ## 0. 권한 경계
 
@@ -77,7 +78,7 @@ node $K/send-aistudio.mjs "📅 <M/D> 예약 발행 완료 — 4계정 × 3편 (
 - publish: `PUB {"ok":true,"logNo":…}` 12개, `MARK` 에 `… 200` 3개씩. 확인: `<원고 관리 URL>?showHidden=1`,
   공개 전 `m.blog.naver.com/PostView.naver?blogId=<id>&logNo=<번호>` 가 `비공개`면 예약 상태.
 - report: 계정마다 `임시저장된 글 보기, 0개`(예약되면 네이버가 임시저장본을 자동 삭제). 남아 있으면 그 목록에서 지운다.
-  잘린 캡처 4장을 **Read 로 전부 눈으로 확인**한 뒤 ⑤ 전송. `200 <알림 id> 3` 과 `200 <알림 id> 1` 두 줄(AIStudio, 뒤에 글이 붙으면 붙지 못한 사진 사유)과 `discord 200 4`(Discord) 한 줄이면 성공.
+  잘린 캡처 4장을 **Read 로 전부 눈으로 확인**한 뒤 ⑤ 전송. `200 <알림 id> 3` 과 `200 <알림 id> 1` 두 줄(AIStudio, 뒤에 글이 붙으면 붙지 못한 사진 사유)이면 성공(Discord 는 2026-10-22 부터 꺼져 `discord 건너뜀` 이 찍힌다 — 실패 아님).
   실패한 쪽만 `--discord-only`/`--no-discord` 로 다시 보낸다.
 
 ### 이미 발행된 글의 대표 이미지 보정
