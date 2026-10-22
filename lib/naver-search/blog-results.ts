@@ -1,14 +1,21 @@
 import { MIH_BLOG_SLUGS } from './exposure';
 
 // 로그인 없이 본 네이버 블로그 검색 결과 (Owner 2026-10-22: "검색 노출을 열 때 시크릿 모드로").
-// 웹 페이지는 휴대폰 브라우저를 시크릿 창으로 열 수 없다. 대신 서버가 쿠키 없이 네이버 모바일 블로그 검색을
-// 받아 결과 목록을 그대로 보여 준다 — 로그인된 브라우저는 개인화로 우리 글이 위로 보이기 때문이다.
+// 웹 페이지는 휴대폰 브라우저를 시크릿 창으로 열 수 없다. 대신 서버가 쿠키 없이 네이버 모바일 검색을
+// 받아 결과의 블로그 글 순서를 그대로 보여 준다 — 로그인된 브라우저는 개인화로 우리 글이 위로 보이기 때문이다.
 
 const MOBILE_UA =
   'Mozilla/5.0 (Linux; Android 14; SM-F956N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
 
-export function mobileBlogSearchUrl(query: string): string {
-  return `https://m.search.naver.com/search.naver?where=m_blog&query=${encodeURIComponent(query)}`;
+/** total: 모바일 통합검색 — 지금 검색 링크(where=blog)를 휴대폰에서 열면 이리로 넘어간다(실측 2026-10-22).
+ *  blog: 모바일 블로그 탭 — 30위까지 나와 색인·순위를 본다. */
+export type SearchSurface = 'total' | 'blog';
+
+export function mobileSearchUrl(query: string, surface: SearchSurface = 'total'): string {
+  const q = encodeURIComponent(query);
+  return surface === 'blog'
+    ? `https://m.search.naver.com/search.naver?ssc=tab.m_blog.all&query=${q}`
+    : `https://m.search.naver.com/search.naver?where=m&ssc=tab.m.all&query=${q}`;
 }
 
 export type BlogResult = {
@@ -81,8 +88,12 @@ export function parseBlogResults(html: string): BlogResult[] {
 }
 
 /** 쿠키를 붙이지 않고 받는다 = 로그인 안 한 사람이 보는 결과. */
-export async function fetchLoggedOutBlogResults(query: string, timeoutMs = 10_000): Promise<BlogResult[]> {
-  const res = await fetch(mobileBlogSearchUrl(query), {
+export async function fetchLoggedOutBlogResults(
+  query: string,
+  surface: SearchSurface = 'total',
+  timeoutMs = 10_000,
+): Promise<BlogResult[]> {
+  const res = await fetch(mobileSearchUrl(query, surface), {
     headers: { 'User-Agent': MOBILE_UA, Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'ko-KR,ko;q=0.9' },
     cache: 'no-store',
     signal: AbortSignal.timeout(timeoutMs),

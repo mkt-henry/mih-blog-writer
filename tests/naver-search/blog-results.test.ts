@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBlogResults, mobileBlogSearchUrl } from '@/lib/naver-search/blog-results';
+import { parseBlogResults, mobileSearchUrl } from '@/lib/naver-search/blog-results';
 
 const item = (slug: string, id: string, name: string, title: string, snippet: string) => `
   <div><a href="https://m.blog.naver.com/${slug}" class="name"><span>${name}</span></a>
@@ -32,10 +32,14 @@ describe('parseBlogResults', () => {
   });
 });
 
-describe('mobileBlogSearchUrl', () => {
-  it('opens the mobile blog tab', () => {
-    expect(mobileBlogSearchUrl('아이유 섭외')).toBe(
-      'https://m.search.naver.com/search.naver?where=m_blog&query=%EC%95%84%EC%9D%B4%EC%9C%A0%20%EC%84%AD%EC%99%B8',
+describe('mobileSearchUrl', () => {
+  it('opens the mobile total search by default', () => {
+    expect(mobileSearchUrl('아이유 섭외')).toBe(
+      'https://m.search.naver.com/search.naver?where=m&ssc=tab.m.all&query=%EC%95%84%EC%9D%B4%EC%9C%A0%20%EC%84%AD%EC%99%B8',
     );
+  });
+
+  it('opens the mobile blog tab for blog', () => {
+    expect(mobileSearchUrl('a&b', 'blog')).toBe('https://m.search.naver.com/search.naver?ssc=tab.m_blog.all&query=a%26b');
   });
 });
