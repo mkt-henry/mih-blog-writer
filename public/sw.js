@@ -62,6 +62,34 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(data.title || "MIH 알림", options));
 });
 
+// 브라우저가 구독을 바꾸거나 만료시키면 새 구독을 만들어 서버에 다시 올린다(그냥 두면 그 기기로는 알림이 끊긴다).
+// 공개 키는 lib/push-client.ts 의 VAPID_PUBLIC_KEY 와 같은 값이다.
+const VAPID_PUBLIC_KEY = "BB9tjodCgVI0cVtKb0Pttt3OXE3w5Jg7fZnAtH9WuiYwRNu_N0AtD0UwewFVkJZY5ai9t4s37G6IyJ6hHc2MOmU";
+
+function keyBytes(base64url) {
+  const pad = "=".repeat((4 - (base64url.length % 4)) % 4);
+  const raw = atob((base64url + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    self.registration.pushManager
+      .subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC_KEY) })
+      .then((sub) =>
+        fetch("/api/push", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(sub.toJSON()),
+        }),
+      )
+      .catch(() => {}),
+  );
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL((event.notification.data && event.notification.data.url) || "/alerts", self.location.origin).href;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -242,6 +242,8 @@ function KeywordEditModal({
 }
 
 /* ─── 메인 컴포넌트 ─── */
+const ROW_PAGE = 200;
+
 export default function KeywordClient({ keywords, categories, isEditor, visibleColumns }: Props) {
   const router = useRouter();
   const [rows, setRows] = useState<Keyword[]>(keywords);
@@ -312,6 +314,27 @@ export default function KeywordClient({ keywords, categories, isEditor, visibleC
       return true;
     });
   }, [rows, query, cat, agencyFilter, activeFilter, stateFilter, isEditor]);
+
+  // 키워드가 6,000개를 넘어 한 번에 다 그리면 화면이 12MB 가까이 되고 휴대폰에서 10초 넘게 멈췄다.
+  // 처음엔 앞쪽만 그리고, 목록 끝에 닿으면(또는 '더 보기'를 누르면) 이어서 그린다. 검색·필터는 전체에서 한다.
+  const [limit, setLimit] = useState(ROW_PAGE);
+  useEffect(() => {
+    setLimit(ROW_PAGE);
+  }, [query, cat, agencyFilter, activeFilter, stateFilter]);
+  const shown = useMemo(() => filtered.slice(0, limit), [filtered, limit]);
+  const moreRef = useRef<HTMLTableRowElement | null>(null);
+  useEffect(() => {
+    const el = moreRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setLimit((n) => n + ROW_PAGE);
+      },
+      { rootMargin: "600px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [shown.length, filtered.length]);
 
   const saveKeyword = useCallback(async (row: Keyword, form: KeywordForm) => {
     setSavingKeywordId(row.id);
@@ -488,7 +511,7 @@ export default function KeywordClient({ keywords, categories, isEditor, visibleC
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.map((k, idx) => (
+              {shown.map((k, idx) => (
                 <tr key={k.id} className={`hover:bg-gray-50/60 transition-colors ${k.is_active ? "" : "bg-gray-50/70 opacity-60"}`}>
                   <td className="px-3 py-1 text-right text-xs text-gray-300 tabular-nums">{idx + 1}</td>
                   {show("keyword") && (
@@ -600,6 +623,19 @@ export default function KeywordClient({ keywords, categories, isEditor, visibleC
                   )}
                 </tr>
               ))}
+              {shown.length < filtered.length && (
+                <tr ref={moreRef}>
+                  <td colSpan={bodyCols} className="py-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setLimit((n) => n + ROW_PAGE)}
+                      className="text-xs text-gray-500 hover:text-gray-800"
+                    >
+                      더 보기 ({(filtered.length - shown.length).toLocaleString()}개 남음)
+                    </button>
+                  </td>
+                </tr>
+              )}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={bodyCols} className="py-10 text-center text-sm text-gray-300">
