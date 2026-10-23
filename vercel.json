@@ -3,6 +3,7 @@
   "framework": "nextjs",
   "buildCommand": "next build",
   "installCommand": "npm install",
+  "regions": ["sin1"],
   "functions": {
     "app/api/manuscripts/route.ts": { "maxDuration": 30 },
     "app/api/manuscripts/[id]/route.ts": { "maxDuration": 15 },

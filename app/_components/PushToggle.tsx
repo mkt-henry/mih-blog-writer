@@ -3,17 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, BellOff } from "lucide-react";
 import { toast } from "sonner";
-
-// VAPID 공개 키. 짝인 비밀 키는 Supabase 함수 send-push 의 VAPID_PRIVATE_KEY 에만 있다.
-const VAPID_PUBLIC_KEY = "BB9tjodCgVI0cVtKb0Pttt3OXE3w5Jg7fZnAtH9WuiYwRNu_N0AtD0UwewFVkJZY5ai9t4s37G6IyJ6hHc2MOmU";
-
-function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
-  const pad = "=".repeat((4 - (base64url.length % 4)) % 4);
-  const raw = atob((base64url + pad).replace(/-/g, "+").replace(/_/g, "/"));
-  const out = new Uint8Array(new ArrayBuffer(raw.length));
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
+import { VAPID_PUBLIC_KEY, keyBytes, resyncPushSubscription, saveSubscription } from "@/lib/push-client";
 
 type State = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on";
 
@@ -36,6 +26,8 @@ export default function PushToggle() {
       const reg = await navigator.serviceWorker.register("/sw.js");
       const sub = await reg.pushManager.getSubscription();
       setState(sub ? "on" : "off");
+      // "알림 끄기"로 보이는 기기는 서버 목록에도 꼭 있게 다시 올린다.
+      if (sub) await resyncPushSubscription(reg).catch(() => {});
     })().catch(() => setState("unsupported"));
   }, []);
 
@@ -53,12 +45,7 @@ export default function PushToggle() {
       const sub =
         (await reg.pushManager.getSubscription()) ??
         (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC_KEY) }));
-      const res = await fetch("/api/push", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sub.toJSON()),
-      });
-      if (!res.ok) throw new Error(String(res.status));
+      await saveSubscription(sub);
       setState("on");
       toast.success("이 기기에서 알림을 받습니다");
     } catch {
