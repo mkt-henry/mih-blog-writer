@@ -80,7 +80,7 @@ node $K/send-aistudio.mjs "📅 <M/D> 예약 발행 완료 — 4계정 × 3편 (
 1. `stepText` — 새 글쓰기 탭 → "작성 중인 글이 있습니다" 팝업이면 **취소** → 제목 복사·붙여넣기 → 본문 복사 →
    본문 자리(`글감과 함께 나의 일상을 기록해보세요!`) 클릭 후 붙여넣기 → 사진마다 스크롤해 로딩 → 첫 사진 URL 반환.
 2. `set-clipboard-image.sh` — 첫 사진을 **이미지 데이터**로 클립보드에 올린다.
-3. `stepFinish` — 첫 사진 클릭 → Ctrl+V(네이버에 업로드되며 자동으로 `대표`) → 원래 링크 사진 클릭 → Delete →
+3. `stepRep` + `stepSched`(한 명령이 60초를 넘으면 지속 세션이 끊겨 두 번에 나눠 부른다, 2026-10-24) — 첫 사진 클릭 → Ctrl+V(네이버에 업로드되며 자동으로 `대표`) → 원래 링크 사진 클릭 → Delete →
    **`저장`** → 발행 패널 → `예약` → 날짜(`setDate`, 달력) → 시·분.
 4. `doPublish`(publish 단계) — 예약·날짜·시각이 기대값과 정확히 같을 때만 패널 안 확정 버튼(`tpb*i.publish`)을 누른다.
    성공하면 URL 에 `logNo` 가 붙는다. 그 뒤 `markReserved` 가 원고 관리 페이지에서 **제목이 같은 원고만** 예약 완료 처리.
@@ -88,7 +88,7 @@ node $K/send-aistudio.mjs "📅 <M/D> 예약 발행 완료 — 4계정 × 3편 (
 ### 결과 판정
 
 - prepare: 원고마다 `TXT {"title":…,"comps":30~45,"tables":4,"videos":2,"firstImg":"https://img.bp-studio.com/…"}` 와
-  `FIN {"img":{"stillOld":false,"rep":true,"caption":"출처 - …"},"date":"YYYY. MM. DD","sched":"전체공개,예약 HH:MM"}`.
+  `{"img":{"stillOld":false,"rep":true,"caption":"출처 - …"}} {"date":"YYYY. MM. DD","sched":"전체공개,예약 HH:MM"}` (앞은 `stepRep`, 뒤는 `stepSched` 결과).
   `err` 가 남으면 그 탭(`W[idx]`)을 snapshot 으로 보고 해당 원고만 손으로 다시 돌린다.
 - publish: `PUB {"ok":true,"logNo":…}` 12개, `MARK` 에 `… 200` 3개씩. 확인: `<원고 관리 URL>?showHidden=1`,
   공개 전 `m.blog.naver.com/PostView.naver?blogId=<id>&logNo=<번호>` 가 `비공개`면 예약 상태.
