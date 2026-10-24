@@ -81,7 +81,7 @@ globalThis.setDate = async (w, ymd) => {
   await w.locator('.ui-datepicker tbody button', {hasText: new RegExp('^' + d + '$')}).first().click(); await sleep(800);
   return await cur();
 };
-globalThis.stepFinish = async (idx, url, ymd, hh, mm) => {
+globalThis.stepRep = async (idx, url) => {
   const w = W[idx]; await w.bringToFront();
   if (await w.getByRole('button', {name: '발행 설정 닫기'}).count()) { await w.getByRole('button', {name: '발행 설정 닫기'}).click(); await sleep(600); }
   const i0 = await w.evaluate((u) => [...document.querySelectorAll('.se-component')].findIndex(c => c.classList.contains('se-image') && [...c.querySelectorAll('img')].some(i => i.src === u)), url);
@@ -94,13 +94,19 @@ globalThis.stepFinish = async (idx, url, ymd, hh, mm) => {
   p = await pt(i0); await jit(600); await hclickXY(w, p[0], p[1]); await jit(500); await w.keyboard.press('Delete'); await jit(1000);
   const img = await w.evaluate((a) => { const cs = [...document.querySelectorAll('.se-component')]; return {stillOld: cs.some(c => [...c.querySelectorAll('img')].some(i => i.src === a.u)), rep: cs[a.i].classList.contains('se-image') && cs[a.i].innerText.includes('대표'), caption: cs[a.i + 1]?.innerText.slice(0, 30)}; }, {u: url, i: i0});
   await jit(1500); await hclick(w, w.getByRole('button', {name: '저장', exact: true}).first()); await jit(2500);
+  return {img};
+};
+/* 사진 교체(stepRep 80~100초)와 예약(stepSched 35~55초)을 한 명령으로 돌리면 2분을 넘겨 지속 세션이 끊긴다(2026-10-24 두 번) → 따로 부른다 */
+globalThis.stepSched = async (idx, ymd, hh, mm) => {
+  const w = W[idx]; await w.bringToFront();
   await hclick(w, w.locator('button[data-click-area="tpb.publish"]').first()); await jit(1800);
   await hclick(w, w.getByText('예약', {exact: true}).first()); await jit(1000);
   const date = await setDate(w, ymd);
   await w.locator('select[class*="hour_option"]').selectOption(hh); await jit(700); await w.locator('select[class*="minute_option"]').selectOption(mm); await jit(600);
   const sched = await w.evaluate(() => [...document.querySelectorAll('input[type=radio]:checked')].map(r => r.nextElementSibling?.innerText).join(',') + ' ' + [...document.querySelectorAll('select')].map(s => s.value).join(':'));
-  return {img, date, sched};
+  return {date, sched};
 };
+globalThis.stepFinish = async (idx, url, ymd, hh, mm) => { const r = await stepRep(idx, url); if (r.err) return r; return {...r, ...(await stepSched(idx, ymd, hh, mm))}; };
 globalThis.doPublish = async (idx, ymd, hh, mm) => {
   const w = W[idx]; await w.bringToFront();
   const [y, m, d] = ymd.split('-');

@@ -84,8 +84,8 @@ prepare)
       img=$(node -e 'console.log(JSON.parse(process.argv[1]).firstImg)' "$txt" 2>/dev/null)
       for try in 1 2; do
         bash "$K/set-clipboard-image.sh" "$img" "$WORK" >/dev/null
-        fin=$(js $n "console.log('FIN', JSON.stringify(await stepFinish($idx,'$img','$DATE','$hh','$mm')))" | tag FIN)
-        [[ "$fin" == *'"err"'* ]] || break
+        fin=$(js $n "console.log('REP', JSON.stringify(await stepRep($idx,'$img')))" | tag REP)
+        [[ "$fin" == *'"err"'* ]] || { fin="$fin $(js $n "console.log('SCH', JSON.stringify(await stepSched($idx,'$DATE','$hh','$mm')))" | tag SCH)"; break; }
         js $n "for (let k=0;k<8;k++){ await W[$idx].evaluate((k)=>{const im=[...document.querySelectorAll('.se-component.se-image')]; if(im[k]) im[k].scrollIntoView({block:'center'});},k); await sleep(1500);} console.log('RESCROLL')" >/dev/null
       done
       echo "  $hh:$mm  $txt"; echo "         $fin"
