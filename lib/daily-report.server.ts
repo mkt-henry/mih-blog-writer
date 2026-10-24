@@ -11,8 +11,9 @@ export async function fetchAllRss(): Promise<{ rss: RssByAgency; errors: string[
         const res = await fetch(`https://rss.blog.naver.com/${REPORT_AGENCIES[slug].blog}`, {
           headers: { "User-Agent": "Mozilla/5.0 (compatible; MIH-Notifier/1.0)" },
           signal: AbortSignal.timeout(12_000),
-          // 휴대폰에서 탭을 오가며 여러 번 열어도 RSS 를 매번 부르지 않게 1분만 묵힌다.
-          next: { revalidate: 60 },
+          // 매번 새로 받는다. revalidate 를 걸면 오래 안 연 뒤 첫 화면이 묵은 RSS 를 보여 준다
+          // (stale-while-revalidate — 2026-10-24 20:50 발행분이 21:14 첫 화면에 빠져 8건으로 보였다).
+          cache: "no-store",
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         rss[slug] = parseRss(await res.text());
