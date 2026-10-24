@@ -131,6 +131,9 @@ JSON
   작성 단계는 매번 수집본(verified 사실)을 근거로 새로 쓴다.
 - Codex 가 모든 계정 한도로 못 돌면 Claude `mih-researcher` 로 대체하지 않고 묻지도 않는다.
   풀릴 때까지 기다렸다가 Codex 로 이어 수집한다(2026-10-24 결정).
+  배치 도구(`cx_research.sh`·`cx_step.sh`)는 `cx_wait.sh` 로 풀리는 시각까지 최대 90분 스스로 기다린다.
+  그래도 한도면 `CODEX_ALL_OUT <시각>`·종료 코드 75 로 멈추니, 그 시각 뒤 같은 명령으로 다시 돌린다
+  (카드는 `CHECK_BACK` 으로 그 시각에 깨어난다).
   실행 기록의 `agent` 는 `"codex:mih-researcher"` 로 남긴다.
 
 넘길 것: 인물명, `keyword_id`, 카테고리, 발행 계정.
