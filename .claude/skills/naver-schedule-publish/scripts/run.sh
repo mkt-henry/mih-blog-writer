@@ -77,10 +77,15 @@ publish)
   for a in "${ACCOUNTS[@]}"; do set -- $a; n=$1 feed=$2
     IFS=',' read -ra TIMES <<< "$(slots $feed)"
     js $n "globalThis.PUBT = []" >/dev/null
+    ok=()
     for idx in 0 1 2; do set -- ${TIMES[$idx]}
-      echo "$feed $1:$2 $(js $n "{ const q = await doPublish($idx,'$DATE','$1','$2'); if (q.ok) PUBT.push(q.title); console.log('PUB', JSON.stringify(q)) }" | tag PUB)"
+      pub=$(js $n "{ const q = await doPublish($idx,'$DATE','$1','$2'); if (q.ok) PUBT.push(q.title); console.log('PUB', JSON.stringify(q)) }" | tag PUB)
+      echo "$feed $1:$2 $pub"
+      [[ "$pub" == *'"ok":true'* ]] && ok+=("$1:$2")
     done
     echo "$feed 예약완료 체크: $(js $n "console.log('MARK', JSON.stringify(await markReserved(dash, PUBT)))" | tag MARK)"
+    # 매일 알림은 그날 마지막 예약 시각 + 10분에 나간다(2026-10-24 Owner) → 예약에 성공한 시각을 DB 에 적는다
+    node "$(git -C "$K" rev-parse --show-toplevel)/scripts/record-publish-slots.mjs" "$DATE" "$feed" "${ok[@]}"
   done ;;
 
 report)

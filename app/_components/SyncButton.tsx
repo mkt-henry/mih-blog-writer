@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 //   ① POST /api/rss-sync       → 엣지 함수가 배포URL 수집 → DB articles 매칭 → 발행 상태 업데이트
 //   ② POST /api/daily-notify   → 엣지 함수(daily-notify)가 발행 현황·검색 노출 쿼리를 AIStudio 알림으로 발송
 //      (같은 날 다시 누르면 그날 알림이 새로 쌓이지 않고 고쳐진다)
-// 12:00 cron 이후 발행분을 즉시 반영·통지하기 위한 용도.
+// 매일 알림 이후 발행분을 즉시 반영·통지하기 위한 용도.
 // /rss 페이지(ActionsBar)와 메인 대시보드(FilterBar)에서 공용으로 사용.
 export default function SyncButton() {
   const [busy, setBusy] = useState(false);

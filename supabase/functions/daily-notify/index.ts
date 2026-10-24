@@ -13,7 +13,8 @@
 // AIStudio 와 Discord 는 따로 보낸다: 한쪽이 실패해도 다른 쪽은 나간다(실패는 응답 errors 에 남고 ok:false).
 // 본문 {"only":"discord"} 면 Discord 만, {"only":"aistudio"} 면 AIStudio 만 보낸다(그날 것을 한쪽에만 다시 보낼 때).
 //
-// 정규 스케줄: Supabase pg_cron 잡 mih-daily-notify 가 매일 12:00 KST 에 이 함수를 부른다(2026-10-20 09:30 에서 옮김).
+// 정규 스케줄: Supabase pg_cron 잡 mih-daily-alerts 가 10분마다 mih_daily_alerts_tick() 을 돌려, 그날 마지막 예약 발행 + 10분
+// (기록이 없으면 12:00 KST)에 하루 한 번 이 함수를 부른다(2026-10-24 Owner. 예약 시각은 run.sh publish 가 mih_publish_slots 에 적는다).
 // 수동: 대시보드 "새로고침 및 알림 발송" 버튼(/api/daily-notify) 또는 GitHub Actions daily-notify.yml(RUN_ONCE=1, Supabase 가 막혔을 때).
 // 본문 {"test": true} 면 발행 현황 알림을 "[테스트]" 제목·푸시 없이 한 번만 보낸다(연결 확인용, Discord 로는 보내지 않는다).
 // GitHub Actions(RUN_ONCE) 에서는 env ONLY=discord|aistudio 로 같은 선택을 한다.
@@ -273,7 +274,7 @@ async function notify(req?: Request): Promise<Response> {
         title:     `📋 MIH 발행 현황 · ${today}`,
         color:     0x1565c0,
         fields,
-        footer:    { text: "MIH Blog Writer · 매일 12:00 KST" },
+        footer:    { text: "MIH Blog Writer · 매일 마지막 발행 10분 뒤" },
         timestamp: new Date().toISOString(),
       }],
     };
