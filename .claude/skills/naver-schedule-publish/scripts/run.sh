@@ -14,7 +14,22 @@ K="$(cd "$(dirname "$0")" && pwd)"
 WORK="${WORK:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp/naver-schedule-publish}"; mkdir -p "$WORK"
 ASIDE_EXE='C:\Program Files\Aside\Application\Aside.exe'
 ACCOUNTS=("4 mih_agency mih_agency" "5 mih_casting mih_casting" "6 mih_speaker gdfdhzgfgfhgdj" "7 mih_other kyh620303")
-[ -n "$ONLY" ] && for a in "${ACCOUNTS[@]}"; do [[ " $a " == *" $ONLY "* ]] && ACCOUNTS=("$a"); done   # 한 계정만: ONLY=mih_agency bash run.sh <단계>
+[ -n "$ONLY" ] && { sel=(); for a in "${ACCOUNTS[@]}"; do for o in ${ONLY//,/ }; do [[ " $a " == *" $o "* ]] && sel+=("$a"); done; done; ACCOUNTS=("${sel[@]}"); }   # 계정 한정: ONLY=mih_agency,mih_other bash run.sh <단계>
+COUNT="${COUNT:-3}"   # 계정당 편수. 평소엔 3(3편 모인 계정만 건다). 밀린 글을 바로 올릴 때만 COUNT=2 처럼 줄인다
+# 사람처럼 (2026-10-24 Owner): 계정 순서를 섞고, 글과 글 사이를 20~90초 들쭉날쭉 쉰다. NOGAP=1 이면 쉬지 않는다
+mapfile -t ACCOUNTS < <(printf '%s
+' "${ACCOUNTS[@]}" | shuf)
+gap() { [ -n "$NOGAP" ] || sleep $(( ${1:-20} + RANDOM % ${2:-70} )); }
+# 두 카드가 같은 Aside 프로필·클립보드로 동시에 발행하면 서로 글을 덮는다 → 저장소 밖 잠금 파일로 한 번에 하나만
+LOCK="$HOME/.novi/locks/mih-naver-publish.lock"; mkdir -p "$(dirname "$LOCK")"
+lock() {
+  for i in $(seq 1 240); do
+    if [ -f "$LOCK" ]; then read -r lp lt lw < "$LOCK"; age=$(( $(date +%s) - ${lt:-0} ))
+      if [ "$lw" != "$(git rev-parse --show-toplevel 2>/dev/null)" ] && [ "$age" -lt 10800 ]; then [ $i = 1 ] && echo "다른 발행이 진행 중($lw) — 끝날 때까지 기다린다"; sleep 30; continue; fi
+    fi
+    echo "$$ $(date +%s) $(git rev-parse --show-toplevel 2>/dev/null)" > "$LOCK"; return 0
+  done; echo "2시간 기다려도 다른 발행이 안 끝났다 — 중단"; exit 1
+}
 DATE="${2:-$(node -e 'const d=new Date(); if (d.getHours()>=6) d.setDate(d.getDate()+1); console.log(d.toLocaleDateString("sv-SE"))')}"
 # 예약 시각 (2026-10-19~): 네 계정이 매일 08:00·08:30·09:00 에 똑같이 올라가 한 사람이 자동으로 돌리는 묶음처럼 보였고,
 # 10-08 부터 인플루언스·캐스팅, 10-12 부터 에이전시 새 글이 검색에서 빠졌다(기타만 정상). 편수는 그대로 두고 시각만 흩는다.
@@ -25,10 +40,11 @@ slots() {  # slots <feed> → "HH MM,HH MM,HH MM"
   [ -n "$SLOTS" ] && { echo "$SLOTS"; return; }   # 손으로 정할 때: SLOTS="08 20,08 30,09 00" bash run.sh prepare|publish
   node -e '
     const [feed, date] = process.argv.slice(1);
-    if (!["mih_agency", "mih_speaker", "mih_casting"].includes(feed)) { console.log("08 00,08 30,09 00"); process.exit(); }
+    const win = process.env.WIN;   /* 밀린 글 오늘 올리기: WIN=14:00 이면 모든 계정이 그 시각부터 1시간 안에 첫 글, 글 사이 40~80분 */
+    if (!win && !["mih_agency", "mih_speaker", "mih_casting"].includes(feed)) { console.log("08 00,08 30,09 00"); process.exit(); }
     let h = 2166136261; for (const c of feed + date) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
     const rnd = (n) => { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; h = Math.imul(h ^ (h >>> 13), 3266489909) >>> 0; return ((h ^ (h >>> 16)) >>> 0) % n; };
-    let t = 7*60 + rnd(13) * 10; const out = [];
+    let t = win ? (win.split(":")[0] * 60 + +win.split(":")[1]) + rnd(7) * 10 : 7*60 + rnd(13) * 10; const out = [];
     for (let i = 0; i < 3; i++) { out.push(String(Math.floor(t / 60)).padStart(2, "0") + " " + String(t % 60).padStart(2, "0")); t += 40 + rnd(5) * 10; }
     console.log(out.join(","));' "$1" "$DATE"
 }
@@ -54,14 +70,17 @@ sessions)
   wait ;;
 
 prepare)
-  echo "발행일 $DATE"
+  lock; echo "발행일 $DATE"
   for a in "${ACCOUNTS[@]}"; do set -- $a; n=$1 feed=$2 blog=$3
     IFS=',' read -ra TIMES <<< "$(slots $feed)"
     bash "$K/send.sh" "$WORK" $n "$K/steps.js" | grep -q 'STEPS ok' || { echo "u$n 세션 없음 — sessions 먼저"; exit 1; }
     cnt=$(js $n "if (!globalThis.dash) globalThis.dash = await openTab('https://mih.bp-studio.com/$feed'); else await dash.reload(); await sleep(4000); console.log('CNT', await dash.locator('[data-copy-title]').count())" | tag CNT)
     echo "== $feed: 대기 원고 $cnt 개"
-    for idx in 0 1 2; do set -- ${TIMES[$idx]}; hh=$1 mm=$2
-      txt=$(js $n "console.log('TXT', JSON.stringify(await stepText(dash,'$blog',$idx)))" | tag TXT)
+    for idx in $(seq 0 $((COUNT-1))); do set -- ${TIMES[$idx]}; hh=$1 mm=$2
+      [ "$idx" -gt 0 ] && gap
+      js $n "console.log('TTL', JSON.stringify(await stepText(dash,'$blog',$idx)))" >/dev/null
+      txt=$(js $n "console.log('TXT', JSON.stringify(await stepBody(dash,$idx)))" | tag TXT)
+      js $n "await hread(W[$idx]); console.log('READ ok')" >/dev/null
       img=$(node -e 'console.log(JSON.parse(process.argv[1]).firstImg)' "$txt" 2>/dev/null)
       for try in 1 2; do
         bash "$K/set-clipboard-image.sh" "$img" "$WORK" >/dev/null
@@ -71,14 +90,17 @@ prepare)
       done
       echo "  $hh:$mm  $txt"; echo "         $fin"
     done
+    gap 30 90
   done ;;
 
 publish)
+  lock
   for a in "${ACCOUNTS[@]}"; do set -- $a; n=$1 feed=$2
     IFS=',' read -ra TIMES <<< "$(slots $feed)"
     js $n "globalThis.PUBT = []" >/dev/null
     ok=()
-    for idx in 0 1 2; do set -- ${TIMES[$idx]}
+    for idx in $(seq 0 $((COUNT-1))); do set -- ${TIMES[$idx]}
+      [ "$idx" -gt 0 ] && gap 15 60
       pub=$(js $n "{ const q = await doPublish($idx,'$DATE','$1','$2'); if (q.ok) PUBT.push(q.title); console.log('PUB', JSON.stringify(q)) }" | tag PUB)
       echo "$feed $1:$2 $pub"
       [[ "$pub" == *'"ok":true'* ]] && ok+=("$1:$2")
@@ -119,6 +141,7 @@ report)
   done
   # 건너뛴 계정 세션까지 모두 끝내고, 빈 줄 하나 더 써서 남은 tail -f 를 끝낸다(안 하면 sessions 가 안 끝나 카드가 '진행'에 머문다)
   sleep 3; for f in "$WORK"/in[0-9].txt; do echo exit >> "$f"; done; sleep 3; for f in "$WORK"/in[0-9].txt; do echo >> "$f"; done
+  [ -f "$LOCK" ] && grep -q " $(git rev-parse --show-toplevel 2>/dev/null)$" "$LOCK" && rm -f "$LOCK"
   echo "캡처: ${shots[*]}  ← Read 로 눈으로 확인한 뒤 send-aistudio.mjs 로 보낸다(AIStudio 알림 + Discord 신규 원고 알림 채널)" ;;
 
 *) sed -n '2,10p' "$0" ;;

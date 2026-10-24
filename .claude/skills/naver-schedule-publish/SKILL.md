@@ -54,7 +54,22 @@ node $K/send-aistudio.mjs "📅 <M/D> 예약 발행 완료 — 4계정 × 3편 (
   "tmp/naver-schedule-publish/mih_agency.png" …/mih_casting.png …/mih_speaker.png …/mih_other.png   # ⑤ AIStudio + Discord (AIStudio 연결 확인만: 맨 앞에 --test, Discord 로는 안 감)
 ```
 
-한 계정만 돌릴 때는 각 단계 앞에 `ONLY=<feed>`(예: `ONLY=mih_agency bash $K/run.sh prepare`)를 붙인다.
+한 계정만 돌릴 때는 각 단계 앞에 `ONLY=<feed>`(예: `ONLY=mih_agency bash $K/run.sh prepare`)를 붙인다. 여러 계정은 쉼표(`ONLY=mih_agency,mih_other`).
+
+### 사람처럼 올리기 (2026-10-24 Owner)
+
+자동으로 몰아 올리면 네이버가 계정을 제지할 수 있어서, 항상 사람이 쓰는 것처럼 움직인다(끄는 옵션 없음, 쉬는 간격만 `NOGAP=1` 로 뺄 수 있다).
+- 계정 순서를 매번 섞고, 글 사이 20~90초·계정 사이 30~120초·예약 확정 사이 15~75초를 들쭉날쭉 쉰다.
+- 클릭은 마우스를 곡선으로 옮겨 버튼 안 아무 곳을 누르고, 대기는 정해진 값의 0.8~1.7배로 흔든다.
+- 제목은 원고 관리의 제목을 읽어 한 글자씩 친다(가끔 길게 멈춘다). 친 제목이 다르면 예전처럼 복사·붙여넣기로 되돌린다.
+- 본문을 붙인 뒤 휠로 오르내리며 읽듯이 훑고 맨 위로 올라간 다음 대표 사진·예약으로 넘어간다.
+- 두 카드가 동시에 발행하지 않게 `~/.novi/locks/mih-naver-publish.lock` 을 잡는다. 다른 폴더의 잠금이 3시간 안이면 풀릴 때까지(최대 2시간) 기다린다. report 가 끝나면 푼다.
+
+### 밀린 글을 오늘 올리기
+
+예약 회차가 빠져 그날 글이 0건이면 한꺼번에 '현재'로 올리지 않고 오늘 오후로 흩어 예약한다:
+`WIN=14:00 COUNT=<편수> ONLY=<계정들> bash $K/run.sh prepare|publish <오늘 날짜>` — 계정마다 WIN 부터 1시간 안에 첫 글, 글 사이 40~80분.
+`COUNT` 는 계정당 편수(기본 3). 평소 회차는 3편 모인 계정만 건다는 규칙 그대로다.
 
 `sessions` 는 프로필마다 90초까지 응답을 기다리고, `Aside isn't running` 처럼 **꺼졌다는 응답일 때만** 프로필 창을 띄운다
 (시간 초과는 꺼짐이 아니다 — 세션이 뜨는 데 60초까지 걸린다. 켜진 프로필을 다시 띄우면 닫을 수 없는 빈 '새 탭' 창이 쌓인다). 그다음 `tail -f in<N>.txt | aside repl --account u<N>` 파이프를 붙잡는다.
