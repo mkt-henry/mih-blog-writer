@@ -96,7 +96,7 @@ globalThis.stepRep = async (idx, url) => {
   await jit(1500); await hclick(w, w.getByRole('button', {name: '저장', exact: true}).first()); await jit(2500);
   return {img};
 };
-/* 사진 교체(stepRep)와 예약(stepSched)을 한 명령으로 돌리면 60초를 넘겨 지속 세션이 끊긴다(2026-10-24 두 번) → 따로 부른다 */
+/* 사진 교체(stepRep 80~100초)와 예약(stepSched 35~55초)을 한 명령으로 돌리면 2분을 넘겨 지속 세션이 끊긴다(2026-10-24 두 번) → 따로 부른다 */
 globalThis.stepSched = async (idx, ymd, hh, mm) => {
   const w = W[idx]; await w.bringToFront();
   await hclick(w, w.locator('button[data-click-area="tpb.publish"]').first()); await jit(1800);
