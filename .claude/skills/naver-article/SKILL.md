@@ -129,7 +129,8 @@ JSON
   그 수집일 이후 새 소식과 만료 사실만 더 모은다.
 - **재사용은 수집본까지만.** 원고 본문(output/ 의 기존 HTML·이전 원고 문장)은 재사용하지 않는다 —
   작성 단계는 매번 수집본(verified 사실)을 근거로 새로 쓴다.
-- Codex 가 모든 계정 한도로 못 돌면 Claude `mih-researcher` 서브에이전트로 대체하고 보고에 적는다.
+- Codex 가 모든 계정 한도로 못 돌면 Claude `mih-researcher` 로 대체하지 않고 묻지도 않는다.
+  풀릴 때까지 기다렸다가 Codex 로 이어 수집한다(2026-10-24 결정).
   실행 기록의 `agent` 는 `"codex:mih-researcher"` 로 남긴다.
 
 넘길 것: 인물명, `keyword_id`, 카테고리, 발행 계정.
@@ -178,7 +179,7 @@ node scripts/kb.mjs audit --person="<인물명>" --html="<html 경로>"
 결과가 보고와 다르면 검수로 넘기지 않고 그 차이를 `--resume` 으로 Codex 에 되돌린다.
 
 Codex 가 실패하거나 사용량 한도로 못 돌면(계정 전환 스크립트가 전 계정 소진으로 보고한 경우 포함)
-**조용히 Claude `mih-writer` 로 대체하지 않는다.** 멈추고 사용자에게 알린 뒤 대체 여부를 묻는다.
+**Claude 로 대체하지 않고 묻지도 않는다.** 계정 전환 뒤에도 전 계정 소진이면 풀릴 때까지 기다렸다가 Codex 로 이어 쓴다(2026-10-24 결정).
 실행 기록의 `agent` 는 `"codex:mih-writer"` 로 남긴다.
 
 ### 4. 검수 — `mih-reviewer`
