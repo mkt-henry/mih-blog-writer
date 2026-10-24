@@ -50,12 +50,15 @@ globalThis.stepText = async (dashTab, blogId, idx) => {
     await dashTab.bringToFront(); await dashTab.locator('[data-copy-title]').nth(idx).click(); await jit(600);
     await w.bringToFront(); await w.locator('.se-title-text').first().click(); await w.keyboard.press('Control+A'); await w.keyboard.press('Delete'); await w.keyboard.press('Control+V'); await jit(800);
   }
-  await jit(1500);
+  W[idx] = w; return {titled: true};
+};
+/* 지속 세션(tail -f | C:/Python314/python.exe C:/dev/project/novi/scripts/aside_safe.py repl)은 명령 하나가 60초쯤 넘으면 끊긴다 → 제목(stepText)·본문(stepBody)·훑기(hread)를 따로 부른다 */
+globalThis.stepBody = async (dashTab, idx) => {
+  const w = W[idx]; await jit(1500);
   await dashTab.bringToFront(); await jit(700); await hclick(dashTab, dashTab.locator('[data-copy-body]').nth(idx)); await jit(1500);
   await w.bringToFront(); await jit(800); await hclick(w, w.getByText('글감과 함께 나의 일상을 기록해보세요!').first()); await jit(500); await w.keyboard.press('Control+V'); await jit(9000);
   for (let k = 0; k < 6; k++) { await w.evaluate((k) => { const im = [...document.querySelectorAll('.se-component.se-image')]; if (im[k]) im[k].scrollIntoView({block: 'center', behavior: 'smooth'}); }, k); await jit(1300); }
-  await hread(w);
-  W[idx] = w;
+    W[idx] = w;
   return await w.evaluate(() => ({
     title: document.querySelector('.se-title-text').innerText,
     comps: document.querySelectorAll('.se-component').length,

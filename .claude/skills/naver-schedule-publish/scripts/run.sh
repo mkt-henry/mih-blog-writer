@@ -78,7 +78,9 @@ prepare)
     echo "== $feed: 대기 원고 $cnt 개"
     for idx in $(seq 0 $((COUNT-1))); do set -- ${TIMES[$idx]}; hh=$1 mm=$2
       [ "$idx" -gt 0 ] && gap
-      txt=$(js $n "console.log('TXT', JSON.stringify(await stepText(dash,'$blog',$idx)))" | tag TXT)
+      js $n "console.log('TTL', JSON.stringify(await stepText(dash,'$blog',$idx)))" >/dev/null
+      txt=$(js $n "console.log('TXT', JSON.stringify(await stepBody(dash,$idx)))" | tag TXT)
+      js $n "await hread(W[$idx]); console.log('READ ok')" >/dev/null
       img=$(node -e 'console.log(JSON.parse(process.argv[1]).firstImg)' "$txt" 2>/dev/null)
       for try in 1 2; do
         bash "$K/set-clipboard-image.sh" "$img" "$WORK" >/dev/null
