@@ -7,7 +7,7 @@
 // 브라우저가 "앱 설치"를 띄우려면 fetch 처리기가 있는 서비스 워커가 필요하다.
 // 여기서는 그 조건만 채우고 나머지는 그대로 네트워크로 흘려보낸다.
 
-const CACHE = "mih-static-v2";
+const CACHE = "mih-static-v3";
 const STATIC = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
