@@ -101,7 +101,7 @@ export function buildStatusReport(rss: RssByAgency, rssErrors: string[], day: st
           title: `📋 MIH 발행 현황 · ${day}`,
           color: 0x1565c0,
           fields,
-          footer: { text: "MIH Blog Writer · 매일 12:00 KST" },
+          footer: { text: "MIH Blog Writer · 매일 마지막 발행 10분 뒤" },
           timestamp: nowIso,
         },
       ],
