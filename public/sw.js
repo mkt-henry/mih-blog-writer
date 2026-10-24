@@ -7,12 +7,13 @@
 // 브라우저가 "앱 설치"를 띄우려면 fetch 처리기가 있는 서비스 워커가 필요하다.
 // 여기서는 그 조건만 채우고 나머지는 그대로 네트워크로 흘려보낸다.
 
-const CACHE = "mih-static-v3";
+const CACHE = "mih-static-v4";
 const STATIC = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/icon-maskable-512.png",
   "/icons/apple-touch-icon.png",
+  "/icons/badge-96.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -54,7 +55,9 @@ self.addEventListener("push", (event) => {
   const options = {
     body: data.body || "",
     icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    // 안드로이드 상태바는 그림의 투명도만 보고 흰색으로 칠한다. 꽉 찬 앱 아이콘을 주면 흰 네모가 되므로
+    // 투명 배경에 흰 글자만 남긴 전용 그림을 준다.
+    badge: "/icons/badge-96.png",
     tag: data.tag,
     data: { url: data.url || "/alerts" },
   };
