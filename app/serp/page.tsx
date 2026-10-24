@@ -39,7 +39,8 @@ export default async function SerpPage({ searchParams }: { searchParams: Promise
   let error: string | null = null;
   try {
     results = await fetchLoggedOutBlogResults(query, surface);
-  } catch {
+  } catch (e) {
+    console.error("[serp]", query, surface, e);
     error = "네이버 검색을 불러오지 못했습니다. 잠시 뒤 다시 열어 주세요.";
   }
   const mine = target ? results.find((r) => postKey(r.url) === target) : undefined;

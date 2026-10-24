@@ -87,17 +87,55 @@ export function parseBlogResults(html: string): BlogResult[] {
   return results;
 }
 
+/** 네이버는 클라우드 IP 대부분을 403 으로 막는다. 사이트가 도는 Vercel sin1 도 막혀 화면이 늘 비었다
+ *  (실측 2026-10-24). 그래서 직접 받기에 실패하면 Supabase 함수 naver-serp 를 지역을 바꿔 가며 부른다.
+ *  실측: us-east-1 은 10번 모두 200, ap-south-1 은 한 번 200 뒤 403, 나머지 지역은 403.
+ *  통과 지역은 IP 평판 따라 바뀔 수 있어 뒤에 몇 곳을 더 둔다(전체 20초 안에서). */
+export const PROXY_REGIONS = ['us-east-1', 'ap-south-1', 'us-west-1', 'eu-central-1'] as const;
+
+type Fetcher = typeof fetch;
+
 /** 쿠키를 붙이지 않고 받는다 = 로그인 안 한 사람이 보는 결과. */
 export async function fetchLoggedOutBlogResults(
   query: string,
   surface: SearchSurface = 'total',
   timeoutMs = 10_000,
+  fetcher: Fetcher = fetch,
 ): Promise<BlogResult[]> {
-  const res = await fetch(mobileSearchUrl(query, surface), {
-    headers: { 'User-Agent': MOBILE_UA, Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'ko-KR,ko;q=0.9' },
-    cache: 'no-store',
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!res.ok) throw new Error(`naver search HTTP ${res.status}`);
-  return parseBlogResults(await res.text());
+  const errors: string[] = [];
+  try {
+    const res = await fetcher(mobileSearchUrl(query, surface), {
+      headers: { 'User-Agent': MOBILE_UA, Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'ko-KR,ko;q=0.9' },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) return parseBlogResults(await res.text());
+    errors.push(`direct HTTP ${res.status}`);
+  } catch (e) {
+    errors.push(`direct ${String(e)}`);
+  }
+
+  const base = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (base && key) {
+    const deadline = Date.now() + 20_000;
+    const s = surface === 'blog' ? '&s=blog' : '';
+    for (const region of PROXY_REGIONS) {
+      const left = deadline - Date.now();
+      if (left < 1_000) break;
+      try {
+        const res = await fetcher(`${base}/functions/v1/naver-serp?q=${encodeURIComponent(query)}${s}`, {
+          headers: { Authorization: `Bearer ${key}`, 'x-region': region },
+          cache: 'no-store',
+          signal: AbortSignal.timeout(Math.min(timeoutMs, left)),
+        });
+        const body = (await res.json().catch(() => null)) as { anchors?: string; naverStatus?: number } | null;
+        if (res.ok && typeof body?.anchors === 'string') return parseBlogResults(body.anchors);
+        errors.push(`${region} ${res.status}/${body?.naverStatus ?? '-'}`);
+      } catch (e) {
+        errors.push(`${region} ${String(e)}`);
+      }
+    }
+  }
+  throw new Error(`naver search failed: ${errors.join('; ')}`);
 }
