@@ -51,7 +51,7 @@ argument-hint: "[계정당 개수, 기본 1] [스타]"
 | 하이브 계열 아티스트 | 신규 금지 | 교체 |
 | verified 사실 5건 미만 | 계속할지 물음 | 보강 수집 1회 → 그래도 5건 미만이면 교체 |
 | conflict 사실 | 보고 | 원고 근거에서 빼고 진행, 보고에 목록만 |
-| Codex 사용량 한도 | 물음 | `~/bin/codex-fb exec -s workspace-write -C "C:/dev/project/mih-blog-writer" - < prompt.txt` 로 대체 계정 실행. 전 계정 소진이면 Claude `mih-writer` 로 대체하고 run 기록 `agent` 를 `"claude:mih-writer"` 로 남긴 뒤 보고에 명시 |
+| Codex 사용량 한도 | 물음 | `~/bin/codex-fb exec -s workspace-write -C "C:/dev/project/mih-blog-writer" - < prompt.txt` 로 대체 계정 실행. 전 계정 소진이면 Claude로 대체하지 않고 풀릴 때까지 기다렸다가 Codex로 이어 쓴다. 제시간에 못 채운 편은 보고에 적는다 |
 | 검수 2회 후에도 needs-fix | 멈추고 보고 | check:article 이 통과하면 발행하고 남은 지적을 보고. 통과 못 하면 발행하지 않고 그 원고만 실패 처리 |
 | publish 가 중복으로 거부 | — | `--force` 쓰지 않는다. 그 원고는 실패 처리하고 보고 |
 
