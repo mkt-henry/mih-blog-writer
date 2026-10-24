@@ -1,17 +1,60 @@
 globalThis.W = globalThis.W || {};
+/* 사람처럼 (2026-10-24 Owner): 고정 대기·순간 클릭·한 번에 붙여넣기만 하면 네이버가 자동 발행으로 보고 계정을 제지할 수 있다.
+   대기는 들쭉날쭉하게, 클릭은 마우스를 옮겨 요소 안 아무 곳을, 제목은 한 글자씩 치고, 본문은 읽듯이 오르내린다. */
+globalThis.rnd = (a, b) => a + Math.random() * (b - a);
+globalThis.jit = (ms) => sleep(Math.round(ms * rnd(0.8, 1.7)));
+globalThis.MXY = globalThis.MXY || {};
+globalThis.hmove = async (w, x, y) => {
+  const k = w.url(); const [x0, y0] = MXY[k] || [rnd(200, 900), rnd(150, 600)];
+  const n = Math.round(rnd(12, 35)); const cx = (x0 + x) / 2 + rnd(-120, 120), cy = (y0 + y) / 2 + rnd(-80, 80);
+  for (let i = 1; i <= n; i++) { const t = i / n, u = 1 - t; await w.mouse.move(u * u * x0 + 2 * u * t * cx + t * t * x, u * u * y0 + 2 * u * t * cy + t * t * y); await sleep(Math.round(rnd(6, 22))); }
+  MXY[k] = [x, y];
+};
+globalThis.hclick = async (w, loc) => {
+  await loc.scrollIntoViewIfNeeded().catch(() => {});
+  const b = await loc.boundingBox().catch(() => null);
+  if (!b) { await loc.click(); return; }
+  const x = b.x + b.width * rnd(0.3, 0.7), y = b.y + b.height * rnd(0.35, 0.65);
+  await hmove(w, x, y); await sleep(Math.round(rnd(90, 350)));
+  await w.mouse.down(); await sleep(Math.round(rnd(40, 130))); await w.mouse.up();
+};
+globalThis.hclickXY = async (w, x, y) => { await hmove(w, x, y); await sleep(Math.round(rnd(90, 300))); await w.mouse.down(); await sleep(Math.round(rnd(40, 120))); await w.mouse.up(); };
+globalThis.htype = async (w, text) => {
+  for (const ch of text) { await w.keyboard.type(ch); await sleep(Math.round(Math.random() < 0.08 ? rnd(400, 1100) : rnd(60, 190))); }
+};
+globalThis.hread = async (w) => {  /* 붙여넣은 글을 훑어 내려가며 읽는 것처럼 */
+  await hmove(w, rnd(450, 900), rnd(300, 600));
+  const steps = Math.round(rnd(6, 13));
+  for (let i = 0; i < steps; i++) { await w.mouse.wheel(0, rnd(250, 750) * (Math.random() < 0.15 ? -0.6 : 1)); await sleep(Math.round(rnd(500, 2200))); }
+  await w.evaluate(() => window.scrollTo({top: 0, behavior: 'smooth'})); await jit(1200);
+};
+globalThis.dashTitle = async (dashTab, idx) => dashTab.evaluate((i) => {
+  const b = document.querySelectorAll('[data-copy-title]')[i]; let el = b;
+  for (let k = 0; k < 8 && el; k++) { el = el.parentElement; const t = el && el.innerText.split('\n').find(l => l.includes('섭외]')); if (t) return t.trim(); }
+  return '';
+}, idx);
 globalThis.dismissDraft = async (w) => {
   const pop = w.locator('.se-popup-alert-confirm .se-popup-button-cancel');
   for (let t = 0; t < 10; t++) { if (await pop.count()) { await pop.first().click(); await sleep(800); return true; } await sleep(700); }
   return false;
 };
 globalThis.stepText = async (dashTab, blogId, idx) => {
-  const w = await openTab('https://blog.naver.com/PostWriteForm.naver?blogId=' + blogId + '&Redirect=Write'); await sleep(5000);
+  const w = await openTab('https://blog.naver.com/PostWriteForm.naver?blogId=' + blogId + '&Redirect=Write'); await jit(5000);
   await dismissDraft(w);
-  await dashTab.bringToFront(); await dashTab.locator('[data-copy-title]').nth(idx).click(); await sleep(600);
-  await w.bringToFront(); await w.locator('.se-title-text').first().click(); await w.keyboard.press('Control+A'); await w.keyboard.press('Delete'); await w.keyboard.press('Control+V'); await sleep(800);
-  await dashTab.bringToFront(); await dashTab.locator('[data-copy-body]').nth(idx).click(); await sleep(1500);
-  await w.bringToFront(); await w.getByText('글감과 함께 나의 일상을 기록해보세요!').first().click(); await sleep(300); await w.keyboard.press('Control+V'); await sleep(10000);
-  for (let k = 0; k < 6; k++) { await w.evaluate((k) => { const im = [...document.querySelectorAll('.se-component.se-image')]; if (im[k]) im[k].scrollIntoView({block: 'center'}); }, k); await sleep(1200); }
+  const want = await dashTitle(dashTab, idx);
+  await w.bringToFront(); await jit(900);
+  await hclick(w, w.locator('.se-title-text').first()); await jit(500); await w.keyboard.press('Control+A'); await w.keyboard.press('Delete'); await jit(400);
+  if (want) await htype(w, want);
+  const typed = await w.evaluate(() => document.querySelector('.se-title-text')?.innerText.replace(/\s+/g, ' ').trim());
+  if (!want || typed !== want.replace(/\s+/g, ' ').trim()) {  /* 제목을 못 읽었거나 치다 어긋나면 예전처럼 복사·붙여넣기 */
+    await dashTab.bringToFront(); await dashTab.locator('[data-copy-title]').nth(idx).click(); await jit(600);
+    await w.bringToFront(); await w.locator('.se-title-text').first().click(); await w.keyboard.press('Control+A'); await w.keyboard.press('Delete'); await w.keyboard.press('Control+V'); await jit(800);
+  }
+  await jit(1500);
+  await dashTab.bringToFront(); await jit(700); await hclick(dashTab, dashTab.locator('[data-copy-body]').nth(idx)); await jit(1500);
+  await w.bringToFront(); await jit(800); await hclick(w, w.getByText('글감과 함께 나의 일상을 기록해보세요!').first()); await jit(500); await w.keyboard.press('Control+V'); await jit(9000);
+  for (let k = 0; k < 6; k++) { await w.evaluate((k) => { const im = [...document.querySelectorAll('.se-component.se-image')]; if (im[k]) im[k].scrollIntoView({block: 'center', behavior: 'smooth'}); }, k); await jit(1300); }
+  await hread(w);
   W[idx] = w;
   return await w.evaluate(() => ({
     title: document.querySelector('.se-title-text').innerText,
@@ -41,17 +84,17 @@ globalThis.stepFinish = async (idx, url, ymd, hh, mm) => {
   const i0 = await w.evaluate((u) => [...document.querySelectorAll('.se-component')].findIndex(c => c.classList.contains('se-image') && [...c.querySelectorAll('img')].some(i => i.src === u)), url);
   if (i0 < 0) return {err: 'image not found'};
   const pt = async (i) => w.evaluate((i) => { const c = document.querySelectorAll('.se-component')[i]; c.scrollIntoView({block: 'center'}); const b = c.querySelector('img').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }, i);
-  let p = await pt(i0); await w.mouse.click(p[0], p[1]); await sleep(600);
-  await w.keyboard.press('Control+V'); await sleep(8000);
+  let p = await pt(i0); await jit(700); await hclickXY(w, p[0], p[1]); await jit(600);
+  await w.keyboard.press('Control+V'); await jit(8000);
   const up = await w.evaluate((i) => { const c = document.querySelectorAll('.se-component')[i + 1]; return !!c && c.classList.contains('se-image') && /pstatic\.net/.test(c.querySelector('img')?.src || '') && c.innerText.includes('대표'); }, i0);
   if (!up) return {err: 'upload not detected', i0};
-  p = await pt(i0); await w.mouse.click(p[0], p[1]); await sleep(500); await w.keyboard.press('Delete'); await sleep(1000);
+  p = await pt(i0); await jit(600); await hclickXY(w, p[0], p[1]); await jit(500); await w.keyboard.press('Delete'); await jit(1000);
   const img = await w.evaluate((a) => { const cs = [...document.querySelectorAll('.se-component')]; return {stillOld: cs.some(c => [...c.querySelectorAll('img')].some(i => i.src === a.u)), rep: cs[a.i].classList.contains('se-image') && cs[a.i].innerText.includes('대표'), caption: cs[a.i + 1]?.innerText.slice(0, 30)}; }, {u: url, i: i0});
-  await w.getByRole('button', {name: '저장', exact: true}).first().click(); await sleep(2000);
-  await w.locator('button[data-click-area="tpb.publish"]').first().click(); await sleep(1500);
-  await w.getByText('예약', {exact: true}).first().click(); await sleep(1000);
+  await jit(1500); await hclick(w, w.getByRole('button', {name: '저장', exact: true}).first()); await jit(2500);
+  await hclick(w, w.locator('button[data-click-area="tpb.publish"]').first()); await jit(1800);
+  await hclick(w, w.getByText('예약', {exact: true}).first()); await jit(1000);
   const date = await setDate(w, ymd);
-  await w.locator('select[class*="hour_option"]').selectOption(hh); await w.locator('select[class*="minute_option"]').selectOption(mm); await sleep(500);
+  await w.locator('select[class*="hour_option"]').selectOption(hh); await jit(700); await w.locator('select[class*="minute_option"]').selectOption(mm); await jit(600);
   const sched = await w.evaluate(() => [...document.querySelectorAll('input[type=radio]:checked')].map(r => r.nextElementSibling?.innerText).join(',') + ' ' + [...document.querySelectorAll('select')].map(s => s.value).join(':'));
   return {img, date, sched};
 };
@@ -61,7 +104,7 @@ globalThis.doPublish = async (idx, ymd, hh, mm) => {
   const want = `${y}. ${m}. ${d} ${hh}:${mm}`;
   const pre = await w.evaluate(() => ({on: [...document.querySelectorAll('input[type=radio]:checked')].map(r => r.nextElementSibling?.innerText).join(','), time: [...document.querySelectorAll('input')].filter(i => /\d{4}\. \d{2}/.test(i.value)).map(i => i.value).join('') + ' ' + [...document.querySelectorAll('select')].map(s => s.value).join(':'), title: document.querySelector('.se-title-text').innerText}));
   if (!pre.on.includes('예약') || pre.time !== want) return {err: 'schedule mismatch', want, pre};
-  await w.locator('button[data-click-area="tpb*i.publish"]').click();
+  await jit(4000); await hclick(w, w.locator('button[data-click-area="tpb*i.publish"]'));
   for (let k = 0; k < 10 && !/logNo=/.test(w.url()); k++) await sleep(2000);
   const logNo = (w.url().match(/logNo=(\d+)/) || [])[1];
   return logNo ? {ok: true, logNo, title: pre.title} : {err: 'no logNo after publish', url: w.url(), title: pre.title};
@@ -84,11 +127,11 @@ globalThis.repFirst = async (w, url) => {
   const i0 = await w.evaluate((u) => [...document.querySelectorAll('.se-component')].findIndex(c => c.classList.contains('se-image') && [...c.querySelectorAll('img')].some(i => i.src === u)), url);
   if (i0 < 0) return {err: 'image not found'};
   const pt = async (i) => w.evaluate((i) => { const c = document.querySelectorAll('.se-component')[i]; c.scrollIntoView({block: 'center'}); const b = c.querySelector('img').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }, i);
-  let p = await pt(i0); await w.mouse.click(p[0], p[1]); await sleep(600);
-  await w.keyboard.press('Control+V'); await sleep(8000);
+  let p = await pt(i0); await jit(700); await hclickXY(w, p[0], p[1]); await jit(600);
+  await w.keyboard.press('Control+V'); await jit(8000);
   const up = await w.evaluate((i) => { const c = document.querySelectorAll('.se-component')[i + 1]; return !!c && c.classList.contains('se-image') && /pstatic\.net/.test(c.querySelector('img')?.src || '') && c.innerText.includes('대표'); }, i0);
   if (!up) return {err: 'upload not detected', i0};
-  p = await pt(i0); await w.mouse.click(p[0], p[1]); await sleep(500); await w.keyboard.press('Delete'); await sleep(1000);
+  p = await pt(i0); await jit(600); await hclickXY(w, p[0], p[1]); await jit(500); await w.keyboard.press('Delete'); await jit(1000);
   return await w.evaluate((a) => { const cs = [...document.querySelectorAll('.se-component')]; return {stillOld: cs.some(c => [...c.querySelectorAll('img')].some(i => i.src === a.u)), rep: cs[a.i].classList.contains('se-image') && cs[a.i].innerText.includes('대표'), caption: cs[a.i + 1]?.innerText.slice(0, 30), n: cs.length}; }, {u: url, i: i0});
 };
 globalThis.openEdit = async (blogId, logNo) => {
