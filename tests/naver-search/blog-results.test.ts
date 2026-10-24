@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBlogResults, mobileSearchUrl } from '@/lib/naver-search/blog-results';
+import { parseBlogResults, mobileSearchUrl, fetchLoggedOutBlogResults } from '@/lib/naver-search/blog-results';
 
 const item = (slug: string, id: string, name: string, title: string, snippet: string) => `
   <div><a href="https://m.blog.naver.com/${slug}" class="name"><span>${name}</span></a>
@@ -41,5 +41,34 @@ describe('mobileSearchUrl', () => {
 
   it('opens the mobile blog tab for blog', () => {
     expect(mobileSearchUrl('a&b', 'blog')).toBe('https://m.search.naver.com/search.naver?ssc=tab.m_blog.all&query=a%26b');
+  });
+});
+
+describe('fetchLoggedOutBlogResults', () => {
+  const anchors = item('mih_casting', '333', '메이드인헤븐', '변민석 섭외', '요약');
+
+  it('falls back to the naver-serp function by region when Naver blocks the server IP', async () => {
+    process.env.SUPABASE_URL = 'https://sb.test';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'svc';
+    const calls: string[] = [];
+    const fetcher = (async (url: string, init?: RequestInit) => {
+      const region = (init?.headers as Record<string, string>)['x-region'];
+      calls.push(region ?? 'direct');
+      if (!region) return new Response('blocked', { status: 403 });
+      if (region === 'us-east-1') return Response.json({ naverStatus: 403 }, { status: 502 });
+      return Response.json({ naverStatus: 200, anchors });
+    }) as typeof fetch;
+
+    const r = await fetchLoggedOutBlogResults('변민석 섭외', 'blog', 1_000, fetcher);
+    expect(calls).toEqual(['direct', 'us-east-1', 'ap-south-1']);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ slug: 'mih_casting', ours: true, title: '변민석 섭외' });
+  });
+
+  it('throws when every route is blocked', async () => {
+    process.env.SUPABASE_URL = 'https://sb.test';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'svc';
+    const fetcher = (async () => new Response('blocked', { status: 403 })) as typeof fetch;
+    await expect(fetchLoggedOutBlogResults('x', 'total', 1_000, fetcher)).rejects.toThrow(/direct HTTP 403/);
   });
 });
