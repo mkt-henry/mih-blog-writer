@@ -79,6 +79,17 @@
           the browser or anything else, and that directory is wiped on every open. It has no launcher entry
           of its own; opened without a keyword it shows the dashboard (Owner 2026-10-25: one app only).
         -->
+        <!-- Serves the 캡처 복사 PNGs (cache/captures) to whichever app the Owner pastes into. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.captures"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/capture_paths" />
+        </provider>
+
         <activity
             android:name=".SecretActivity"
             android:exported="true"
