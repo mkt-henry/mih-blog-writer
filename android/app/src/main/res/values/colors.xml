@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same as the dashboard manifest theme_color / background_color. -->
+    <color name="brand">#1565C0</color>
+    <color name="background">#F5F6F8</color>
+</resources>

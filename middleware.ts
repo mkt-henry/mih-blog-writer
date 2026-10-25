@@ -24,7 +24,9 @@ export const config = {
   // 설치형 앱(PWA) 파일도 열어 둬야 한다 — 매니페스트·아이콘·서비스워커가 /login 으로 리다이렉트되면
   // 브라우저가 "앱 설치"를 띄우지 않고 서비스워커 등록도 실패한다(스크립트 대신 HTML 이 온다).
   // 이 파일들에는 로그인해야 볼 데이터가 없다(앱 이름·색·아이콘 경로뿐).
+  // .well-known/assetlinks.json 은 안드로이드 MIH 앱(android/)이 이 사이트를 주소창 없이 전체 화면으로 열 때
+  // 크롬이 로그인 없이 읽어 앱 서명을 대조하는 파일이다.
   matcher: [
-    "/((?!login|share|mih_speaker|mih_casting|mih_agency|mih_other|kyh620303|api/auth|api/cron|api/feed|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/).*)",
+    "/((?!login|share|mih_speaker|mih_casting|mih_agency|mih_other|kyh620303|api/auth|api/cron|api/feed|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/|.well-known/).*)",
   ],
 };

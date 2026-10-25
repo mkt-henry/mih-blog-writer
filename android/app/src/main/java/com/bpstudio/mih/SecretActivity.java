@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
  * directory, so it never sees the Chrome login, and it wipes cookies/storage/cache on every open and close —
  * every search starts as a brand-new visitor, like an incognito tab.
  *
- * Opened with mihsecret://search?q=<keyword>[&post=<blog post url>][&s=blog], or from the launcher with an empty box.
+ * Opened with mihsecret://search?q=<keyword>[&post=<blog post url>][&s=blog], or from the launcher shortcut "시크릿 검색" with an empty box.
  */
 public class SecretActivity extends Activity {
 
