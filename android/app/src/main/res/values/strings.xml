@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MIH 시크릿</string>
+    <string name="app_name">MIH</string>
+    <string name="shortcut_secret">시크릿 검색</string>
+    <string name="asset_statements" translatable="false">[{\"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": {\"namespace\": \"web\", \"site\": \"https://mih.bp-studio.com\"}}]</string>
 </resources>

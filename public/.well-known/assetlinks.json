@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bpstudio.mih.secret",
+      "sha256_cert_fingerprints": ["B4:AD:53:43:91:84:C2:07:EE:B2:8C:42:59:3E:E3:DB:EF:4F:92:D3:86:CD:52:36:0D:3F:3A:0E:D3:1F:1E:BD"]
+    }
+  }
+]

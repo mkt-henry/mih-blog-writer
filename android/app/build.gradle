@@ -18,8 +18,8 @@ android {
         // setDataDirectorySuffix (separate WebView profile for the secret viewer) needs API 28.
         minSdk 28
         targetSdk 36
-        versionCode 1
-        versionName '1.0'
+        versionCode 2
+        versionName '2.0'
     }
 
     compileOptions {
@@ -41,4 +41,10 @@ android {
             signingConfig signingFile.exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
+}
+
+dependencies {
+    // Trusted Web Activity: opens the whole dashboard (https://mih.bp-studio.com) full screen in the phone's browser
+    // engine, so the existing login, web push and PWA behaviour keep working inside the app.
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
 }
