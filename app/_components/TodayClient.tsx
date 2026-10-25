@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { EyeOff, RefreshCw } from "lucide-react";
 import { alertText, stripMarkdown } from "@/lib/alert-format";
 import { REPORT_AGENCIES, type SearchReport, type StatusReport } from "@/lib/daily-report";
+import { isAndroid, secretAppIntent, serpPath } from "@/lib/secret-app";
 import { Content, CopyButton, kst } from "./DiscordMessage";
 
 type Tab = "status" | "search";
@@ -61,6 +62,11 @@ function StatusTab({ status }: { status: StatusReport }) {
 
 function SearchTab({ yesterday, today }: { yesterday: SearchReport; today: SearchReport }) {
   const [day, setDay] = useState<"yesterday" | "today">("yesterday");
+  // 안드로이드면 키워드를 "MIH 시크릿" 앱(로그인 없는 웹뷰)으로 연다. 서버 렌더와 어긋나지 않게 마운트 뒤에 정한다.
+  const [appOrigin, setAppOrigin] = useState<string | null>(null);
+  useEffect(() => {
+    if (isAndroid(navigator.userAgent)) setAppOrigin(window.location.origin);
+  }, []);
   const r = day === "yesterday" ? yesterday : today;
   const chip = (key: "yesterday" | "today", label: string, rep: SearchReport) => (
     <button
@@ -92,14 +98,25 @@ function SearchTab({ yesterday, today }: { yesterday: SearchReport; today: Searc
                 <div className="truncate text-xs font-medium text-gray-700">{REPORT_AGENCIES[row.agency].label}</div>
                 <div className="text-[11px] tabular-nums text-gray-500">{row.time} 발행</div>
               </div>
-              {/* 로그인된 브라우저는 개인화로 우리 글이 위로 보여 시크릿(로그인 없는) 결과 화면으로 연다 (Owner 2026-10-22) */}
-              <Link
-                href={`/serp?q=${encodeURIComponent(row.keyword)}&post=${encodeURIComponent(row.post)}`}
-                className="flex min-w-0 flex-1 items-center gap-1 text-sm font-medium text-[#0068E0] hover:underline"
-              >
-                <span className="truncate">{row.keyword}</span>
-                <EyeOff className="h-3 w-3 shrink-0" />
-              </Link>
+              {/* 로그인된 브라우저는 개인화로 우리 글이 위로 보여 시크릿(로그인 없는) 결과 화면으로 연다 (Owner 2026-10-22).
+                  안드로이드는 앱의 시크릿 웹뷰로 실제 네이버 화면을 연다 — 앱이 없으면 크롬이 같은 /serp 로 넘어간다 (Owner 2026-10-25). */}
+              {appOrigin ? (
+                <a
+                  href={secretAppIntent(row.keyword, row.post, appOrigin)}
+                  className="flex min-w-0 flex-1 items-center gap-1 text-sm font-medium text-[#0068E0] hover:underline"
+                >
+                  <span className="truncate">{row.keyword}</span>
+                  <EyeOff className="h-3 w-3 shrink-0" />
+                </a>
+              ) : (
+                <Link
+                  href={serpPath(row.keyword, row.post)}
+                  className="flex min-w-0 flex-1 items-center gap-1 text-sm font-medium text-[#0068E0] hover:underline"
+                >
+                  <span className="truncate">{row.keyword}</span>
+                  <EyeOff className="h-3 w-3 shrink-0" />
+                </Link>
+              )}
               <CopyButton text={row.url} label="링크 복사" />
             </li>
           ))}
