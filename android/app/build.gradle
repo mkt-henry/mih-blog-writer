@@ -1,0 +1,44 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Release signing comes from keystore.properties (not in git). Without it the build falls back to the debug key.
+def signingFile = rootProject.file('keystore.properties')
+def signingValues = new Properties()
+if (signingFile.exists()) {
+    signingFile.withInputStream { signingValues.load(it) }
+}
+
+android {
+    namespace 'com.bpstudio.mih'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.bpstudio.mih.secret'
+        // setDataDirectorySuffix (separate WebView profile for the secret viewer) needs API 28.
+        minSdk 28
+        targetSdk 36
+        versionCode 1
+        versionName '1.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    signingConfigs {
+        if (signingFile.exists()) {
+            release {
+                storeFile file(signingValues['storeFile'])
+                storePassword signingValues['storePassword']
+                keyAlias signingValues['keyAlias']
+                keyPassword signingValues['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingFile.exists() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+}
