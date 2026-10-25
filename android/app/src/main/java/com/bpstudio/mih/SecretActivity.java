@@ -44,7 +44,8 @@ import java.util.regex.Pattern;
  * directory, so it never sees the Chrome login, and it wipes cookies/storage/cache on every open and close —
  * every search starts as a brand-new visitor, like an incognito tab.
  *
- * Opened with mihsecret://search?q=<keyword>[&post=<blog post url>][&s=blog], or from the launcher shortcut "시크릿 검색" with an empty box.
+ * Opened with mihsecret://search?q=<keyword>[&post=<blog post url>][&s=blog] from the dashboard keyword links. Without a
+ * keyword it hands over to the dashboard, so the phone only ever shows one MIH app.
  */
 public class SecretActivity extends Activity {
 
@@ -78,8 +79,12 @@ public class SecretActivity extends Activity {
         }
         super.onCreate(savedInstanceState);
         getWindow().setStatusBarColor(BRAND);
-        buildUi();
         readIntent(getIntent());
+        if (query.isEmpty()) {
+            showDashboard();
+            return;
+        }
+        buildUi();
         open();
     }
 
@@ -88,7 +93,25 @@ public class SecretActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         readIntent(intent);
+        if (query.isEmpty()) {
+            showDashboard();
+            return;
+        }
         open();
+    }
+
+    /**
+     * One app, not two (Owner 2026-10-25): the secret viewer is only a window of the dashboard, opened from a keyword.
+     * Anything that reaches it without a keyword — the v1 "MIH 시크릿" home-screen icon, which pointed straight at this
+     * activity and survives the update on Samsung launchers, or its old long-press shortcut — gets the dashboard instead.
+     */
+    private void showDashboard() {
+        Intent launch = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        if (launch != null) {
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(launch);
+        }
+        finish();
     }
 
     @Override
