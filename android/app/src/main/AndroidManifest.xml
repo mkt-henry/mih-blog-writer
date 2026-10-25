@@ -40,9 +40,6 @@
             <meta-data
                 android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
                 android:value="customtabs" />
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -79,8 +76,8 @@
           Logged-out ("secret") Naver search viewer, opened from the dashboard keyword links:
           intent://search?q=<keyword>&post=<blog post url>#Intent;scheme=mihsecret;package=com.bpstudio.mih.secret;...
           Runs in its own process with its own WebView data directory, so it never shares cookies with
-          the browser or anything else, and that directory is wiped on every open. The launcher's
-          long-press shortcut "시크릿 검색" opens it with an empty box.
+          the browser or anything else, and that directory is wiped on every open. It has no launcher entry
+          of its own; opened without a keyword it shows the dashboard (Owner 2026-10-25: one app only).
         -->
         <activity
             android:name=".SecretActivity"
