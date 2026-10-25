@@ -1,18 +1,26 @@
 package com.bpstudio.mih;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.PixelCopy;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
@@ -28,11 +36,16 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.core.content.FileProvider;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.URLEncoder;
 import java.util.regex.Matcher;
@@ -48,6 +61,9 @@ import java.util.regex.Pattern;
  *
  * Opened with mihsecret://search?q=<keyword>[&post=<blog post url>][&s=blog] from the dashboard keyword links. Without a
  * keyword it hands over to the dashboard, so the phone only ever shows one MIH app.
+ *
+ * The 모바일/PC switch shows either Naver surface (PC = search.naver.com with a desktop browser identity, zoomed out to
+ * the whole page), and 캡처 복사 puts what the card shows on the clipboard as a PNG (Owner 2026-10-25).
  */
 public class SecretActivity extends Activity {
 
@@ -55,6 +71,9 @@ public class SecretActivity extends Activity {
     private static final String[] MIH_BLOGS = {"mih_agency", "mih_casting", "gdfdhzgfgfhgdj", "kyh620303", "mih_speaker"};
     private static final Pattern POST = Pattern.compile("blog\\.naver\\.com/([A-Za-z0-9_-]+)/(\\d+)");
     private static final int BRAND = Color.parseColor("#1565C0");
+    /** Naver serves the PC result page only to desktop browsers. */
+    private static final String DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            + "(KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
     private static boolean dataDirSet;
 
@@ -62,12 +81,16 @@ public class SecretActivity extends Activity {
     private EditText box;
     private TextView totalTab;
     private TextView blogTab;
+    private TextView mobileTab;
+    private TextView pcTab;
     private ProgressBar progress;
     private LinearLayout sheet;
     private String query = "";
     private String postKey = "";
     private String highlightJs;
     private boolean blogSurface;
+    /** Kept across searches in this window: once the Owner picks PC, the next keyword opens on PC too. */
+    private boolean pc;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -175,21 +198,38 @@ public class SecretActivity extends Activity {
             return;
         }
         wipe();
-        web.loadUrl(searchUrl(query, blogSurface));
+        applySurface();
+        web.loadUrl(searchUrl(query, blogSurface, pc));
         web.postDelayed(() -> web.clearHistory(), 1500);
     }
 
-    /** Same URLs as lib/naver-search/blog-results.ts mobileSearchUrl(). */
-    static String searchUrl(String q, boolean blog) {
+    /** Mobile: same URLs as lib/naver-search/blog-results.ts mobileSearchUrl(). PC: the matching search.naver.com tabs. */
+    static String searchUrl(String q, boolean blog, boolean pc) {
         String enc;
         try {
             enc = URLEncoder.encode(q, "UTF-8");
         } catch (Exception e) {
             enc = Uri.encode(q);
         }
+        if (pc) {
+            return blog
+                    ? "https://search.naver.com/search.naver?ssc=tab.blog.all&query=" + enc
+                    : "https://search.naver.com/search.naver?where=nexearch&ssc=tab.nx.all&query=" + enc;
+        }
         return blog
                 ? "https://m.search.naver.com/search.naver?ssc=tab.m_blog.all&query=" + enc
                 : "https://m.search.naver.com/search.naver?where=m&ssc=tab.m.all&query=" + enc;
+    }
+
+    /** PC: desktop identity and a wide layout viewport zoomed out to the page width; pinch to zoom in. */
+    private void applySurface() {
+        WebSettings s = web.getSettings();
+        s.setUserAgentString(pc ? DESKTOP_UA : null);
+        s.setUseWideViewPort(pc);
+        s.setLoadWithOverviewMode(pc);
+        s.setSupportZoom(true);
+        s.setBuiltInZoomControls(true);
+        s.setDisplayZoomControls(false);
     }
 
     private int dp(float v) {
@@ -273,6 +313,32 @@ public class SecretActivity extends Activity {
         root.addView(bar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        LinearLayout tools = new LinearLayout(this);
+        tools.setOrientation(LinearLayout.HORIZONTAL);
+        tools.setGravity(Gravity.CENTER_VERTICAL);
+        tools.setBackgroundColor(Color.parseColor("#F1F5FB"));
+        tools.setPadding(dp(10), dp(6), dp(10), dp(6));
+        mobileTab = surface("모바일", false);
+        pcTab = surface("PC", true);
+        tools.addView(mobileTab);
+        LinearLayout.LayoutParams pcGap = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        pcGap.leftMargin = dp(4);
+        tools.addView(pcTab, pcGap);
+        tools.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
+        TextView shot = new TextView(this);
+        shot.setText("캡처 복사");
+        shot.setTextColor(Color.WHITE);
+        shot.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        shot.setTypeface(Typeface.DEFAULT_BOLD);
+        shot.setPadding(dp(12), dp(5), dp(12), dp(5));
+        shot.setBackground(round(BRAND, dp(14)));
+        shot.setContentDescription("화면을 캡처해 클립보드에 복사");
+        shot.setOnClickListener(v -> capture());
+        tools.addView(shot);
+        root.addView(tools, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progress.setMax(100);
         progress.setIndeterminate(false);
@@ -334,6 +400,90 @@ public class SecretActivity extends Activity {
     private void paintTabs() {
         paintTab(totalTab, !blogSurface);
         paintTab(blogTab, blogSurface);
+        paintSurface(mobileTab, !pc);
+        paintSurface(pcTab, pc);
+    }
+
+    private TextView surface(String label, boolean wantPc) {
+        TextView t = new TextView(this);
+        t.setText(label);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        t.setPadding(dp(12), dp(5), dp(12), dp(5));
+        t.setOnClickListener(v -> {
+            if (pc == wantPc) return;
+            pc = wantPc;
+            String q = box.getText().toString().trim();
+            if (!q.isEmpty()) query = q;
+            open();
+        });
+        return t;
+    }
+
+    private void paintSurface(TextView t, boolean on) {
+        t.setTextColor(on ? Color.WHITE : BRAND);
+        t.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+        GradientDrawable bg = round(on ? BRAND : Color.WHITE, dp(14));
+        if (!on) bg.setStroke(dp(1), Color.parseColor("#B0C4DE"));
+        t.setBackground(bg);
+    }
+
+    /**
+     * Puts what the card shows (the Naver page as it is scrolled, highlights included) on the clipboard as a PNG.
+     * PixelCopy reads the window's real pixels, so the hardware-drawn WebView comes out exactly as on screen.
+     */
+    private void capture() {
+        int w = web.getWidth(), h = web.getHeight();
+        if (w == 0 || h == 0) return;
+        int[] at = new int[2];
+        web.getLocationInWindow(at);
+        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        Rect area = new Rect(at[0], at[1], at[0] + w, at[1] + h);
+        PixelCopy.request(getWindow(), area, bmp, result -> {
+            if (result != PixelCopy.SUCCESS) {
+                bmp.recycle();
+                Toast.makeText(this, "캡처하지 못했어요", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            new Thread(() -> {
+                Uri uri = save(bmp);
+                runOnUiThread(() -> copy(uri));
+            }).start();
+        }, new Handler(Looper.getMainLooper()));
+    }
+
+    /** Writes the PNG under cache/captures (served by the FileProvider), keeping only the latest few. */
+    private Uri save(Bitmap bmp) {
+        try {
+            File dir = new File(getCacheDir(), "captures");
+            if (!dir.isDirectory() && !dir.mkdirs()) return null;
+            File[] old = dir.listFiles();
+            if (old != null) {
+                java.util.Arrays.sort(old, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                for (int i = 4; i < old.length; i++) old[i].delete();
+            }
+            File f = new File(dir, "mih-search-" + System.currentTimeMillis() + ".png");
+            try (FileOutputStream out = new FileOutputStream(f)) {
+                bmp.compress(Bitmap.CompressFormat.PNG, 100, out);
+            }
+            return FileProvider.getUriForFile(this, getPackageName() + ".captures", f);
+        } catch (Exception e) {
+            return null;
+        } finally {
+            bmp.recycle();
+        }
+    }
+
+    private void copy(Uri uri) {
+        if (uri == null) {
+            Toast.makeText(this, "캡처를 저장하지 못했어요", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ClipboardManager clip = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        clip.setPrimaryClip(ClipData.newUri(getContentResolver(), "MIH 검색 캡처", uri));
+        // Android 13+ shows its own clipboard preview; older versions get a toast.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            Toast.makeText(this, "캡처를 클립보드에 복사했어요", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void paintTab(TextView t, boolean on) {
