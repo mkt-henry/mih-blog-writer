@@ -3,6 +3,7 @@ package com.bpstudio.mih;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -23,6 +24,7 @@ import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -61,6 +63,7 @@ public class SecretActivity extends Activity {
     private TextView totalTab;
     private TextView blogTab;
     private ProgressBar progress;
+    private LinearLayout sheet;
     private String query = "";
     private String postKey = "";
     private String highlightJs;
@@ -78,7 +81,7 @@ public class SecretActivity extends Activity {
             dataDirSet = true;
         }
         super.onCreate(savedInstanceState);
-        getWindow().setStatusBarColor(BRAND);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
         readIntent(getIntent());
         if (query.isEmpty()) {
             showDashboard();
@@ -193,11 +196,23 @@ public class SecretActivity extends Activity {
         return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics()));
     }
 
+    /**
+     * Popup over the dashboard (Owner 2026-10-25: "open it like a modal right there"). The window is translucent, so
+     * the dashboard stays visible, dimmed, around a rounded card; tapping the dim area, ✕ or back closes it.
+     */
     private void buildUi() {
+        FrameLayout scrim = new FrameLayout(this);
+        scrim.setFitsSystemWindows(true);
+        scrim.setBackgroundColor(Color.parseColor("#80000000"));
+        scrim.setOnClickListener(v -> finish());
+
         LinearLayout root = new LinearLayout(this);
+        sheet = root;
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setFitsSystemWindows(true);
-        root.setBackgroundColor(Color.WHITE);
+        root.setBackground(round(Color.WHITE, dp(16)));
+        root.setClipToOutline(true);
+        root.setClickable(true);
+        scrim.addView(root, sheetParams());
 
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
@@ -280,7 +295,25 @@ public class SecretActivity extends Activity {
         });
         root.addView(web, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        setContentView(root);
+        setContentView(scrim);
+    }
+
+    /** Card size: a little inset from the screen edges, and no wider than a phone page on an unfolded Fold or tablet. */
+    private FrameLayout.LayoutParams sheetParams() {
+        float widthDp = getResources().getConfiguration().screenWidthDp;
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                widthDp > 640 ? dp(600) : ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+        lp.setMargins(dp(10), dp(36), dp(10), dp(10));
+        return lp;
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Folding/unfolding does not recreate the activity (configChanges), so resize the card here.
+        if (sheet != null) sheet.setLayoutParams(sheetParams());
     }
 
     private TextView tab(String label, boolean blog) {

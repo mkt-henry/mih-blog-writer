@@ -85,6 +85,7 @@
             android:process=":secret"
             android:taskAffinity=""
             android:excludeFromRecents="true"
+            android:theme="@style/SecretPopup"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:launchMode="singleTask">
             <intent-filter>
