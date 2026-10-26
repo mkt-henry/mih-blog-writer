@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { EyeOff, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, EyeOff, RefreshCw } from "lucide-react";
 import { alertText, stripMarkdown } from "@/lib/alert-format";
 import { REPORT_AGENCIES, type SearchReport, type StatusReport } from "@/lib/daily-report";
 import { isAndroid, secretAppIntent, serpPath } from "@/lib/secret-app";
@@ -12,9 +12,14 @@ import { Content, CopyButton, kst } from "./DiscordMessage";
 type Tab = "status" | "search";
 
 type Props = {
+  /** 보고 있는 날짜 YYYY-MM-DD (주소 ?date=, 없으면 오늘) */
+  day: string;
+  today: string;
   status: StatusReport;
   searchYesterday: SearchReport;
   searchToday: SearchReport;
+  /** 네이버가 주는 최근 글 목록이 그날까지 닿지 않아 일부 글이 빠졌을 수 있다 */
+  rssPartial: boolean;
   rssErrors: string[];
   generatedAt: string;
 };
@@ -60,7 +65,7 @@ function StatusTab({ status }: { status: StatusReport }) {
   );
 }
 
-function SearchTab({ yesterday, today }: { yesterday: SearchReport; today: SearchReport }) {
+function SearchTab({ yesterday, today, isToday }: { yesterday: SearchReport; today: SearchReport; isToday: boolean }) {
   const [day, setDay] = useState<"yesterday" | "today">("yesterday");
   // 안드로이드면 키워드를 "MIH 시크릿" 앱(로그인 없는 웹뷰)으로 연다. 서버 렌더와 어긋나지 않게 마운트 뒤에 정한다.
   const [appOrigin, setAppOrigin] = useState<string | null>(null);
@@ -83,8 +88,8 @@ function SearchTab({ yesterday, today }: { yesterday: SearchReport; today: Searc
   return (
     <>
       <div className="mb-2 flex items-center gap-1.5">
-        {chip("yesterday", "어제", yesterday)}
-        {chip("today", "오늘", today)}
+        {chip("yesterday", isToday ? "어제" : "전날", yesterday)}
+        {chip("today", isToday ? "오늘" : "그날", today)}
         <div className="flex-1" />
         {r.message?.content && <CopyButton text={stripMarkdown(r.message.content)} label="전체 복사" />}
       </div>
@@ -127,7 +132,10 @@ function SearchTab({ yesterday, today }: { yesterday: SearchReport; today: Searc
   );
 }
 
-export default function TodayClient({ status, searchYesterday, searchToday, rssErrors, generatedAt }: Props) {
+// 날짜 하루 앞뒤로 옮기기 (YYYY-MM-DD, 시간대 영향 없게 UTC 로 계산)
+const shiftDay = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
+
+export default function TodayClient({ day, today, status, searchYesterday, searchToday, rssPartial, rssErrors, generatedAt }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("status");
   const [pending, startTransition] = useTransition();
@@ -143,12 +151,49 @@ export default function TodayClient({ status, searchYesterday, searchToday, rssE
     else url.searchParams.delete("tab");
     window.history.replaceState(null, "", url.pathname + url.search);
   };
+  // 날짜 바꾸기 (Owner 2026-10-27): ?date= 로 서버가 그날 기준으로 다시 만든다. 보던 탭은 그대로 둔다.
+  const isToday = day === today;
+  const goDay = (d: string) => {
+    if (!d || d === day) return;
+    const url = new URL(window.location.href);
+    if (d >= today) url.searchParams.delete("date");
+    else url.searchParams.set("date", d);
+    startTransition(() => router.push(url.pathname + url.search));
+  };
 
   return (
     <main className="mx-auto max-w-2xl px-3 py-4 pb-16">
       <div className="mb-2 flex items-center gap-2">
         <h1 className="whitespace-nowrap text-lg font-bold">오늘</h1>
-        <span className="text-xs text-gray-500">{status.day} · {kst(generatedAt).split(" ")[1]} 기준</span>
+        <div className="flex items-center">
+          <button type="button" onClick={() => goDay(shiftDay(day, -1))} aria-label="전날" className="rounded p-1 text-gray-500 hover:bg-gray-100">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <input
+            type="date"
+            value={day}
+            max={today}
+            onChange={(e) => goDay(e.target.value)}
+            aria-label="날짜"
+            className="rounded border border-gray-200 bg-white px-1.5 py-0.5 text-xs tabular-nums text-gray-700"
+          />
+          <button
+            type="button"
+            onClick={() => goDay(shiftDay(day, 1))}
+            disabled={isToday}
+            aria-label="다음 날"
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+        {isToday ? (
+          <span className="whitespace-nowrap text-xs text-gray-500">{kst(generatedAt).split(" ")[1]} 기준</span>
+        ) : (
+          <button type="button" onClick={() => goDay(today)} className="whitespace-nowrap rounded-full border border-gray-200 px-2 py-0.5 text-xs text-gray-600">
+            오늘로
+          </button>
+        )}
         <div className="flex-1" />
         <button
           type="button"
@@ -173,7 +218,15 @@ export default function TodayClient({ status, searchYesterday, searchToday, rssE
         <p className="mb-2 text-xs text-red-600">일부 계정 글을 못 읽었습니다: {rssErrors.join(", ")}</p>
       )}
 
-      {tab === "status" ? <StatusTab status={status} /> : <SearchTab yesterday={searchYesterday} today={searchToday} />}
+      {rssPartial && (
+        <p className="mb-2 text-xs text-amber-700">이 날짜는 블로그 최근 글 목록 밖이라 일부 글이 빠졌을 수 있습니다.</p>
+      )}
+
+      {tab === "status" ? (
+        <StatusTab status={status} />
+      ) : (
+        <SearchTab key={day} yesterday={searchYesterday} today={searchToday} isToday={isToday} />
+      )}
     </main>
   );
 }

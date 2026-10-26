@@ -146,3 +146,21 @@ export function buildSearchReport(rss: RssByAgency, day: string): SearchReport {
     rows.length > 0 ? { content: [`▶ ${day} 검색 노출`, ...rows.map((x) => x.url)].join("\n\n") } : null;
   return { day, rows, message };
 }
+
+/** 주소의 ?date= 를 보고서 날짜로. 형식이 틀리거나 오늘보다 뒤면 오늘. */
+export function pickReportDay(raw: string | undefined, today: string): string {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw) || Number.isNaN(Date.parse(raw))) return today;
+  return raw > today ? today : raw;
+}
+
+/**
+ * 네이버 RSS 는 블로그마다 최근 글 몇십 개만 준다. 그날이 어느 블로그의 가장 오래된 글보다 앞이면
+ * 그 블로그 글이 목록 밖으로 밀려나 빠졌을 수 있다 → false. (글이 하나도 없는 블로그는 따지지 않는다.)
+ */
+export function rssCoversDay(rss: RssByAgency, day: string): boolean {
+  const dayStart = Date.parse(`${day}T00:00:00+09:00`);
+  return REPORT_SLUGS.every((s) => {
+    const ts = (rss[s] ?? []).map((r) => r.ts).filter(Boolean);
+    return ts.length === 0 || Math.min(...ts) < dayStart;
+  });
+}

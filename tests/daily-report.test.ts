@@ -3,6 +3,8 @@ import { alertText } from '@/lib/alert-format';
 import {
   buildSearchReport,
   buildStatusReport,
+  pickReportDay,
+  rssCoversDay,
   extractKeyword,
   kstDateStr,
   parseRss,
@@ -67,5 +69,20 @@ describe('daily-report', () => {
     ]);
     expect(r.message?.content).toBe(`▶ 2026-10-22 검색 노출\n\n${searchUrl('아무개')}\n\n${searchUrl('홍길동 가수')}`);
     expect(buildSearchReport({ mih_casting: casting }, '2026-10-19').message).toBeNull();
+  });
+});
+
+describe('pickReportDay / rssCoversDay (날짜 바꾸기, 2026-10-27)', () => {
+  it('형식이 틀리거나 미래면 오늘', () => {
+    expect(pickReportDay(undefined, '2026-10-27')).toBe('2026-10-27');
+    expect(pickReportDay('2026-10-2', '2026-10-27')).toBe('2026-10-27');
+    expect(pickReportDay('2026-10-30', '2026-10-27')).toBe('2026-10-27');
+    expect(pickReportDay('2026-10-26', '2026-10-27')).toBe('2026-10-26');
+  });
+  it('가장 오래된 RSS 글이 그날보다 뒤면 일부가 빠졌을 수 있다', () => {
+    const it2 = (iso: string) => ({ title: 't', link: 'l', pubDate: iso, ts: Date.parse(iso) });
+    const rss = { mih_agency: [it2('2026-10-20T00:00:00Z')], other: [] };
+    expect(rssCoversDay(rss, '2026-10-26')).toBe(true);
+    expect(rssCoversDay(rss, '2026-10-10')).toBe(false);
   });
 });
