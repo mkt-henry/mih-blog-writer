@@ -22,6 +22,7 @@
     "legacy:build-manifest": "node scripts/build-manifest.js",
     "legacy:dev-server": "node scripts/dev-server.js",
     "check:article": "node scripts/check-article.mjs",
+    "check:today-publish": "tsx scripts/check-today-publish.ts",
     "migrate:blob": "node scripts/migrate-blob-images.mjs",
     "migrate:blob:dry": "node scripts/migrate-blob-images.mjs --dry-run",
     "serp:corpus": "node scripts/serp-corpus.mjs",
