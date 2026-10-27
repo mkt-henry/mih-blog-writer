@@ -107,7 +107,7 @@ function SearchTab({ yesterday, today, isToday }: { yesterday: SearchReport; tod
                   안드로이드는 앱의 시크릿 웹뷰로 실제 네이버 화면을 연다 — 앱이 없으면 크롬이 같은 /serp 로 넘어간다 (Owner 2026-10-25). */}
               {appOrigin ? (
                 <a
-                  href={secretAppIntent(row.keyword, row.post, appOrigin)}
+                  href={secretAppIntent(row.keyword, row.post, appOrigin, r.rows, i)}
                   className="flex min-w-0 flex-1 items-center gap-1 text-sm font-medium text-[#0068E0] hover:underline"
                 >
                   <span className="truncate">{row.keyword}</span>

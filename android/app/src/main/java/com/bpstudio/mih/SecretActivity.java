@@ -48,6 +48,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,8 +61,10 @@ import java.util.regex.Pattern;
  * directory, so it never sees the Chrome login, and it wipes cookies/storage/cache on every open and close —
  * every search starts as a brand-new visitor, like an incognito tab.
  *
- * Opened with mihsecret://search?q=<keyword>[&post=<blog post url>][&s=blog] from the dashboard keyword links. Without a
- * keyword it hands over to the dashboard, so the phone only ever shows one MIH app.
+ * Opened with mihsecret://search?q=<keyword>[&post=<blog post url>][&s=blog][&l=<json [[keyword, post], ...]>&i=<index>]
+ * from the dashboard keyword links. Without a keyword it hands over to the dashboard, so the phone only ever shows one
+ * MIH app. With l/i (the day's keyword list and where this one sits in it) the card gets ◀ n/N ▶ at the bottom, so the
+ * Owner steps through the keywords without closing the popup (Owner 2026-10-27).
  *
  * The 모바일/PC switch shows either Naver surface (PC = search.naver.com with a desktop browser identity, zoomed out to
  * the whole page), and 캡처 복사 puts what the card shows on the clipboard as a PNG (Owner 2026-10-25).
@@ -91,6 +95,13 @@ public class SecretActivity extends Activity {
     private boolean blogSurface;
     /** Kept across searches in this window: once the Owner picks PC, the next keyword opens on PC too. */
     private boolean pc;
+    /** The dashboard's keyword list ({keyword, post url}) and the one shown now; empty when opened for one keyword. */
+    private final List<String[]> items = new ArrayList<>();
+    private int index = -1;
+    private LinearLayout nav;
+    private TextView prevBtn;
+    private TextView nextBtn;
+    private TextView counter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -163,15 +174,90 @@ public class SecretActivity extends Activity {
         query = "";
         postKey = "";
         blogSurface = false;
+        items.clear();
+        index = -1;
         if (uri == null) return;
         String q = uri.getQueryParameter("q");
         query = q == null ? "" : q.trim();
-        String post = uri.getQueryParameter("post");
-        if (post != null) {
-            Matcher m = POST.matcher(post);
-            if (m.find()) postKey = m.group(1).toLowerCase() + "/" + m.group(2);
-        }
+        postKey = postKeyOf(uri.getQueryParameter("post"));
         blogSurface = "blog".equals(uri.getQueryParameter("s"));
+        readList(uri);
+    }
+
+    /** l = JSON [[keyword, post url], ...], i = position of q in it. Anything malformed just means no ◀ ▶. */
+    private void readList(Uri uri) {
+        items.clear();
+        index = -1;
+        String l = uri.getQueryParameter("l");
+        if (l == null || l.isEmpty() || query.isEmpty()) return;
+        try {
+            JSONArray arr = new JSONArray(l);
+            for (int k = 0; k < arr.length(); k++) {
+                JSONArray it = arr.getJSONArray(k);
+                String kw = it.optString(0, "").trim();
+                if (kw.isEmpty()) continue;
+                items.add(new String[]{kw, it.optString(1, "")});
+            }
+            int i = -1;
+            try {
+                i = Integer.parseInt(uri.getQueryParameter("i"));
+            } catch (Exception ignored) {
+                // Missing index: found by keyword below.
+            }
+            if (i >= 0 && i < items.size() && items.get(i)[0].equals(query)) {
+                index = i;
+            } else {
+                for (int k = 0; k < items.size(); k++) {
+                    if (items.get(k)[0].equals(query)) {
+                        index = k;
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            items.clear();
+        }
+        if (index < 0 || items.size() < 2) {
+            items.clear();
+            index = -1;
+        }
+    }
+
+    private static String postKeyOf(String post) {
+        if (post == null) return "";
+        Matcher m = POST.matcher(post);
+        return m.find() ? m.group(1).toLowerCase() + "/" + m.group(2) : "";
+    }
+
+    /** ◀ ▶: the neighbouring keyword of the dashboard list in this same popup, keeping 통합/블로그 and 모바일/PC. */
+    private void step(int delta) {
+        int to = index + delta;
+        if (items.isEmpty() || to < 0 || to >= items.size()) return;
+        index = to;
+        query = items.get(to)[0];
+        postKey = postKeyOf(items.get(to)[1]);
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(box.getWindowToken(), 0);
+        box.clearFocus();
+        open();
+    }
+
+    private void paintNav() {
+        if (nav == null) return;
+        if (items.isEmpty()) {
+            nav.setVisibility(View.GONE);
+            return;
+        }
+        nav.setVisibility(View.VISIBLE);
+        counter.setText((index + 1) + " / " + items.size());
+        paintStep(prevBtn, index > 0);
+        paintStep(nextBtn, index < items.size() - 1);
+    }
+
+    private void paintStep(TextView t, boolean enabled) {
+        t.setEnabled(enabled);
+        t.setTextColor(enabled ? Color.WHITE : Color.parseColor("#9AA8BA"));
+        t.setBackground(round(enabled ? BRAND : Color.parseColor("#E3E9F2"), dp(20)));
     }
 
     /** Fresh visitor for every search: no cookies, no storage, no cache, no history. */
@@ -190,6 +276,7 @@ public class SecretActivity extends Activity {
     private void open() {
         box.setText(query);
         paintTabs();
+        paintNav();
         if (query.isEmpty()) {
             web.loadUrl("about:blank");
             box.requestFocus();
@@ -361,6 +448,26 @@ public class SecretActivity extends Activity {
         });
         root.addView(web, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
+        // ◀ n/N ▶ at the bottom of the card, where the thumb is (Owner 2026-10-27: move on without closing).
+        nav = new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setGravity(Gravity.CENTER_VERTICAL);
+        nav.setBackgroundColor(Color.parseColor("#F1F5FB"));
+        nav.setPadding(dp(10), dp(8), dp(10), dp(8));
+        prevBtn = stepButton("◀ 이전", -1);
+        nextBtn = stepButton("다음 ▶", 1);
+        counter = new TextView(this);
+        counter.setTextColor(Color.parseColor("#334155"));
+        counter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        counter.setTypeface(Typeface.DEFAULT_BOLD);
+        counter.setGravity(Gravity.CENTER);
+        nav.addView(prevBtn, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        nav.addView(counter, new LinearLayout.LayoutParams(dp(72), ViewGroup.LayoutParams.WRAP_CONTENT));
+        nav.addView(nextBtn, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        nav.setVisibility(View.GONE);
+        root.addView(nav, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
         setContentView(scrim);
     }
 
@@ -380,6 +487,17 @@ public class SecretActivity extends Activity {
         super.onConfigurationChanged(newConfig);
         // Folding/unfolding does not recreate the activity (configChanges), so resize the card here.
         if (sheet != null) sheet.setLayoutParams(sheetParams());
+    }
+
+    private TextView stepButton(String label, int delta) {
+        TextView t = new TextView(this);
+        t.setText(label);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        t.setTypeface(Typeface.DEFAULT_BOLD);
+        t.setGravity(Gravity.CENTER);
+        t.setContentDescription(delta < 0 ? "이전 키워드" : "다음 키워드");
+        t.setOnClickListener(v -> step(delta));
+        return t;
     }
 
     private TextView tab(String label, boolean blog) {

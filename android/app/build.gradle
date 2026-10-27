@@ -18,8 +18,8 @@ android {
         // setDataDirectorySuffix (separate WebView profile for the secret viewer) needs API 28.
         minSdk 28
         targetSdk 36
-        versionCode 5
-        versionName '5.0'
+        versionCode 6
+        versionName '6.0'
     }
 
     compileOptions {
