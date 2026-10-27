@@ -18,6 +18,26 @@ describe("secret app links", () => {
     expect(fallback).toBe(`https://mih.bp-studio.com${serpPath("민서 섭외", "https://blog.naver.com/mih_agency/2")}`);
   });
 
+  it("carries the whole keyword list and the current position for next/prev in the app", () => {
+    const list = [
+      { keyword: "민서 섭외", post: "https://blog.naver.com/mih_agency/2" },
+      { keyword: "a&b;c 섭외" },
+    ];
+    const url = secretAppIntent("a&b;c 섭외", undefined, "https://mih.bp-studio.com", list, 1);
+    const query = url.slice("intent://search?".length, url.indexOf("#Intent;"));
+    const params = new URLSearchParams(query);
+    expect(params.get("q")).toBe("a&b;c 섭외");
+    expect(params.get("i")).toBe("1");
+    expect(JSON.parse(params.get("l")!)).toEqual([
+      ["민서 섭외", "https://blog.naver.com/mih_agency/2"],
+      ["a&b;c 섭외", ""],
+    ]);
+    // ';' must stay escaped or Chrome would cut the intent fields there.
+    expect(query).not.toContain(";");
+    // A single keyword has nothing to step through.
+    expect(secretAppIntent("x", undefined, "https://a", [{ keyword: "x" }], 0)).not.toContain("&l=");
+  });
+
   it("detects Android user agents only", () => {
     expect(isAndroid("Mozilla/5.0 (Linux; Android 14; SM-F956N) AppleWebKit/537.36")).toBe(true);
     expect(isAndroid("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)")).toBe(false);
