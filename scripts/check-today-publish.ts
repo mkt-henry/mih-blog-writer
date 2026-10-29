@@ -65,6 +65,12 @@ async function main() {
     { encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" } },
   );
   console.log((r.stdout || "").trim());
+  // 같은 날 키로 이미 만든 카드가 있으면(다른 카드가 먼저 돌렸거나 대기 원고 수가 바뀐 재실행) 서버가 409 로 거절한다.
+  // 카드는 이미 있으니 점검 실패가 아니라 미달(1)로 끝낸다.
+  if (r.status !== 0 && /409|이미 접수한/.test(r.stderr || "")) {
+    console.log(`할 일 카드는 오늘(${c.day}) 이미 만들어져 있어 새로 만들지 않았어`);
+    return 1;
+  }
   if (r.status !== 0) {
     console.error(`할 일 카드 만들기 실패: ${(r.stderr || "").trim()}`);
     process.exit(2);
