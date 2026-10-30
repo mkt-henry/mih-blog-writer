@@ -18,6 +18,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.util.TypedValue;
+import android.view.Choreographer;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.PixelCopy;
@@ -91,6 +92,8 @@ public class SecretActivity extends Activity {
     private LinearLayout sheet;
     private String query = "";
     private String postKey = "";
+    /** 캡처 복사 is between hiding the highlights and putting them back. */
+    private boolean capturing;
     private String highlightJs;
     private boolean blogSurface;
     /** Kept across searches in this window: once the Owner picks PC, the next keyword opens on PC too. */
@@ -546,17 +549,42 @@ public class SecretActivity extends Activity {
     }
 
     /**
-     * Puts what the card shows (the Naver page as it is scrolled, highlights included) on the clipboard as a PNG.
-     * PixelCopy reads the window's real pixels, so the hardware-drawn WebView comes out exactly as on screen.
+     * Puts what the card shows (the Naver page as it is scrolled) on the clipboard as a PNG — Naver's own page only:
+     * the MIH highlights and labels are switched off (`mih-bare`, see assets/highlight.js) for the shot and come back
+     * right after. PixelCopy reads the window's real pixels, so the hardware-drawn WebView comes out as on screen.
      */
     private void capture() {
+        if (capturing || web.getWidth() == 0 || web.getHeight() == 0) return;
+        capturing = true;
+        web.evaluateJavascript("document.documentElement.classList.add('mih-bare')", added ->
+            // Fires once the WebView has the bare page ready to draw; two more frames put it in the window.
+            web.postVisualStateCallback(0, new WebView.VisualStateCallback() {
+                @Override
+                public void onComplete(long requestId) {
+                    web.invalidate();
+                    Choreographer.getInstance().postFrameCallback(a ->
+                        Choreographer.getInstance().postFrameCallback(b -> copyWindow()));
+                }
+            }));
+    }
+
+    private void showHighlights() {
+        web.evaluateJavascript("document.documentElement.classList.remove('mih-bare')", null);
+        capturing = false;
+    }
+
+    private void copyWindow() {
         int w = web.getWidth(), h = web.getHeight();
-        if (w == 0 || h == 0) return;
+        if (w == 0 || h == 0) {
+            showHighlights();
+            return;
+        }
         int[] at = new int[2];
         web.getLocationInWindow(at);
         Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Rect area = new Rect(at[0], at[1], at[0] + w, at[1] + h);
         PixelCopy.request(getWindow(), area, bmp, result -> {
+            showHighlights();
             if (result != PixelCopy.SUCCESS) {
                 bmp.recycle();
                 Toast.makeText(this, "캡처하지 못했어요", Toast.LENGTH_SHORT).show();

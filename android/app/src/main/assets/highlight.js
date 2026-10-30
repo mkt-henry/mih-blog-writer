@@ -2,9 +2,20 @@
 // Highlights MIH blog results and labels each with its order among blog posts — the same counting as
 // lib/naver-search/blog-results.ts parseBlogResults (unique post links that carry text, in page order).
 // The post the dashboard row points at gets a stronger yellow mark.
+// The colours live in a stylesheet keyed on data-mih, so `mih-bare` on <html> (set by 캡처 복사 while it copies the
+// screen) shows Naver's own page: the cards fall back to Naver's styles and the labels drop out.
 (function (c) {
   if (window.__mih) return;
   window.__mih = 1;
+  var css = document.createElement('style');
+  css.textContent =
+    'html:not(.mih-bare) [data-mih]{background:#E8F1FC!important;box-shadow:inset 4px 0 0 #1565C0!important}' +
+    'html:not(.mih-bare) [data-mih][data-mih-mine]{background:#FFF3C4!important;box-shadow:inset 4px 0 0 #F5B400!important}' +
+    '.mih-tag{display:inline-block;margin:6px 0 2px 12px;padding:2px 8px;border-radius:4px;' +
+    'font:bold 12px sans-serif;color:#fff;background:#1565C0}' +
+    '.mih-tag.mine{background:#E09E00}' +
+    'html.mih-bare .mih-tag{display:none!important}';
+  (document.head || document.documentElement).appendChild(css);
   var RE = /blog\.naver\.com\/([A-Za-z0-9_-]+)\/(\d+)/;
   // Widest ancestor that links nowhere but this blog (its profile and this post) — the whole result card,
   // header included. Links back into Naver search (tags, related keywords) don't count.
@@ -36,12 +47,10 @@
       var box = card(a, key);
       box.setAttribute('data-mih', key);
       var mine = c.post && key === c.post;
-      box.style.background = mine ? '#FFF3C4' : '#E8F1FC';
-      box.style.boxShadow = 'inset 4px 0 0 ' + (mine ? '#F5B400' : '#1565C0');
+      if (mine) box.setAttribute('data-mih-mine', '');
       var tag = document.createElement('div');
+      tag.className = 'mih-tag' + (mine ? ' mine' : '');
       tag.textContent = (mine ? '이 글' : '우리 블로그') + ' · 블로그 글 ' + seen[key] + '번째';
-      tag.style.cssText = 'display:inline-block;margin:6px 0 2px 12px;padding:2px 8px;border-radius:4px;' +
-        'font:bold 12px sans-serif;color:#fff;background:' + (mine ? '#E09E00' : '#1565C0');
       box.insertBefore(tag, box.firstChild);
     }
   }
