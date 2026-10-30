@@ -1,6 +1,8 @@
 // Injected into the Naver search page by SecretActivity as `(<this function>)({blogs, post})`.
-// Highlights MIH blog results and labels each with its order among blog posts ('3위', other MIH posts '우리 3위') — the same counting as
-// lib/naver-search/blog-results.ts parseBlogResults (unique post links that carry text, in page order).
+// Highlights MIH blog results and labels each with its place among the search results on screen ('2위', other MIH posts
+// '우리 3위'). 통합 counts every organic result — web docs, news and blogs alike, ads not — because Owner reads the rank
+// off the page (2026-10-30: a web doc above our post made it 2위, not 1위). The blog tab lists only blogs, so there it
+// matches lib/naver-search/blog-results.ts parseBlogResults (unique post links that carry text, in page order).
 // The post the dashboard row points at gets a stronger yellow mark.
 // The colours live in a stylesheet keyed on data-mih, so `mih-bare` on <html> (set by 캡처 복사 while it copies the
 // screen) shows Naver's own page: the cards fall back to Naver's styles and the labels drop out.
@@ -34,14 +36,21 @@
     }
     return box;
   }
+  // Naver tags every link of one organic result with the same gdid in data-nlog-params (통합: web docs, blogs, news…);
+  // ads carry none. Blog-tab links have no gdid, so there a result is its post link.
+  function gdid(a) {
+    var g = (a.getAttribute('data-nlog-params') || '').match(/"gdid"\s*:\s*"([^"]+)"/);
+    return g ? g[1] : '';
+  }
   function run() {
-    var seen = {}, rank = 0, as = document.querySelectorAll('a[href*="blog.naver.com/"]');
+    var seen = {}, rank = 0, as = document.querySelectorAll('a[href]');
     for (var i = 0; i < as.length; i++) {
-      var a = as[i], m = a.href.match(RE);
-      if (!m || !(a.textContent || '').trim()) continue;
+      var a = as[i], m = a.href.match(RE), g = gdid(a);
+      if (!(m || g) || !(a.textContent || '').trim()) continue;
+      var id = g || m[1].toLowerCase() + '/' + m[2];
+      if (!seen[id]) seen[id] = ++rank;
+      if (!m || c.blogs.indexOf(m[1].toLowerCase()) < 0) continue;
       var key = m[1].toLowerCase() + '/' + m[2];
-      if (!seen[key]) seen[key] = ++rank;
-      if (c.blogs.indexOf(m[1].toLowerCase()) < 0) continue;
       // Naver re-renders result blocks as you scroll — mark again whenever our mark is gone.
       if (document.querySelector('[data-mih="' + key + '"]')) continue;
       var box = card(a, key);
@@ -50,8 +59,8 @@
       if (mine) box.setAttribute('data-mih-mine', '');
       var tag = document.createElement('div');
       tag.className = 'mih-tag' + (mine ? ' mine' : '');
-      // Short enough to stay on one line: the post's rank among blog posts; the colour says whether it is this post.
-      tag.textContent = (mine ? '' : '우리 ') + seen[key] + '위';
+      // Short enough to stay on one line: the post's rank among the results; the colour says whether it is this post.
+      tag.textContent = (mine ? '' : '우리 ') + seen[id] + '위';
       box.insertBefore(tag, box.firstChild);
     }
   }
