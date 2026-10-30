@@ -1,5 +1,5 @@
 // Injected into the Naver search page by SecretActivity as `(<this function>)({blogs, post})`.
-// Highlights MIH blog results and labels each with its order among blog posts — the same counting as
+// Highlights MIH blog results and labels each with its order among blog posts ('3위', other MIH posts '우리 3위') — the same counting as
 // lib/naver-search/blog-results.ts parseBlogResults (unique post links that carry text, in page order).
 // The post the dashboard row points at gets a stronger yellow mark.
 // The colours live in a stylesheet keyed on data-mih, so `mih-bare` on <html> (set by 캡처 복사 while it copies the
@@ -11,7 +11,7 @@
   css.textContent =
     'html:not(.mih-bare) [data-mih]{background:#E8F1FC!important;box-shadow:inset 4px 0 0 #1565C0!important}' +
     'html:not(.mih-bare) [data-mih][data-mih-mine]{background:#FFF3C4!important;box-shadow:inset 4px 0 0 #F5B400!important}' +
-    '.mih-tag{display:inline-block;margin:6px 0 2px 12px;padding:2px 8px;border-radius:4px;' +
+    '.mih-tag{display:inline-block;margin:6px 0 2px 12px;padding:1px 6px;border-radius:4px;white-space:nowrap;' +
     'font:bold 12px sans-serif;color:#fff;background:#1565C0}' +
     '.mih-tag.mine{background:#E09E00}' +
     'html.mih-bare .mih-tag{display:none!important}';
@@ -50,7 +50,8 @@
       if (mine) box.setAttribute('data-mih-mine', '');
       var tag = document.createElement('div');
       tag.className = 'mih-tag' + (mine ? ' mine' : '');
-      tag.textContent = (mine ? '이 글' : '우리 블로그') + ' · 블로그 글 ' + seen[key] + '번째';
+      // Short enough to stay on one line: the post's rank among blog posts; the colour says whether it is this post.
+      tag.textContent = (mine ? '' : '우리 ') + seen[key] + '위';
       box.insertBefore(tag, box.firstChild);
     }
   }
