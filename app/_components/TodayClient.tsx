@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, EyeOff, RefreshCw } from "lucide-react";
 import { alertText, stripMarkdown } from "@/lib/alert-format";
-import { REPORT_AGENCIES, type SearchReport, type StatusReport } from "@/lib/daily-report";
+import { REPORT_AGENCIES, type SearchReport, type SearchRow, type StatusReport } from "@/lib/daily-report";
+import { performanceCounts, performanceText, rankLabel, type RankValue } from "@/lib/performance-summary";
 import { isAndroid, secretAppIntent, serpPath } from "@/lib/secret-app";
 import { Content, CopyButton, kst } from "./DiscordMessage";
 
@@ -62,6 +63,93 @@ function StatusTab({ status }: { status: StatusReport }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+// 검색 노출 목록 아래 성과 요약 (Owner 2026-10-31): 키워드마다 로그인 없이 본 통합검색 순위를 받아 모으고 한 번에 복사한다.
+// 순위는 앱 검색 팝업 배지와 같은 수(화면의 검색 결과 순서, 광고 제외). 네이버를 한꺼번에 두드리지 않게 3개씩 받는다.
+function PerformanceSummary({ day, rows }: { day: string; rows: SearchRow[] }) {
+  const [ranks, setRanks] = useState<RankValue[]>([]);
+  const [asOf, setAsOf] = useState("");
+  const [round, setRound] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    setRanks(rows.map(() => undefined));
+    let next = 0;
+    const worker = async () => {
+      while (alive && next < rows.length) {
+        const i = next++;
+        let v: RankValue = "error";
+        try {
+          const res = await fetch(`/api/serp-rank?q=${encodeURIComponent(rows[i].keyword)}&post=${encodeURIComponent(rows[i].post)}`, {
+            cache: "no-store",
+          });
+          if (res.ok) v = ((await res.json()) as { rank: number | null }).rank;
+        } catch {}
+        if (alive) setRanks((prev) => prev.map((x, j) => (j === i ? v : x)));
+      }
+    };
+    Promise.all([worker(), worker(), worker()]).then(() => {
+      if (alive) setAsOf(kst(new Date().toISOString()));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [rows, round]);
+
+  const lines = rows.map((r, i) => ({ keyword: r.keyword, rank: ranks[i] }));
+  const c = performanceCounts(lines);
+  const loading = c.pending > 0;
+
+  return (
+    <section className="mt-4 rounded-lg border border-gray-200 bg-white p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <h2 className="text-sm font-bold">성과 요약</h2>
+        <span className="text-[11px] text-gray-500">{loading ? `순위 확인 중 ${c.total - c.pending}/${c.total}` : `통합검색 · ${asOf} 기준`}</span>
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={() => setRound((n) => n + 1)}
+          disabled={loading}
+          aria-label="순위 다시 확인"
+          className="rounded p-1 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+        </button>
+        {!loading && <CopyButton text={performanceText(day, lines, asOf)} label="요약 복사" />}
+      </div>
+      <div className="mb-2 grid grid-cols-3 gap-1.5 text-center">
+        {[
+          ["노출", `${c.exposed}/${c.total}`],
+          ["1위", `${c.top1}건`],
+          ["3위 안", `${c.top3}건`],
+        ].map(([k, v]) => (
+          <div key={k} className="rounded-md bg-gray-50 py-1.5">
+            <div className="text-[11px] text-gray-500">{k}</div>
+            <div className="text-base font-bold tabular-nums">{loading ? "…" : v}</div>
+          </div>
+        ))}
+      </div>
+      <ul className="space-y-0.5">
+        {lines.map((l, i) => (
+          <li key={i} className="flex items-center gap-2 text-sm">
+            <span className="min-w-0 flex-1 truncate text-gray-800">{l.keyword}</span>
+            <span
+              className={`shrink-0 tabular-nums ${
+                typeof l.rank === "number"
+                  ? l.rank <= 3
+                    ? "font-bold text-[color:var(--color-primary)]"
+                    : "font-semibold text-gray-800"
+                  : "text-gray-400"
+              }`}
+            >
+              {rankLabel(l.rank)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -128,6 +216,7 @@ function SearchTab({ yesterday, today, isToday }: { yesterday: SearchReport; tod
         </ul>
       )}
       <p className="mt-2 text-[11px] text-gray-400">키워드를 누르면 로그인 없이 본(시크릿) 네이버 블로그 검색 순위가 열립니다 · 복사는 검색 링크</p>
+      {r.rows.length > 0 && <PerformanceSummary key={`${r.day}`} day={r.day} rows={r.rows} />}
     </>
   );
 }
