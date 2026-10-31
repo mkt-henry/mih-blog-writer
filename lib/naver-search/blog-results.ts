@@ -139,3 +139,117 @@ export async function fetchLoggedOutBlogResults(
   }
   throw new Error(`naver search failed: ${errors.join('; ')}`);
 }
+
+// ── 화면 순서 순위 (Owner 2026-10-31 "하단에 성과 요약") ─────────────────────────────
+// 앱(android/app/src/main/assets/highlight.js)이 검색 화면에 붙이는 '2위' 배지와 같은 수를 서버에서 낸다.
+// 통합검색은 웹문서·뉴스·블로그를 가리지 않고 화면의 검색 결과 순서로 센다(광고는 gdid 가 없어 빠진다, 2026-10-30).
+// 블로그 탭은 gdid 가 없어 글 링크 순서가 곧 순위다. supabase/functions/naver-serp 의 screenOrder 와 같은 규칙이어야 한다.
+
+export type ScreenOrder = {
+  /** 화면에 나온 검색 결과 수(광고 빼고) */
+  total: number;
+  /** 블로그 글마다 화면 순위. post 는 "slug/글번호"(slug 소문자) */
+  posts: { rank: number; post: string }[];
+};
+
+const ANY_ANCHOR = /<a\s([^>]*)>([\s\S]*?)<\/a>/g;
+const POST_IN_HREF = /blog\.naver\.com\/([A-Za-z0-9_-]+)\/(\d+)/;
+
+export function parseScreenOrder(html: string): ScreenOrder {
+  const rankOf = new Map<string, number>();
+  const posts: { rank: number; post: string }[] = [];
+  const seenPost = new Set<string>();
+  let total = 0;
+  for (const m of html.matchAll(ANY_ANCHOR)) {
+    const attrs = m[1];
+    if (!text(m[2])) continue;
+    const href = attrs.match(/\bhref="([^"]*)"/)?.[1] ?? '';
+    const p = href.match(POST_IN_HREF);
+    const nlog = (attrs.match(/\bdata-nlog-params="([^"]*)"/)?.[1] ?? '').replace(/&quot;/g, '"');
+    const gdid = nlog.match(/"gdid"\s*:\s*"([^"]+)"/)?.[1] ?? '';
+    if (!p && !gdid) continue;
+    const post = p ? `${p[1].toLowerCase()}/${p[2]}` : '';
+    const id = gdid || post;
+    if (!rankOf.has(id)) rankOf.set(id, ++total);
+    if (post && !seenPost.has(post)) {
+      seenPost.add(post);
+      posts.push({ rank: rankOf.get(id)!, post });
+    }
+  }
+  return { total, posts };
+}
+
+/** "https://blog.naver.com/Slug/123" → "slug/123" */
+export const postKeyOf = (url: string): string => {
+  const m = url.match(POST_IN_HREF);
+  return m ? `${m[1].toLowerCase()}/${m[2]}` : '';
+};
+
+export type PostRank = {
+  /** 이 글의 화면 순위. 첫 화면에 없으면 null */
+  rank: number | null;
+  /** 첫 화면에 나온 우리 블로그 글들의 순위(오름차순) */
+  ours: number[];
+  total: number;
+};
+
+export function rankOfPost(order: ScreenOrder, post: string): PostRank {
+  const key = postKeyOf(post);
+  const ours = order.posts
+    .filter((p) => (MIH_BLOG_SLUGS as readonly string[]).includes(p.post.split('/')[0]))
+    .map((p) => p.rank)
+    .sort((a, b) => a - b);
+  return { rank: order.posts.find((p) => p.post === key)?.rank ?? null, ours: [...new Set(ours)], total: order.total };
+}
+
+/** 로그인 없이 본 네이버 모바일 검색에서 이 글이 화면 몇 번째 결과인지. */
+export async function fetchLoggedOutScreenOrder(
+  query: string,
+  surface: SearchSurface = 'total',
+  timeoutMs = 10_000,
+  fetcher: Fetcher = fetch,
+): Promise<ScreenOrder> {
+  const errors: string[] = [];
+  try {
+    const res = await fetcher(mobileSearchUrl(query, surface), {
+      headers: { 'User-Agent': MOBILE_UA, Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'ko-KR,ko;q=0.9' },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) return parseScreenOrder(await res.text());
+    errors.push(`direct HTTP ${res.status}`);
+  } catch (e) {
+    errors.push(`direct ${String(e)}`);
+  }
+
+  const base = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (base && key) {
+    const deadline = Date.now() + 20_000;
+    const s = surface === 'blog' ? '&s=blog' : '';
+    for (const region of PROXY_REGIONS) {
+      const left = deadline - Date.now();
+      if (left < 1_000) break;
+      try {
+        const res = await fetcher(`${base}/functions/v1/naver-serp?q=${encodeURIComponent(query)}${s}`, {
+          headers: { Authorization: `Bearer ${key}`, 'x-region': region },
+          cache: 'no-store',
+          signal: AbortSignal.timeout(Math.min(timeoutMs, left)),
+        });
+        const body = (await res.json().catch(() => null)) as
+          | { anchors?: string; order?: ScreenOrder; naverStatus?: number }
+          | null;
+        if (res.ok && body?.order && Array.isArray(body.order.posts)) return body.order;
+        // 함수가 화면 순서를 아직 안 주는 판이면 블로그 글끼리 순서로 대신한다.
+        if (res.ok && typeof body?.anchors === 'string') {
+          const r = parseBlogResults(body.anchors);
+          return { total: r.length, posts: r.map((x) => ({ rank: x.rank, post: postKeyOf(x.url) })) };
+        }
+        errors.push(`${region} ${res.status}/${body?.naverStatus ?? '-'}`);
+      } catch (e) {
+        errors.push(`${region} ${String(e)}`);
+      }
+    }
+  }
+  throw new Error(`naver search failed: ${errors.join('; ')}`);
+}
